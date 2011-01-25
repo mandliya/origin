@@ -50,7 +50,17 @@ http://code.google.com/p/origin/source/checkout
 = Building Origin =
 
 == Linux and Mac ==
-In order to 
+In order to build Origin on Linux or Mac, you must first install the [#Prerequisites prerequisite software], including an a [#GCC SVN build of GCC].
+
+Origin uses CMake as the build system and relies on a number environment variables to control the build. _Before running CMake_, make sure that the following environment variables are set.
+
+|| *Variable* || *Description* ||
+|| `CXX` || Absolute path to the SVN-built g++ executable ||
+|| `LD_LIBRARY_PATH` || Paths to the library's for GMP, MPFR, MPC, etc. ||
+|| `ORIGIN_ROOT` || The path to the top-level Origin directory ||
+|| `BOOST_ROOT` || The path to the top-level Boost directory ||
+
+Note that `LD_LIBRARY_PATH` may be `DYLIB_LIBRARY_PATH` on Mac OS X. Also, `BOOST_ROOT` only needs to be defined if Boost is not installed on a system include path.
 
 == Windows ==
 Since Visual C++ is not an option, you would need to build GCC from subversion on Windows. MinGW or Cygwin may be viable solutions, but we haven't tested these. Our best suggestion is to run a Linux distribution as a virtual operating system and then follow the [#Linux_and_Mac build instructions Linux (or Mac)].
