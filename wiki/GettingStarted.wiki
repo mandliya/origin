@@ -1,0 +1,56 @@
+#summary Getting Started with Origin
+
+= Introduction =
+This page describes how to get started with the Origin C++0x libraries.
+
+= Prerequisites =
+== Programs and Libraries ==
+The Origin C++0x Libraries have two prerequisites:
+
+ * [http://www.cmake.org/ CMake] -- Origin uses CMake as the build system
+ * [http://www.boost.org/ Boost] -- Origin _may_ rely on one or more Boost C++ libraries.
+
+Note that the dependence on Boost is typically for convenience of users. Chances are, if you're trying to use Origin, then Boost will have some libraries that you will also find interesting. Best just to have it installed.
+
+== Compilers ==
+You also need a compiler that implements the following C++0x features:
+
+ * Move Semantics
+ * Auto and Decltype
+ * Variadic Templates
+ * Constant Expressions
+ * Lambda Expressions
+ * Uniform Initialization
+ * Initializer Lists
+ * ...
+
+Your standard library must also provide:
+
+ * Tuples
+ * Type Traits
+ * ...
+
+Currently, the only known option for compiling the Origin C++0x Libraries is GCC. Notes are given for other compilers below.
+
+=== GCC ===
+Must be compiled out of subversion.
+
+=== Visual C++ ===
+Not tested, but VS 2010 does not support variadic templates, this is unlikely.
+
+=== Clang ===
+Does not currently include sufficient language support to compile the Origin C++0x libraries.
+
+= Getting the Source Code =
+Since Origin does not currently have any releases, the only way to get the source code is to check it out from Subversion. Instructions for doing so can be found here:
+
+http://code.google.com/p/origin/source/checkout
+
+
+= Building Origin =
+
+== Linux and Mac ==
+In order to 
+
+== Windows ==
+Since Visual C++ is not an option, you would need to build GCC from subversion on Windows. MinGW or Cygwin may be viable solutions, but we haven't tested these. Our best suggestion is to run a Linux distribution as a virtual operating system and then follow the [#Linux_and_Mac build instructions Linux (or Mac)].
