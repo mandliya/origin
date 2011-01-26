@@ -33,7 +33,11 @@ Your standard library must also provide:
 Currently, the only known option for compiling the Origin C++0x Libraries is GCC. Notes are given for other compilers below.
 
 === GCC ===
-Must be compiled out of subversion.
+Must currently be compiled out of SVN. Instructions for acquiring GCC can be found [http://gcc.gnu.org/svn.html here]. Installation instructions can be found [http://gcc.gnu.org/install/ here]. Because Origin tracks GCC's evolution through SVN, we typically only build the C and C++ compilers and skip the bootstrap build.
+
+Note that GCC has a number dependencies itself (e.g., GMP, MPFR, MPC, etc.). We found it useful to install these locally with the prefix `~/local` so they don't collide with your distributions versions. Typically, these only need to be downloaded and compiled once. However, GCC will infrequently change their minimum required version of its dependencies, and you will have to go through this process again.
+
+If you have a lot of custom libraries and programs installed in `~/local` then it may be useful to configure GCC with a different prefix, such as `~/opt`. This leaves all of the programs in `~/local` built with the non-experimental compiler and runtime.
 
 === Visual C++ ===
 Not tested, but VS 2010 does not support variadic templates, this is unlikely.
