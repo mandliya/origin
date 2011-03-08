@@ -1,4 +1,4 @@
-#summary Getting Started with Origin
+#summary Getting started with Origin
 
 = Introduction =
 This page describes how to get started with the Origin C++0x libraries.
