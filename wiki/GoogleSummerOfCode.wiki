@@ -1,4 +1,4 @@
-#summary Google Summer of Code Page
+#summary Google Summer of Code information
 
 = Introduction =
 We plan to apply as a mentoring organization for [http://www.google-melange.com/ Google Summer of Code] this year. The goal of our participation in this project is to encourage students to implement generic libraries using the C++0x programming language. The focus of GSoC projects will be on the investigation of a computational domain (set theory, graph theory, linear algebra, computational geometry, etc.), and the initial design, specification, and implementation of its basic abstractions. Note that Origin projects are not specifically limited to scientific computation; operating system and data/text processing concepts are also of interest.
