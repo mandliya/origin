@@ -2,6 +2,8 @@
 
 Origin was started at Kent State University by Andrew Sutton as part of a project to rewrite the [http://www.boost.org/doc/libs/1_46_0/libs/graph/doc/index.html Boost Graph Library] sometime in 2008 using the C++0x programming language. This was an offshoot from a [http://code.google.com/soc/ Google Summer of Code] project. The primary emphasis of the project involved (and still involves) experimenting with the designs that would make the library easier to use.
 
+The name "Origin" was actually a name that Andrew proposed as the name of the KDE development libraries when KDE 4.0 was first being developed and released and had several new components with neat names (e.g., Plasma, Phonon, etc.). The word "origin" means (roughly) "a beginning", and is a synonym for "source" (as in code). KDE didn't want the name, so Andrew kept it.
+
 Andrew recruited several undergraduates who were interested in learning advanced C++ programming, and started expanding the scope of Origin. Students worked on C++0x projects including graph data structures, memory layout, trees, hashing and binning, template metaprogramming, concept checking and emulation. Michael Lopez is still working on the Origin.Graph library.
 
 The original work on Origin is still hosted at Kent State University, [http://calder.sdml.cs.kent.edu/trac/origin here].
