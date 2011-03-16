@@ -14,10 +14,10 @@ include(Origin)
 origin_component(
   heaps
   VERSION 0.1.0
-  DEPENDS core 
+  DEPENDS core
   AUTHORS
     Author 1 <author1 -at- address.foo>
     Author 2 <author2 -at- address.foo>
 )
 
-# add_subdirectory(test)
+add_subdirectory(tests)
