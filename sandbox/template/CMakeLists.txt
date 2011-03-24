@@ -20,4 +20,4 @@ origin_component(
     Author 2 <author2 -at- address.foo>
 )
 
-# add_subdirectory(test)
+# add_subdirectory(tests)
