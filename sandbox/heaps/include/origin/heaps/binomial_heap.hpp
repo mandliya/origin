@@ -12,12 +12,17 @@
 #include <iostream>
 #include <map>
 
+/* Forward Declaration */
+struct binomial_heap_node;
+
+/* Function Prototypes */
+void binomial_link (std::vector<binomial_heap_node>& data_, size_t y, size_t z);
+
 /*
  * An adaptation of CLRS's Binomial heap implementation
  * in Chapter 19, 3rd Ed, pages .
  */
 
-//struct binomial_heap_node_base {
 struct binomial_heap_node
 {
    public:
@@ -35,15 +40,8 @@ struct binomial_heap_node
       /* Degree of the element */
       size_t degree;
       binomial_heap_node ():parent(-1), child(-1), right_sibling(-1), degree(-1) {};
-      //binomial_heap_node_base ():parent(-1), child(-1), right_sibling(-1), degree(-1) {};
 };
 
-/*
-template<typename T>
-struct binomial_heap_node : public binomial_heap_node_base {
-   size_t item;
-};
-*/
 
 /* Class: Binomial Heap 
  * Template parameters
@@ -67,7 +65,6 @@ class binomial_heap
       // FIXME: I think there may be some typedefs missing. See priority_queue.
       // TODO : Not sure of this one.
       
-      // FIXME: Combine as a single vector of binomial_heap_node<T>
       /* Random access container which holds the heap elements */
       std::vector<T> elements_;
       std::vector<binomial_heap_node> data_;
@@ -137,26 +134,6 @@ class binomial_heap
        */
       size_type get_new_top(); 
       
-      // FIXME: This operation may be written in such a way that it does not
-      // depend on template parameters. Consider moving it outside the body
-      // of this class. TODO: Not clear.
-      /*
-       * binomial_link: Links the specified nodes in the heap
-       * Input: 
-       * size_type y: element in the heap
-       * size_type z: element in the heap
-       * Output:
-       * links element y and z in the heap
-       * Return Value:
-       * None
-       */
-      void binomial_link (size_type y, size_type z) {
-         data_[y].parent = z;
-         data_[y].right_sibling = data_[z].child;
-         data_[z].child = y;
-         data_[z].degree = data_[z].degree + 1;
-      }
-   
    public:
       // FIXME Implement two more constructors: a range constructor (taking two
       // iterators) and an initializer list constructor.
@@ -489,7 +466,7 @@ void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index
       } else {
          if (compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
             data_[x].right_sibling = data_[next_x].right_sibling;
-            binomial_link(next_x, x);
+            binomial_link(data_, next_x, x);
          } else {
             if (prev_x == -1) {
                head_ = next_x;
@@ -497,7 +474,7 @@ void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index
                data_[prev_x].right_sibling = next_x;
             }
             
-            binomial_link(x, next_x);
+            binomial_link(data_, x, next_x);
             x = next_x;
          }
       }
@@ -589,5 +566,23 @@ void binomial_heap<T, Compare, Item_Label>::print(std::basic_ostream<Char, Trait
    }
 }
 
+
+/*
+ * binomial_link: Links the specified nodes in the heap
+ * Input: 
+ * size_type y: element in the heap
+ * size_type z: element in the heap
+ * Output:
+ * links element y and z in the heap
+ * Return Value:
+ * None
+*/
+void binomial_link (std::vector<binomial_heap_node>& data_, size_t y, size_t z) {
+   data_[y].parent = z;
+   data_[y].right_sibling = data_[z].child;
+   data_[z].child = y;
+   data_[z].degree = data_[z].degree + 1;
+}
+   
 
 #endif // ORIGIN_HEAPS_BINOMIAL_HEAP_HPP
