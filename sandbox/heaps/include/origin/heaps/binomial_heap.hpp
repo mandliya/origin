@@ -84,7 +84,7 @@ class binomial_heap
        */
       
       IndexArray index_array;
-      Item_Label _id;
+      Item_Label id_;
       Compare compare_;
       
       /*
@@ -149,7 +149,7 @@ class binomial_heap
        * Return Value:
        * None       
        */
-      binomial_heap (): compare_(Compare()), _id(Item_Label()) {};
+      binomial_heap (): compare_(Compare()), id_(Item_Label()) {};
       
       /*
        * binomial_heap: 3 argument constructor
@@ -165,7 +165,7 @@ class binomial_heap
        */
       binomial_heap (size_type n,
             const Compare &cmp, const Item_Label& id) :
-            compare_(cmp), _id(id), index_array(n), top_(-1), head_(-1) 
+            compare_(cmp), id_(id), index_array(n), top_(-1), head_(-1) 
             //n_(0) - Keeping this until the design is fixed 
       { 
       }
@@ -187,7 +187,7 @@ class binomial_heap
          binomial_heap (ForwardIterator first, ForwardIterator last,
                const Compare &cmp, const Item_Label& id) :
                index_array(std::distance(first, last)), compare_(cmp), 
-              _id(id), top_(-1), head_(-1) //, n_(0)
+              id_(id), top_(-1), head_(-1) //, n_(0)
       {
          while(first != last) {
             push(*first);
@@ -359,7 +359,7 @@ void binomial_heap<T, Compare, Item_Label>::push(const value_type& d)
    
    index = data_.size() - 1;
    
-   index_array[_id(d)] = index;
+   index_array[id_(d)] = index;
    if (head_ == -1) {
       /* New heap */
       head_ = index;
@@ -378,7 +378,7 @@ template <class T,
           class Item_Label>
 void binomial_heap<T, Compare, Item_Label>::update(const value_type& d)
 {
-   size_type index = index_array[_id(d)];
+   size_type index = index_array[id_(d)];
    size_type parent = data_[index].parent;
    size_type temp;
    elements_[data_[index].item_index] = d;
@@ -387,14 +387,14 @@ void binomial_heap<T, Compare, Item_Label>::update(const value_type& d)
          compare_(d, elements_[data_[parent].item_index])) {
       elements_[data_[index].item_index] = elements_[data_[parent].item_index];
       elements_[data_[parent].item_index] = d;
-      temp = _id(elements_[data_[index].item_index]);
+      temp = id_(elements_[data_[index].item_index]);
       index_array[temp] = index;
       
       index = parent;
       parent = data_[parent].parent;
    }
    
-   temp = _id(d);
+   temp = id_(d);
    
    index_array[temp] = index;
    
@@ -531,7 +531,7 @@ void binomial_heap<T, Compare, Item_Label>::pop()
    top_ = get_new_top();
 
    // where in data_ old top element was stored
-   size_type index = index_array[_id(elements_[elements_.size()-1])];
+   size_type index = index_array[id_(elements_[elements_.size()-1])];
 
    // copy the last element to location of old root
    elements_[temp] = elements_[elements_.size()-1];
