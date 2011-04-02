@@ -16,7 +16,7 @@
 struct binomial_heap_node;
 
 /* Function Prototypes */
-void binomial_link (std::vector<binomial_heap_node>& data_, size_t y, size_t z);
+void binomial_link (binomial_heap_node& node1, binomial_heap_node& node2, size_t index1, size_t index2);
 
 /*
  * An adaptation of CLRS's Binomial heap implementation
@@ -39,31 +39,30 @@ struct binomial_heap_node
       
       /* Degree of the element */
       size_t degree;
-      binomial_heap_node ():parent(-1), child(-1), right_sibling(-1), degree(-1) {};
+      binomial_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, degree{-1} {};
 };
 
+// FIXME: This is temporary, definition in meta.hpp to be used
+struct default_t {};
 
 /* Class: Binomial Heap 
  * Template parameters
  * T : Value type - Type of data to be stored in the heap
  * Compare : Binary function predicate - This gives the ordering between the
  *           element (max/min heap)
- * Item_Label : Property Map - External property map used to find the 
+ * Item_Map : Property Map - External property map used to find the 
  *                  index of element in the heap
  */
 template <class T, 
           class Compare,
-          class Item_Label> // This label is not a final design
+          class Item_Map> // This label is not a final design
 class binomial_heap
 {
    private:
       // FIXME: Value type should be "T const" for mutable priority queues.
-      typedef T value_type; //TODO: Not clear?
+      typedef T value_type; //TODO: Will address then when we write Immutable heap 
       typedef size_t size_type;
       typedef std::vector<size_type> IndexArray;
-      
-      // FIXME: I think there may be some typedefs missing. See priority_queue.
-      // TODO : Not sure of this one.
       
       /* Random access container which holds the heap elements */
       std::vector<T> elements_;
@@ -76,15 +75,12 @@ class binomial_heap
       
       size_type head_, top_;
       
-      // FIXME: Consider using the Empty Base Optimization to store the
-      // Compare function (I'll implement compressed pair at some point to
-      // help with this)
-      /* Internal map for mapping the values stored in the external property map
+      /* Internal map for mapping the values stored in the external map
        * to actual index of the element in the heap
        */
       
       IndexArray index_array;
-      Item_Label id_;
+      Item_Map id_;
       Compare compare_;
       
       /*
@@ -96,7 +92,8 @@ class binomial_heap
        * Prints the nodes for a particular binomial tree identified by x
        * Return Value: None       
        */
-      void print_recur(size_type x, std::ostream& os) {
+      void print_recur(size_type x, std::ostream& os)
+      {
          if (x != -1) {
             os << elements_[data_[x].item_index];
             if (data_[x].degree > 0) {
@@ -135,28 +132,24 @@ class binomial_heap
       size_type get_new_top(); 
       
    public:
-      // FIXME Implement two more constructors: a range constructor (taking two
-      // iterators) and an initializer list constructor.
-      // DONE: Implemented range constructor
-
       /*
        * binomial_heap: Default constructor
        * Input: 
        * None
        * Output:
        * Instantiates an empty heap with Compare() as comparison function and 
-       * Item_Label() as the map
+       * Item_Map() as the map
        * Return Value:
        * None       
        */
-      binomial_heap (): compare_(Compare()), id_(Item_Label()) {};
+      binomial_heap (): compare_(Compare()), id_(Item_Map()) {};
       
       /*
        * binomial_heap: 3 argument constructor
        * Input: 
        * size_type n: number of elements in the heap initially
        * Compare &cmp: comparison function predicate
-       * Item_Label: Lambda function for map
+       * Item_Map: Lambda function for map
        * Output:
        * Instantiates a heap of n elements with given comparison function
        * and property map
@@ -164,9 +157,8 @@ class binomial_heap
        * None
        */
       binomial_heap (size_type n,
-            const Compare &cmp, const Item_Label& id) :
-            compare_(cmp), id_(id), index_array(n), top_(-1), head_(-1) 
-            //n_(0) - Keeping this until the design is fixed 
+            const Compare &cmp, const Item_Map& id) :
+            compare_{cmp}, id_{id}, index_array(n), top_{-1}, head_{-1} 
       { 
       }
       
@@ -176,7 +168,7 @@ class binomial_heap
        * ForwardIterator first: Iterator to the first element of a container 
        * ForwardIterator last: Iterator to the last element of a container
        * Compare &cmp: comparison function predicate
-       * Item_Label: Lambda function for map
+       * Item_Map: Lambda function for map
        * Output:
        * Instantiates a heap of n elements with given comparison function
        * and property map
@@ -185,9 +177,9 @@ class binomial_heap
        */
       template<typename ForwardIterator>
          binomial_heap (ForwardIterator first, ForwardIterator last,
-               const Compare &cmp, const Item_Label& id) :
-               index_array(std::distance(first, last)), compare_(cmp), 
-              id_(id), top_(-1), head_(-1) //, n_(0)
+               const Compare &cmp, const Item_Map& id) :
+               index_array(std::distance(first, last)), compare_{cmp}, 
+               id_{id}, top_{-1}, head_{-1}
       {
          while(first != last) {
             push(*first);
@@ -254,7 +246,8 @@ class binomial_heap
        * Return Value:
        * value_type &: Reference to the top element is retured
        */
-      value_type& top() {
+      value_type& top()
+      {
          return elements_[data_[top_].item_index];
       }
       
@@ -267,7 +260,8 @@ class binomial_heap
        * Return Value:
        * value_type &: Reference to the top element is retured
        */
-      const value_type& top() const {
+      const value_type& top() const
+      {
          return elements_[data_[top_].item_index];
       }
       
@@ -280,8 +274,8 @@ class binomial_heap
        * Return Value:
        * bool : True if heap is empty, False otherwise
        */
-      bool empty() const {
-         //return n_==0;
+      bool empty() const
+      {
          return elements_.size()==0;
       }
       
@@ -294,8 +288,8 @@ class binomial_heap
        * Return Value:
        * size_type : Number of elements
        */
-      inline size_type size() const {
-         //return n_;
+      inline size_type size() const
+      {
          return elements_.size();
       }
       
@@ -313,9 +307,9 @@ class binomial_heap
 
 template <class T, 
           class Compare,
-          class Item_Label>
-typename binomial_heap<T, Compare, Item_Label>::size_type 
-binomial_heap<T, Compare, Item_Label>::get_new_top()
+          class Item_Map>
+typename binomial_heap<T, Compare, Item_Map>::size_type 
+binomial_heap<T, Compare, Item_Map>::get_new_top()
 {
    size_type top_index;
    size_type tmp;
@@ -340,12 +334,11 @@ binomial_heap<T, Compare, Item_Label>::get_new_top()
 
 template <class T, 
           class Compare,
-          class Item_Label>
-void binomial_heap<T, Compare, Item_Label>::push(const value_type& d)
+          class Item_Map>
+void binomial_heap<T, Compare, Item_Map>::push(const value_type& d)
 {
    binomial_heap_node obj;
    size_type index;
-   //n_++;
   
    elements_.push_back(d);
 
@@ -375,8 +368,8 @@ void binomial_heap<T, Compare, Item_Label>::push(const value_type& d)
 
 template <class T, 
           class Compare,
-          class Item_Label>
-void binomial_heap<T, Compare, Item_Label>::update(const value_type& d)
+          class Item_Map>
+void binomial_heap<T, Compare, Item_Map>::update(const value_type& d)
 {
    size_type index = index_array[id_(d)];
    size_type parent = data_[index].parent;
@@ -406,8 +399,8 @@ void binomial_heap<T, Compare, Item_Label>::update(const value_type& d)
 
 template <class T, 
           class Compare,
-          class Item_Label>
-void binomial_heap<T, Compare, Item_Label>::merge (size_type index)
+          class Item_Map>
+void binomial_heap<T, Compare, Item_Map>::merge (size_type index)
 {
    size_type p = head_;
    size_type q = index;
@@ -443,8 +436,8 @@ void binomial_heap<T, Compare, Item_Label>::merge (size_type index)
 
 template <class T, 
           class Compare,
-          class Item_Label>
-void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index)
+          class Item_Map>
+void binomial_heap<T, Compare, Item_Map>::binomial_heap_union (size_type index)
 {
    /* Merge the root lists */
    merge(index);
@@ -466,7 +459,7 @@ void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index
       } else {
          if (compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
             data_[x].right_sibling = data_[next_x].right_sibling;
-            binomial_link(data_, next_x, x);
+            binomial_link(data_[next_x], data_[x], next_x, x);
          } else {
             if (prev_x == -1) {
                head_ = next_x;
@@ -474,7 +467,7 @@ void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index
                data_[prev_x].right_sibling = next_x;
             }
             
-            binomial_link(data_, x, next_x);
+            binomial_link(data_[x], data_[next_x], x, next_x);
             x = next_x;
          }
       }
@@ -486,8 +479,8 @@ void binomial_heap<T, Compare, Item_Label>::binomial_heap_union (size_type index
 
 template <class T, 
           class Compare,
-          class Item_Label>
-void binomial_heap<T, Compare, Item_Label>::pop()
+          class Item_Map>
+void binomial_heap<T, Compare, Item_Map>::pop()
 {
    size_type new_head = -1;
    
@@ -547,14 +540,13 @@ void binomial_heap<T, Compare, Item_Label>::pop()
 
    elements_.pop_back();
 
-//   --n_;
 }
 
 template <class T, 
           class Compare,
-          class Item_Label>
+          class Item_Map>
    template<typename Char, typename Traits>
-void binomial_heap<T, Compare, Item_Label>::print(std::basic_ostream<Char, Traits>& os)
+void binomial_heap<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
 {
    if (head_ != -1) {
       size_type i = head_;
@@ -577,12 +569,12 @@ void binomial_heap<T, Compare, Item_Label>::print(std::basic_ostream<Char, Trait
  * Return Value:
  * None
 */
-void binomial_link (std::vector<binomial_heap_node>& data_, size_t y, size_t z) {
-   data_[y].parent = z;
-   data_[y].right_sibling = data_[z].child;
-   data_[z].child = y;
-   data_[z].degree = data_[z].degree + 1;
+void binomial_link (binomial_heap_node& node1, binomial_heap_node& node2, size_t index1, size_t index2)
+{
+   node1.parent = index2;
+   node1.right_sibling = node2.child;
+   node2.child = index1;
+   node2.degree = node2.degree + 1;
 }
    
-
 #endif // ORIGIN_HEAPS_BINOMIAL_HEAP_HPP
