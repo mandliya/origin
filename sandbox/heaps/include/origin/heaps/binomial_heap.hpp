@@ -640,9 +640,6 @@ namespace origin
             search_impl impl;
     };
 
-
-    //FIXME: This implementation is not correct
-
     /*
      * Binomial Heap Implementation in case of no external map
      */

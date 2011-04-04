@@ -353,11 +353,13 @@ namespace origin
         }
     }
 
-
-
+    /*
+     * Binary Heap implementation used when an external map is provided
+     * by the user
+     */
     template <class T, 
               class Compare,
-              class Item_Map = default_t>
+              class Item_Map = default_t> 
     class mutable_binary_heap
     {
         public:
@@ -382,18 +384,18 @@ namespace origin
             {}
  
             void update(const value_type& d) 
-            {
-                impl.update(d);
+            { 
+                impl.update(d); 
             }
           
             void push(const value_type& d)
-            {
-                impl.push(d);
+            { 
+                impl.push(d); 
             }
           
             value_type& top()
             {
-                return impl.top(); 
+               return impl.top(); 
             }
           
             const value_type& top() const
@@ -403,27 +405,26 @@ namespace origin
           
             bool empty() const
             {
-                return impl.empty(); 
+               return impl.empty(); 
             }
           
-            size_type size() const
+            inline size_type size() const
             {
-                return impl.size();
+               return impl.size();
             }
           
             void pop()
-            {
-                return impl.pop();
+            { 
+                impl.pop();
             }
           
         protected:
             search_impl impl;
-
     };
 
-
-    //FIXME: This implementation is not correct
-
+    /*
+     * Binaryl Heap Implementation in case of no external map
+     */
     template <class T, 
               class Compare>
     class mutable_binary_heap<T, Compare, default_t>
@@ -436,16 +437,16 @@ namespace origin
         protected:
             typedef typename std::unordered_map<value_type, size_type> internal_map;
             struct item_map {
-                internal_map imap;
+                internal_map *imap;
 
                 public:
-                item_map (internal_map &map): imap(map) 
+                item_map (internal_map *map): imap(map) 
                 {}
                 
                 template<typename value_type>
                 size_type operator() (const value_type& key)
                 {
-                    return imap[key];
+                    return (*imap)[key];
                 }
             };
 
@@ -457,15 +458,23 @@ namespace origin
             {};
             
             mutable_binary_heap (size_type n,
-                const Compare& cmp): id_(map_), impl (n, cmp, id_)
+                const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
               
-            {}
+            { 
+                for (int  x = n - 1; x >= 0; x --) {
+                    free_indexes.push_back(x);
+                }
+            }
             
             template<typename ForwardIterator>
             mutable_binary_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
-            {}
+            {
+                for (int x = std::distance(first, last) - 1; x >= 0; x --) {
+                    free_indexes.push_back(x);
+                }
+            }
  
             /*
              * The assumption is that heap never stores the actual value. It 
@@ -479,7 +488,8 @@ namespace origin
           
             void push(const value_type& d)
             {   
-                map_[d] = impl.size();
+                map_[d] = free_indexes.back();
+                free_indexes.pop_back();
                 impl.push(d); 
             }
           
@@ -505,14 +515,24 @@ namespace origin
           
             void pop()
             {   
-                //map_.erase(impl.top);
-                return impl.pop();
+                const value_type top_element = impl.top();
+                size_type free_index  = map_[top_element];
+                impl.pop();
+                free_indexes.push_back(free_index);
+                map_.erase(top_element);
             }
-          
+            
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os) 
+            {
+                impl.print(os);
+            }
+                
         protected:
             internal_map map_;
             item_map id_;
             search_impl impl;
+            std::vector<size_type> free_indexes;
 
     };
 
