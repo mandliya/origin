@@ -27,7 +27,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    class binary_heap_impl
+    class mutable_binary_heap_impl
     {
         private:
             // FIXME: Value type should be "T const" for mutable priority queues.
@@ -76,17 +76,17 @@ namespace origin
         public:
 			
             /*
-             * binary_heap_impl: Default constructor
+             * mutable_binary_heap_impl: Default constructor
              * Input: 
              * None
              * Output:
              * Return Value:
              * None       
              */
-            binary_heap_impl () {};
+            mutable_binary_heap_impl () {};
             
             /*
-             * binary_heap_impl: 3 argument constructor
+             * mutable_binary_heap_impl: 3 argument constructor
              * Input: 
              * size_type n: number of elements in the heap initially
              * Compare &cmp: comparison function predicate
@@ -97,14 +97,14 @@ namespace origin
              * Return Value:
              * None
              */
-            binary_heap_impl (size_type n,
+            mutable_binary_heap_impl (size_type n,
                   const Compare &cmp, const Item_Map& id) :
                   compare_{cmp}, id_{id}, index_array(n)
             { 
             }
             
             /*
-             * binary_heap_impl: range based constructor
+             * mutable_binary_heap_impl: range based constructor
              * Input: 
              * ForwardIterator first: Iterator to the first element of a container 
              * ForwardIterator last: Iterator to the last element of a container
@@ -117,7 +117,7 @@ namespace origin
              * None       
              */
             template<typename ForwardIterator>
-            binary_heap_impl (ForwardIterator first, ForwardIterator last,
+            mutable_binary_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
                    index_array(std::distance(first, last)), compare_{cmp}, 
                    id_{id}
@@ -150,10 +150,7 @@ namespace origin
              */
             value_type& top()
             {
-                if(!empty())
-                    return elements_[0];
-                else
-                    return NULL;
+                return elements_[0];
             }
             
             /*
@@ -167,10 +164,7 @@ namespace origin
              */
             const value_type& top() const
             {
-                if(!empty())
-                    return elements_[0];
-                else
-                    return NULL;
+                return elements_[0];
             }
             
             /*
@@ -229,11 +223,8 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binary_heap_impl<T, Compare, Item_Map>::swap_elements (size_type index1, size_type index2)
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::swap_elements (size_type index1, size_type index2)
     {
-        if ((index1 < elements_.size()) || (index2 < elements_.size()))
-            return;
- 
         value_type temp_element;
         size_type temp_index;
  	   
@@ -255,7 +246,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binary_heap_impl<T, Compare, Item_Map>::push(const value_type& d)
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::push(const value_type& d)
     {
         /* Push element into the heap structure */
         elements_.push_back(d);
@@ -287,25 +278,24 @@ namespace origin
             else
                 break;
         }
+         
     }
 
     template <class T, 
               class Compare,
               class Item_Map>
-    void binary_heap_impl<T, Compare, Item_Map>::heapify (size_type parent)
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::heapify (size_type parent)
     {
         size_type total_size = elements_.size();
-        if (parent < total_size);
- 	        return;
  
         size_type new_parent = parent;
-        size_type left_child = 2 * parent;
-        size_type right_child = 2 * parent + 1;
+        size_type left_child = 2 * parent + 1;
+        size_type right_child = 2 * parent + 2;
  	   
-        if ((left_child < total_size) && (compare_(elements_[parent], elements_[left_child]))) {
+        if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
             new_parent = left_child;
         }
-        if ((right_child < total_size) && (compare_(elements_[new_parent], elements_[right_child]))) {
+        if ((right_child < total_size) && (compare_(elements_[right_child],elements_[new_parent]))) {
             new_parent = right_child;
         }
         if (parent != new_parent) {
@@ -317,11 +307,8 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binary_heap_impl<T, Compare, Item_Map>::pop()
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::pop()
     {    
-        if (empty())
-            return;
- 
         /* swap root with last element and delete old root */
         swap_elements(0, elements_.size()-1);
  
@@ -336,7 +323,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binary_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
     {
         /* update the element with the new value */
         size_type index = index_array[id_(d)];
@@ -371,25 +358,25 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map = default_t>
-    class binary_heap
+    class mutable_binary_heap
     {
         public:
             typedef T value_type;
             typedef size_t size_type;
         
         protected:
-            typedef binary_heap_impl<value_type, Compare, Item_Map> search_impl;
+            typedef mutable_binary_heap_impl<value_type, Compare, Item_Map> search_impl;
             
         public:
-            binary_heap(): impl() 
+            mutable_binary_heap(): impl() 
             {}
             
-            binary_heap (size_type n,
+            mutable_binary_heap (size_type n,
                 const Compare& cmp, const Item_Map& id) : impl(n, cmp, id)
             {}
             
             template<typename ForwardIterator>
-            binary_heap (ForwardIterator first, ForwardIterator last,
+            mutable_binary_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp, const Item_Map& id):
                            impl (first, last, cmp, id)
             {}
@@ -439,7 +426,7 @@ namespace origin
 
     template <class T, 
               class Compare>
-    class binary_heap<T, Compare, default_t>
+    class mutable_binary_heap<T, Compare, default_t>
     {
  
         public:
@@ -463,19 +450,19 @@ namespace origin
             };
 
 
-            typedef binary_heap_impl<value_type, Compare, item_map> search_impl;
+            typedef mutable_binary_heap_impl<value_type, Compare, item_map> search_impl;
 
         public:
-            binary_heap() 
+            mutable_binary_heap() 
             {};
             
-            binary_heap (size_type n,
+            mutable_binary_heap (size_type n,
                 const Compare& cmp): id_(map_), impl (n, cmp, id_)
               
             {}
             
             template<typename ForwardIterator>
-            binary_heap (ForwardIterator first, ForwardIterator last,
+            mutable_binary_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
             {}

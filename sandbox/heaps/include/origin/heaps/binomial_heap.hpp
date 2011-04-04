@@ -43,10 +43,10 @@ namespace origin
           
           /* Degree of the element */
           size_t degree;
-          binomial_heap_node ():parent{size_t(-1)}, child{size_t(-1)}, right_sibling{size_t(-1)}, degree{size_t(0)} {};
+          binomial_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, degree{0} {};
     };
     
-    /* Class: Binomial Heap 
+    /* Class: Mutable Binomial Heap 
      * Template parameters
      * T : Value type - Type of data to be stored in the heap
      * Compare : Binary function predicate - This gives the ordering between the
@@ -56,8 +56,8 @@ namespace origin
      */
     template <class T, 
               class Compare,
-              class Item_Map> // This label is not a final design
-    class binomial_heap_impl
+              class Item_Map> 
+    class mutable_binomial_heap_impl
     {
        private:
           // FIXME: Value type should be "T const" for mutable priority queues.
@@ -95,7 +95,7 @@ namespace origin
            */
           void print_recur(size_type x, std::ostream& os)
           {
-             if (x != -1) {
+             if (x != size_type (-1)) {
                 os << elements_[data_[x].item_index];
                 if (data_[x].degree > 0) {
                    os << "(";
@@ -104,7 +104,7 @@ namespace origin
                       print_recur (i, os);
                       os << " ";
                       i = data_[i].right_sibling;
-                   } while (i != -1);
+                   } while (i != size_type(-1));
                    os << ")";
                 }
              }
@@ -122,7 +122,7 @@ namespace origin
           void merge (size_type index);
 
           /*
-           * binomial_heap_union: Unites the heap pointed to by head_ with 
+           * mutable_binomial_heap_union: Unites the heap pointed to by head_ with 
            * the heap specified
            * Input: 
            * size_type index: Index of the root element of the heap to be united
@@ -131,7 +131,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          void binomial_heap_union (size_type index);
+          void mutable_binomial_heap_union (size_type index);
            
           /*
            * get_new_top: Function to find the index of new root element
@@ -146,17 +146,17 @@ namespace origin
           
        public:
           /*
-           * binomial_heap_impl: Default constructor
+           * mutable_binomial_heap_impl: Default constructor
            * Input: 
            * None
            * Output:
            * Return Value:
            * None       
            */
-          binomial_heap_impl () {};
+          mutable_binomial_heap_impl () {};
           
           /*
-           * binomial_heap_impl: 3 argument constructor
+           * mutable_binomial_heap_impl: 3 argument constructor
            * Input: 
            * size_type n: number of elements in the heap initially
            * Compare &cmp: comparison function predicate
@@ -167,14 +167,14 @@ namespace origin
            * Return Value:
            * None
            */
-          binomial_heap_impl (size_type n,
+          mutable_binomial_heap_impl (size_type n,
                 const Compare &cmp, const Item_Map& id) :
                 compare_{cmp}, id_{id}, index_array(n), top_{-1}, head_{-1} 
           { 
           }
           
           /*
-           * binomial_heap_impl: range based constructor
+           * mutable_binomial_heap_impl: range based constructor
            * Input: 
            * ForwardIterator first: Iterator to the first element of a container 
            * ForwardIterator last: Iterator to the last element of a container
@@ -187,7 +187,7 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             binomial_heap_impl (ForwardIterator first, ForwardIterator last,
+             mutable_binomial_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
                    index_array(std::distance(first, last)), compare_{cmp}, 
                    id_{id}, top_{-1}, head_{-1}
@@ -308,8 +308,8 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    typename binomial_heap_impl<T, Compare, Item_Map>::size_type 
-    binomial_heap_impl<T, Compare, Item_Map>::get_new_top()
+    typename mutable_binomial_heap_impl<T, Compare, Item_Map>::size_type 
+    mutable_binomial_heap_impl<T, Compare, Item_Map>::get_new_top()
     {
        size_type top_index;
        size_type tmp;
@@ -335,7 +335,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binomial_heap_impl<T, Compare, Item_Map>::push(const value_type& d)
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::push(const value_type& d)
     {
        binomial_heap_node obj;
        size_type index;
@@ -359,7 +359,7 @@ namespace origin
           top_ = head_;
        } else {
           /* Unite the 1 element heap with the existing heap */
-          binomial_heap_union(index);
+          mutable_binomial_heap_union(index);
           if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
              top_ = index;
        }
@@ -369,7 +369,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binomial_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
     {
        size_type index = index_array[id_(d)];
        size_type parent = data_[index].parent;
@@ -400,7 +400,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binomial_heap_impl<T, Compare, Item_Map>::merge (size_type index)
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::merge (size_type index)
     {
        size_type p = head_;
        size_type q = index;
@@ -430,7 +430,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binomial_heap_impl<T, Compare, Item_Map>::binomial_heap_union (size_type index)
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::mutable_binomial_heap_union (size_type index)
     {
        /* Merge the root lists */
        merge(index);
@@ -473,7 +473,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void binomial_heap_impl<T, Compare, Item_Map>::pop()
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::pop()
     {
        size_type new_head = size_type(-1);
        
@@ -511,43 +511,44 @@ namespace origin
              data_[tmp].right_sibling = data_[top_].right_sibling;
           }
           
-          binomial_heap_union(new_head);
+          mutable_binomial_heap_union(new_head);
        }
        
-       top_ = get_new_top();
     
        // where in data_ old top element was stored
        size_type index = index_array[id_(elements_[elements_.size()-1])];
     
-       // copy the last element to location of old root
-       elements_[temp] = elements_[elements_.size()-1];
+       // copy the last element to location of old top element
+       elements_[data_[temp].item_index] = elements_[elements_.size()-1];
     
        //point the item_index of the old element to correct location
-       data_[index].item_index = temp;
+       data_[index].item_index = data_[temp].item_index;
     
        // Invalidating the entries of node
        data_[temp].parent = -1;
        data_[temp].child = -1;
        data_[temp].right_sibling = -1;
        data_[temp].degree = 0;
+       data_[temp].item_index = -1;
     
        elements_.pop_back();
     
+       top_ = get_new_top();
     }
     
     template <class T, 
               class Compare,
               class Item_Map>
        template<typename Char, typename Traits>
-    void binomial_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
+    void mutable_binomial_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
     {
-       if (head_ != -1) {
+       if (head_ != size_type(-1)) {
           size_type i = head_;
           do {
              print_recur(i, os);
              os << std::endl;
              i = data_[i].right_sibling;
-          } while (i != -1);
+          } while (i != size_type(-1));
        }
     }
     
@@ -570,37 +571,45 @@ namespace origin
        node2.degree = node2.degree + 1;
     }
 
+    /*
+     * Binomial Heap implementation used when an external map is provided
+     * by the user
+     */
     template <class T, 
               class Compare,
-              class Item_Map = default_t> // This label is not a final design
-    class binomial_heap
+              class Item_Map = default_t> 
+    class mutable_binomial_heap
     {
         public:
             typedef T value_type;
             typedef size_t size_type;
         
         protected:
-            typedef binomial_heap_impl<value_type, Compare, Item_Map> search_impl;
+            typedef mutable_binomial_heap_impl<value_type, Compare, Item_Map> search_impl;
             
         public:
-            binomial_heap(): impl() 
+            mutable_binomial_heap(): impl() 
             {}
             
-            binomial_heap (size_type n,
+            mutable_binomial_heap (size_type n,
                 const Compare& cmp, const Item_Map& id) : impl(n, cmp, id)
             {}
             
             template<typename ForwardIterator>
-            binomial_heap (ForwardIterator first, ForwardIterator last,
+            mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp, const Item_Map& id):
                            impl (first, last, cmp, id)
             {}
  
             void update(const value_type& d) 
-            { impl.update(d); }
+            { 
+                impl.update(d); 
+            }
           
             void push(const value_type& d)
-            { impl.push(d); }
+            { 
+                impl.push(d); 
+            }
           
             value_type& top()
             {
@@ -623,19 +632,23 @@ namespace origin
             }
           
             void pop()
-            { return impl.pop();}
+            { 
+                impl.pop();
+            }
           
         protected:
             search_impl impl;
-
     };
 
 
     //FIXME: This implementation is not correct
 
+    /*
+     * Binomial Heap Implementation in case of no external map
+     */
     template <class T, 
               class Compare>
-    class binomial_heap<T, Compare, default_t>
+    class mutable_binomial_heap<T, Compare, default_t>
     {
  
         public:
@@ -645,36 +658,44 @@ namespace origin
         protected:
             typedef typename std::unordered_map<value_type, size_type> internal_map;
             struct item_map {
-                internal_map imap;
+                internal_map *imap;
 
                 public:
-                item_map (internal_map &map): imap(map) 
+                item_map (internal_map *map): imap(map) 
                 {}
                 
                 template<typename value_type>
                 size_type operator() (const value_type& key)
                 {
-                    return imap[key];
+                    return (*imap)[key];
                 }
             };
 
 
-            typedef binomial_heap_impl<value_type, Compare, item_map> search_impl;
+            typedef mutable_binomial_heap_impl<value_type, Compare, item_map> search_impl;
 
         public:
-            binomial_heap() 
+            mutable_binomial_heap() 
             {};
             
-            binomial_heap (size_type n,
-                const Compare& cmp): id_(map_), impl (n, cmp, id_)
+            mutable_binomial_heap (size_type n,
+                const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
               
-            {}
+            { 
+                for (int  x = n - 1; x >= 0; x --) {
+                    free_indexes.push_back(x);
+                }
+            }
             
             template<typename ForwardIterator>
-            binomial_heap (ForwardIterator first, ForwardIterator last,
+            mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
-            {}
+            {
+                for (int x = std::distance(first, last) - 1; x >= 0; x --) {
+                    free_indexes.push_back(x);
+                }
+            }
  
             /*
              * The assumption is that heap never stores the actual value. It 
@@ -688,7 +709,8 @@ namespace origin
           
             void push(const value_type& d)
             {   
-                map_[d] = impl.size();
+                map_[d] = free_indexes.back();
+                free_indexes.pop_back();
                 impl.push(d); 
             }
           
@@ -714,15 +736,26 @@ namespace origin
           
             void pop()
             {   
-                //map_.erase(impl.top);
-                return impl.pop();
+                const value_type top_element = impl.top();
+                size_type free_index  = map_[top_element];
+                impl.pop();
+                free_indexes.push_back(free_index);
+                map_.erase(top_element);
             }
-          
+            
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os) 
+            {
+                impl.print(os);
+            }
+                
         protected:
             internal_map map_;
             item_map id_;
             search_impl impl;
+            std::vector<size_type> free_indexes;
 
     };
+
 }
 #endif // ORIGIN_HEAPS_BINOMIAL_HEAP_HPP
