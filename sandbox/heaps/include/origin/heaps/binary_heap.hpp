@@ -408,7 +408,7 @@ namespace origin
                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
                return impl.size();
             }
@@ -508,7 +508,7 @@ namespace origin
                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
                return impl.size();
             }
@@ -521,13 +521,7 @@ namespace origin
                 free_indexes.push_back(free_index);
                 map_.erase(top_element);
             }
-            
-            template<typename Char, typename Traits>
-            void print(std::basic_ostream<Char, Traits>& os) 
-            {
-                impl.print(os);
-            }
-                
+                            
         protected:
             internal_map map_;
             item_map id_;
