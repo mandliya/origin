@@ -75,7 +75,6 @@ namespace origin
           
           Compare compare_;
           Item_Map id_;
-          IndexArray index_array;
           
           /*
            * head_ - index of the root element
@@ -169,7 +168,7 @@ namespace origin
            */
           mutable_binomial_heap_impl (size_type n,
                 const Compare &cmp, const Item_Map& id) :
-                compare_{cmp}, id_{id}, index_array(n), top_{-1}, head_{-1} 
+                compare_{cmp}, id_{id}, top_{-1}, head_{-1} 
           { 
           }
           
@@ -189,7 +188,7 @@ namespace origin
           template<typename ForwardIterator>
              mutable_binomial_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
-                   index_array(std::distance(first, last)), compare_{cmp}, 
+                   compare_{cmp}, 
                    id_{id}, top_{-1}, head_{-1}
           {
              while(first != last) {
@@ -352,7 +351,7 @@ namespace origin
        
        index = data_.size() - 1;
        
-       index_array[id_(d)] = index;
+       id_(d) = index;
        if (head_ == size_type(-1)) {
           /* New heap */
           head_ = index;
@@ -371,7 +370,7 @@ namespace origin
               class Item_Map>
     void mutable_binomial_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
     {
-       size_type index = index_array[id_(d)];
+       size_type index = id_(d);
        size_type parent = data_[index].parent;
        size_type temp;
        elements_[data_[index].item_index] = d;
@@ -380,16 +379,14 @@ namespace origin
              compare_(d, elements_[data_[parent].item_index])) {
           elements_[data_[index].item_index] = elements_[data_[parent].item_index];
           elements_[data_[parent].item_index] = d;
-          temp = id_(elements_[data_[index].item_index]);
-          index_array[temp] = index;
+
+          id_(elements_[data_[index].item_index]) = index;
           
           index = parent;
           parent = data_[parent].parent;
        }
-       
-       temp = id_(d);
-       
-       index_array[temp] = index;
+
+       id_(d) = index;
        
        if (compare_(d, elements_[data_[top_].item_index])) {
           top_ = index;
@@ -516,7 +513,7 @@ namespace origin
        
     
        // where in data_ old top element was stored
-       size_type index = index_array[id_(elements_[elements_.size()-1])];
+       size_type index = id_(elements_[elements_.size()-1]);
     
        // copy the last element to location of old top element
        elements_[data_[temp].item_index] = elements_[elements_.size()-1];
@@ -662,7 +659,7 @@ namespace origin
                 {}
                 
                 template<typename value_type>
-                size_type operator() (const value_type& key)
+                size_type & operator() (const value_type& key)
                 {
                     return (*imap)[key];
                 }
@@ -679,9 +676,6 @@ namespace origin
                 const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
               
             { 
-                for (int  x = n - 1; x >= 0; x --) {
-                    free_indexes.push_back(x);
-                }
             }
             
             template<typename ForwardIterator>
@@ -689,9 +683,6 @@ namespace origin
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
             {
-                for (int x = std::distance(first, last) - 1; x >= 0; x --) {
-                    free_indexes.push_back(x);
-                }
             }
  
             /*
@@ -706,8 +697,6 @@ namespace origin
           
             void push(const value_type& d)
             {   
-                map_[d] = free_indexes.back();
-                free_indexes.pop_back();
                 impl.push(d); 
             }
           
@@ -734,9 +723,7 @@ namespace origin
             void pop()
             {   
                 const value_type top_element = impl.top();
-                size_type free_index  = map_[top_element];
                 impl.pop();
-                free_indexes.push_back(free_index);
                 map_.erase(top_element);
             }
             
@@ -750,7 +737,6 @@ namespace origin
             internal_map map_;
             item_map id_;
             search_impl impl;
-            std::vector<size_type> free_indexes;
 
     };
 
