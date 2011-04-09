@@ -33,21 +33,16 @@ namespace origin
             // FIXME: Value type should be "T const" for mutable priority queues.
             typedef T value_type; //TODO: Will address then when we write Immutable heap 
             typedef size_t size_type;
-            typedef std::vector<size_type> IndexArray;
             
             /* Random access container which holds the heap elements */
             std::vector<T> elements_;
-  	  
+
             /* Internal map for mapping the values stored in the external map
              * to actual index of the element in the heap
              */
             
             Compare compare_;
             Item_Map id_;
-            IndexArray index_array;
-  		  
-            /* Mapping Elements to internal map - i.e. reverse mapping of index_array */
-            IndexArray rev_index_array;
 
             /*
              * heapify: Function to heapify after root is swapped with last element
@@ -72,9 +67,9 @@ namespace origin
              */
             void swap_elements (size_type index1, size_type index2);
 
-			
+
         public:
-			
+
             /*
              * mutable_binary_heap_impl: Default constructor
              * Input: 
@@ -99,7 +94,7 @@ namespace origin
              */
             mutable_binary_heap_impl (size_type n,
                   const Compare &cmp, const Item_Map& id) :
-                  compare_{cmp}, id_{id}, index_array(n)
+                  compare_{cmp}, id_{id}
             { 
             }
             
@@ -119,8 +114,7 @@ namespace origin
             template<typename ForwardIterator>
             mutable_binary_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
-                   index_array(std::distance(first, last)), compare_{cmp}, 
-                   id_{id}
+                   compare_{cmp}, id_{id}
             {
                 while(first != last) {
                     push(*first);
@@ -194,7 +188,7 @@ namespace origin
             {
                 return elements_.size();
             }
-  		  
+
             /*
              * pop: Removes the top element from the heap
              * Input: 
@@ -227,20 +221,15 @@ namespace origin
     {
         value_type temp_element;
         size_type temp_index;
- 	   
+
         /* swap two elements in the heap structure */
         temp_element = elements_[index1];
         elements_[index1] = elements_[index2];
         elements_[index2] = temp_element;
- 		
-        /* change internal map accordingly */
-        index_array[rev_index_array[index1]] = index2;
-        index_array[rev_index_array[index2]] = index1;
- 
-        /* swap two elements in the reverse internal map */
-        temp_index = rev_index_array[index1];
-        rev_index_array[index1] = rev_index_array[index2];
-        rev_index_array[index2] = temp_index;
+
+        /* change external map values accordingly */
+        id_(elements_[index1]) = index1;
+        id_(elements_[index2]) = index2;
     }
 
     template <class T, 
@@ -257,13 +246,8 @@ namespace origin
         size_type index;
         index = elements_.size() - 1;
  
-        size_type rev_index;
-        rev_index = id_(d);
-        index_array[rev_index] = index;
- 
-        /* store the index of the internal map in the reverse map */
-        rev_index_array.push_back(rev_index);
- 	   
+        id_(d) = index;
+  
         /* move the element up the heap till condition satisfied */
         while (index > 0){
             parent_index = (index - 1) / 2;
@@ -291,7 +275,7 @@ namespace origin
         size_type new_parent = parent;
         size_type left_child = 2 * parent + 1;
         size_type right_child = 2 * parent + 2;
- 	   
+
         if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
             new_parent = left_child;
         }
@@ -300,7 +284,7 @@ namespace origin
         }
         if (parent != new_parent) {
             swap_elements(parent, new_parent);
- 		    heapify(new_parent);
+            heapify(new_parent);
         }
     }
 
@@ -313,7 +297,6 @@ namespace origin
         swap_elements(0, elements_.size()-1);
  
         elements_.pop_back();
-        rev_index_array.pop_back();
  
         /* Find correct position for new root*/
         heapify(0);
@@ -326,7 +309,7 @@ namespace origin
     void mutable_binary_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
     {
         /* update the element with the new value */
-        size_type index = index_array[id_(d)];
+        size_type index = id_(d);
         elements_[index] = d;
  
         size_type parent_index = (index - 1) / 2;
@@ -343,10 +326,10 @@ namespace origin
                     /* new index will be the parents index */
                     index = parent_index;
                 }
-      		    else
+                else
                     break;
             }
-        }	   
+        }
         /* else, element may need to move down the heap */
         else {
             heapify(index);
@@ -444,7 +427,7 @@ namespace origin
                 {}
                 
                 template<typename value_type>
-                size_type operator() (const value_type& key)
+                size_type& operator() (const value_type& key)
                 {
                     return (*imap)[key];
                 }
@@ -461,9 +444,6 @@ namespace origin
                 const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
               
             { 
-                for (int  x = n - 1; x >= 0; x --) {
-                    free_indexes.push_back(x);
-                }
             }
             
             template<typename ForwardIterator>
@@ -471,9 +451,6 @@ namespace origin
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
             {
-                for (int x = std::distance(first, last) - 1; x >= 0; x --) {
-                    free_indexes.push_back(x);
-                }
             }
  
             /*
@@ -488,8 +465,6 @@ namespace origin
           
             void push(const value_type& d)
             {   
-                map_[d] = free_indexes.back();
-                free_indexes.pop_back();
                 impl.push(d); 
             }
           
@@ -516,9 +491,7 @@ namespace origin
             void pop()
             {   
                 const value_type top_element = impl.top();
-                size_type free_index  = map_[top_element];
                 impl.pop();
-                free_indexes.push_back(free_index);
                 map_.erase(top_element);
             }
                             
@@ -526,7 +499,6 @@ namespace origin
             internal_map map_;
             item_map id_;
             search_impl impl;
-            std::vector<size_type> free_indexes;
 
     };
 
