@@ -30,8 +30,7 @@ namespace origin
     class mutable_binary_heap_impl
     {
         private:
-            // FIXME: Value type should be "T const" for mutable priority queues.
-            typedef T value_type; //TODO: Will address then when we write Immutable heap 
+            typedef T value_type;
             typedef size_t size_type;
 
             //Random access container which holds the heap elements
@@ -216,11 +215,8 @@ namespace origin
               class Item_Map>
     void mutable_binary_heap_impl<T, Compare, Item_Map>::swap_elements (size_type index1, size_type index2)
     {
-        value_type temp_element;
-        size_type temp_index;
-
         //swap two elements in the heap structure
-        temp_element = elements_[index1];
+        value_type temp_element = elements_[index1];
         elements_[index1] = elements_[index2];
         elements_[index2] = temp_element;
 
@@ -238,8 +234,6 @@ namespace origin
         elements_.push_back(d);
 
         size_type parent_index;
-
-        //store the position in the internal map
         size_type index;
         index = elements_.size() - 1;
 
@@ -270,19 +264,23 @@ namespace origin
         size_type total_size = elements_.size();
 
         size_type new_parent = parent;
-        size_type left_child = 2 * parent + 1;
-        size_type right_child = 2 * parent + 2;
+        size_type left_child;
+        size_type right_child;
 
-        if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
-            new_parent = left_child;
-        }
-        if ((right_child < total_size) && (compare_(elements_[right_child],elements_[new_parent]))) {
-            new_parent = right_child;
-        }
-        if (parent != new_parent) {
+        do{
             swap_elements(parent, new_parent);
-            heapify(new_parent);
-        }
+            parent = new_parent;
+
+            left_child = 2 * parent + 1;
+            right_child = 2 * parent + 2;
+        
+            if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
+                new_parent = left_child;
+            }
+            if ((right_child < total_size) && (compare_(elements_[right_child],elements_[new_parent]))) {
+                new_parent = right_child;
+            }
+        }while (parent != new_parent);
     }
 
     template <class T, 
@@ -508,8 +506,7 @@ namespace origin
     class binary_heap
     {
         private:
-            // FIXME: Value type should be "T const" for mutable priority queues.
-            typedef T value_type; //TODO: Will address then when we write Immutable heap 
+            typedef T const value_type; 
             typedef size_t size_type;
 
             //Random access container which holds the heap elements
@@ -675,14 +672,10 @@ namespace origin
               class Compare>
     void binary_heap<T, Compare>::swap_elements (size_type index1, size_type index2)
     {
-        value_type temp_element;
-        size_type temp_index;
-
         //swap two elements in the heap structure
-        temp_element = elements_[index1];
+        value_type temp_element = elements_[index1];
         elements_[index1] = elements_[index2];
         elements_[index2] = temp_element;
-
     }
 
     template <class T, 
@@ -693,8 +686,6 @@ namespace origin
         elements_.push_back(d);
 
         size_type parent_index;
-
-        //store the position in the internal map
         size_type index;
         index = elements_.size() - 1;
 
@@ -720,21 +711,25 @@ namespace origin
     void binary_heap<T, Compare>::heapify (size_type parent)
     {
         size_type total_size = elements_.size();
-
+        
         size_type new_parent = parent;
-        size_type left_child = 2 * parent + 1;
-        size_type right_child = 2 * parent + 2;
+        size_type left_child;
+        size_type right_child;
 
-        if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
-            new_parent = left_child;
-        }
-        if ((right_child < total_size) && (compare_(elements_[right_child],elements_[new_parent]))) {
-            new_parent = right_child;
-        }
-        if (parent != new_parent) {
+        do{
             swap_elements(parent, new_parent);
-            heapify(new_parent);
-        }
+            parent = new_parent;
+
+            left_child = 2 * parent + 1;
+            right_child = 2 * parent + 2;
+        
+            if ((left_child < total_size) && (compare_(elements_[left_child], elements_[parent]))) {
+                new_parent = left_child;
+            }
+            if ((right_child < total_size) && (compare_(elements_[right_child],elements_[new_parent]))) {
+                new_parent = right_child;
+            }
+        }while (parent != new_parent);
     }
 
     template <class T, 
