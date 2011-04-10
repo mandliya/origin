@@ -16,8 +16,9 @@ origin_component(
   VERSION 0.1.0
   DEPENDS core
   AUTHORS
-    Author 1 <author1 -at- address.foo>
-    Author 2 <author2 -at- address.foo>
+    Jagadish Chandar J. <jagadishchandar -at- gmail.com>
+    Rudrajit Tapadar    <rudrajit.tapadar -at- gmail.com>
+    Saurabh Mittal      <saurabh3122 -at- gmail.com>
 )
 
 add_subdirectory(tests)
