@@ -341,5 +341,14 @@ int main()
         std::cout<<"non-mutable binomial heap test failed \n";
     }
 
+    typedef binary_heap<int, ICmp> binary;
+ 
+    result = test_non_mutable_heap<binary>();
+    
+    if (result > 0) {
+        std::cout << "non-mutable binary heap passed test" << std::endl; 
+    } else {
+        std::cout<<"non-mutable binary heap test failed \n";
+    }
     return 0;
 }
