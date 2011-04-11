@@ -8,6 +8,8 @@
 #ifndef ORIGIN_HEAPS_FIBONACCI_HEAP_HPP
 #define ORIGIN_HEAPS_FIBONACCI_HEAP_HPP
 
+#include <cmath>
+#include <array>
 #include <vector>
 #include <iostream>
 #include <unordered_map>
@@ -15,6 +17,17 @@
 
 namespace origin
 {
+    /* Forward Declaration */
+    struct fibonacci_heap_node;
+    
+    /* Function Prototypes */
+    void fibonacci_link (fibonacci_heap_node&, fibonacci_heap_node&, 
+          fibonacci_heap_node&, fibonacci_heap_node&, size_t, size_t);
+   
+    /* Constant Expressions */
+    constexpr double phi() {return (1+sqrt(5))/2;}
+    constexpr double rec_log_phi() {return 1/log(phi());} // Reciprocal of naturallog(phi)
+
     /*
      * An adaptation of CLRS's Fibonacci heap implementation
      * in Chapter 19, 3rd Ed, pages .
@@ -119,6 +132,18 @@ namespace origin
            * None       
            */
           void merge (size_type index);
+          
+          /*
+           * consolidate: Function to consolidate
+           * Input: 
+           * size_type x : Index of the root element of the heap to be merged
+           * Output:
+           * Merges the heap pointed to by x in the main heap pointed to by head_
+           * Return Value:
+           * None       
+           */
+          void consolidate ();
+
 
           /*
            * mutable_fibonacci_heap_union: Unites the heap pointed to by head_ with 
@@ -303,13 +328,56 @@ namespace origin
            */
           void pop();
     };
-    
+     
+    template <class T, 
+              class Compare,
+              class Item_Map>
+    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::consolidate()
+    {
+       // Max Degree of fibonacci heap
+       size_type D = floor(rec_log_phi()*elements_.size())+1;
+
+       // Create an auxillary array of size D
+       std::vector<size_type> aux(D, -1);
+
+       size_type temp = head_;
+       size_type x, d, y;
+
+       do{
+          x = temp;
+          d = data_[d].degree;
+
+          while(aux[d] != -1) {
+             y = aux[d];
+             if(!compare_(elements_[data_[x].item_index], elements_[data_[y].item_index])) {
+                // Swap x, y
+                std::swap(data_[x].item_index, data_[y].item_index);
+             }
+
+             fibonacci_link(data_[data_[y].left_sibling], 
+                   data_[data_[y].right_sibling], data_[y], data_[x], y, x);
+             aux[d] = -1;
+             ++d;
+          }
+
+          aux[d] = x;
+
+          temp = data_[temp].right_sibling;
+       } while(temp != head_);
+
+       top_ = -1;
+
+       /* FIXME: Remaining to be completed tomorrow ;) */
+
+    }
+
     template <class T, 
               class Compare,
               class Item_Map>
     typename mutable_fibonacci_heap_impl<T, Compare, Item_Map>::size_type 
     mutable_fibonacci_heap_impl<T, Compare, Item_Map>::get_new_top()
     {
+       return 0;
     }
     
     
@@ -397,7 +465,34 @@ namespace origin
           } while (i != head_);
        }
     }
-    
+      
+    /*
+     * fibonacci_link: Links the specified nodes in the heap
+     * Input: 
+     * size_type y: element in the heap
+     * size_type z: element in the heap
+     * Output:
+     * links element y and z in the heap
+     * Return Value:
+     * None
+    */
+    void fibonacci_link (fibonacci_heap_node& y_left, fibonacci_heap_node& y_right, 
+          fibonacci_heap_node& y, fibonacci_heap_node& x, size_t y_index, size_t x_index)
+    {
+       // Remove node1 from the root list
+       y_left.right_sibling = y.right_sibling;
+       y_right.left_sibling = y.left_sibling;
+
+       // Make y a child of x
+       y.parent = x_index;
+       x.child = y_index;
+       ++x.degree;
+
+       // Unmark y
+       y.mark = false;
+    }
+
+   
     
     /*
      * Fibonacci Heap implementation used when an external map is provided
