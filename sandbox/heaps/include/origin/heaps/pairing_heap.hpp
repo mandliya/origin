@@ -16,11 +16,6 @@
 namespace origin
 {
     /* Forward Declaration */
-    struct pairing_heap_node;
-    
-    /* Function Prototypes */
-    void binomial_link (binomial_heap_node& node1, binomial_heap_node& node2, size_t index1, size_t index2);
-    
     struct pairing_heap_node
     {
        public:
@@ -38,9 +33,7 @@ namespace origin
           /* Index of the left neighbour of the element in the heap */
           size_t left_sibling;
           
-          /* Degree of the element */
-          size_t degree;
-          pairing_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, degree{0} {};
+          pairing_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, left_sibling{0} {};
     };
     
     /* Class: Mutable Pairing Heap 
@@ -59,38 +52,36 @@ namespace origin
        private:
           typedef T value_type;
           typedef size_t size_type;
-          typedef std::vector<size_type> IndexArray;
           
           /* Random access container which holds the heap elements */
           std::vector<T> elements_;
-          std::vector<binomial_heap_node> data_;
+          std::vector<pairing_heap_node> data_;
            
           Compare compare_;
           Item_Map id_;
           
           /*
-           * head_ - index of the root element
            * top_ - index of the top element
            */ 
           
-          size_type top_, head_;
+          size_type top_;
          
           /*
-           * print_recur: Helper function for displaying the binomial heap
+           * print_recur: Helper function for displaying the pairing heap
            * Input:
            * size_type x : Index of the element
            * ostresm &os : Reference to the ouput stream
            * Output:
-           * Prints the nodes for a particular binomial tree identified by x
+           * Prints the nodes for a particular pairing tree identified by x
            * Return Value: None       
            */
-          /*void print_recur(size_type x, std::ostream& os)
+          void print_recur(size_type x, std::ostream& os)
           {
              if (x != size_type (-1)) {
                 os << elements_[data_[x].item_index];
-                if (data_[x].degree > 0) {
+                size_type i = data_[x].child;
+                if (i != size_type(-1)) {
                    os << "(";
-                   size_type i = data_[x].child;
                    do {
                       print_recur (i, os);
                       os << " ";
@@ -99,55 +90,33 @@ namespace origin
                    os << ")";
                 }
              }
-          }*/
+          }
           
           /*
-           * merge: Function to merge two binomial heaps
+           * merge: Function to merge two pairing heaps
            * Input: 
-           * size_type x : Index of the root element of the heap to be merged
+           * size_type x : Index of the root element of the heap that will become left child 
+           * size_type y : Index of the root element of the heap that takes a new left child 
            * Output:
-           * Merges the heap pointed to by x in the main heap pointed to by head_
+           * Merges the heap pointed to by x to the heap pointed to by y
            * Return Value:
            * None       
            */
-          void merge (size_type index);
+          void merge (size_type index1, size_type index2);
 
-          /*
-           * mutable_binomial_heap_union: Unites the heap pointed to by head_ with 
-           * the heap specified
-           * Input: 
-           * size_type index: Index of the root element of the heap to be united
-           * Output:
-           * United binomial heap
-           * Return Value:
-           * None       
-           */
-          void mutable_pairing_heap_union (size_type index);
-           
-          /*
-           * get_new_top: Function to find the index of new root element
-           * Input: 
-           * None
-           * Output:
-           * Index of the new root
-           * Return Value:
-           * size_type: Index of the new root
-           */
-          size_type get_new_top(); 
-          
        public:
           /*
-           * mutable_binomial_heap_impl: Default constructor
+           * mutable_pairing_heap_impl: Default constructor
            * Input: 
            * None
            * Output:
            * Return Value:
            * None       
            */
-          mutable_binomial_heap_impl () {};
+          mutable_pairing_heap_impl () {};
           
           /*
-           * mutable_binomial_heap_impl: 3 argument constructor
+           * mutable_pairing_heap_impl: 3 argument constructor
            * Input: 
            * size_type n: number of elements in the heap initially
            * Compare &cmp: comparison function predicate
@@ -158,14 +127,14 @@ namespace origin
            * Return Value:
            * None
            */
-          mutable_binomial_heap_impl (size_type n,
+          mutable_pairing_heap_impl (size_type n,
                 const Compare &cmp, const Item_Map& id) :
-                compare_{cmp}, id_{id}, top_{-1}, head_{-1} 
+                compare_{cmp}, id_{id}, top_{-1} 
           { 
           }
           
           /*
-           * mutable_binomial_heap_impl: range based constructor
+           * mutable_pairing_heap_impl: range based constructor
            * Input: 
            * ForwardIterator first: Iterator to the first element of a container 
            * ForwardIterator last: Iterator to the last element of a container
@@ -178,10 +147,10 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             mutable_binomial_heap_impl (ForwardIterator first, ForwardIterator last,
+             mutable_pairing_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
                    compare_{cmp}, 
-                   id_{id}, top_{-1}, head_{-1}
+                   id_{id}, top_{-1}
           {
              while(first != last) {
                 push(*first);
@@ -190,11 +159,11 @@ namespace origin
           }
           
           /*
-           * print: Function for displaying the binomial heap
+           * print: Function for displaying the pairing heap
            * Input:
            * ostresm &os : Reference to the ouput stream
            * Output:
-           * Outputs the binomial heap to the specified output stream
+           * Outputs the pairing heap to the specified output stream
            * Return Value:
            * None       
            * Note: This a helper function developed for unit testing
@@ -289,39 +258,12 @@ namespace origin
            * Input: 
            * None
            * Output:
-           * binomial heap with a new top element
+           * pairing heap with a new top element
            * Return Value:
            * None
            */
           void pop();
     };
-    
-    template <class T, 
-              class Compare,
-              class Item_Map>
-    typename mutable_binomial_heap_impl<T, Compare, Item_Map>::size_type 
-    mutable_binomial_heap_impl<T, Compare, Item_Map>::get_new_top()
-    {
-       size_type top_index;
-       size_type tmp;
-       if (head_ == size_type(-1)) {
-          return -1;
-       }
-       
-       top_index = head_;
-       tmp = data_[top_index].right_sibling;
-       
-       while (tmp != size_type(-1)) {
-          if (compare_(elements_[data_[tmp].item_index], elements_[data_[top_index].item_index])) {
-             top_index = tmp;
-          }
-          
-          tmp = data_[tmp].right_sibling;
-       }
-       
-       return top_index;
-    }
-    
     
     template <class T, 
               class Compare,
@@ -339,7 +281,6 @@ namespace origin
         obj.right_sibling = size_type(-1);
         obj.left_sibling = size_type(-1);
         obj.child = size_type(-1);
-        obj.degree = 0;
        
         data_.push_back(obj);
        
@@ -347,14 +288,21 @@ namespace origin
        
         id_(d) = index;
 
-        if (head_ == size_type(-1)) {
-            //set head pointer and exit if this was the fist element
-            head_ = index;
-            top_ = head_;
+        if (top_ == size_type(-1)) {
+            //set top_ pointer and exit if this was the fist element
+            top_ = index;
         }
         else {
             //else, unite the 1 element heap with the existing heap
-            mutable_pairing_heap_union(index);
+            if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
+                //make existing root a left child of updated node
+                merge(top_, index);
+                top_ = index;
+            }
+            else{
+                //make new node a left child of the existing root
+                merge(index, top_);
+            }
         }
     }
     
@@ -362,7 +310,7 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
+    void mutable_pairing_heap_impl<T, Compare, Item_Map>::update(const value_type& d)
     {
         //update the value in internal structure
         size_type index = id_(d);
@@ -387,173 +335,170 @@ namespace origin
         if (right_sib != size_type(-1))
             data_[right_sib].left_sibling = left_sib;
 
-        //make modified node a new root
+        //make modified node a new heap 
         data_[index].parent = size_type(-1);
         data_[index].left_sibling = size_type(-1);
         data_[index].right_sibling = size_type(-1);
 
         //unite the new heap with the existing heap
-        mutable_pairing_heap_union(index);
-    }
-    
-    template <class T, 
-              class Compare,
-              class Item_Map>
-    void mutable_pairing_heap_impl<T, Compare, Item_Map>::mutable_pairing_heap_union (size_type index)
-    {
         if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
-            //make old root the child of the new node
-            data_[top_].parent = index;
-            data_[top_].right_sibling = data_[index].child;
-
-            if (data_[index].child != size_type(-1))
-                data_[index].left_sibling = top_;
-
-            data_[index].child = top_;
-
-            //make new node the new root
+            //make existing root a left child of updated node
+            merge(top_, index);
             top_ = index;
         }
         else{
-            //make new node the child of the old root
-            data_[index].parent = top_;
-            data_[index].right_sibling = data_[top_].child;
-
-            if (data_[top_].child != size_type(-1))
-                data_[top_].left_sibling = index;
-
-            data_[top_].child = index;
+            //make new node a left child of the existing root
+            merge(index, top_);
         }
     }
     
+    template <class T, 
+              class Compare,
+              class Item_Map>
+    void mutable_pairing_heap_impl<T, Compare, Item_Map>::merge(size_type index1, size_type index2)
+    {
+        //make index1 heap a left child of index2 heap
+        data_[index1].parent = index2;
+        data_[index1].right_sibling = data_[index2].child;
+
+        if (data_[index2].child != size_type(-1))
+            data_[data_[index2].child].left_sibling = index1;
+
+        data_[index2].child = index1;
+    }
+    
     
     template <class T, 
               class Compare,
               class Item_Map>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map>::pop()
+    void mutable_pairing_heap_impl<T, Compare, Item_Map>::pop()
     {
-       size_type new_head = size_type(-1);
-       
-       if (head_ == size_type(-1)) {
-          return;
-       }
-      
-       size_type temp = top_;
-    
-       /* Reverse the list */
-       if (data_[top_].child != size_type(-1)) {
-          size_type tmp_head = data_[top_].child;
-          size_type tmp_sibling;
-          
-          while (tmp_head != size_type(-1)) {
-             tmp_sibling = data_[tmp_head].right_sibling;
-             data_[tmp_head].parent = size_type(-1);
-             data_[tmp_head].right_sibling = new_head;
-             new_head = tmp_head;
-             tmp_head = tmp_sibling;
-          }
-       }
-       
-       if (data_[head_].right_sibling == size_type(-1)) {
-          head_ = new_head;
-       } else {
-          if (head_ == top_) {
-             head_ = data_[head_].right_sibling;
-          } else {
-             size_type tmp = head_;
-             while (data_[tmp].right_sibling != top_) {
-                tmp = data_[tmp].right_sibling;
-             }
-             
-             data_[tmp].right_sibling = data_[top_].right_sibling;
-          }
-          
-          mutable_binomial_heap_union(new_head);
-       }
-       
-    
-       // where in data_ old last element is stored
-       size_type index = id_(elements_[elements_.size()-1]);
-    
-       // copy the last element to location of old top element
-       elements_[data_[temp].item_index] = elements_[elements_.size()-1];
-    
-       //point the item_index of the old element to correct location
-       data_[index].item_index = data_[temp].item_index;
-    
-       // Invalidating the entries of node
-       data_[temp].parent = -1;
-       data_[temp].child = -1;
-       data_[temp].right_sibling = -1;
-       data_[temp].degree = 0;
-       data_[temp].item_index = -1;
-    
-       elements_.pop_back();
-    
-       top_ = get_new_top();
-    }
-    
-    template <class T, 
-              class Compare,
-              class Item_Map>
-       template<typename Char, typename Traits>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
-    {
-       if (head_ != size_type(-1)) {
-          size_type i = head_;
-          do {
-             print_recur(i, os);
-             os << std::endl;
-             i = data_[i].right_sibling;
-          } while (i != size_type(-1));
-       }
-    }
-    
-    
-    /*
-     * binomial_link: Links the specified nodes in the heap
-     * Input: 
-     * size_type y: element in the heap
-     * size_type z: element in the heap
-     * Output:
-     * links element y and z in the heap
-     * Return Value:
-     * None
-    */
-    void binomial_link (binomial_heap_node& node1, binomial_heap_node& node2, size_t index1, size_t index2)
-    {
-       node1.parent = index2;
-       node1.right_sibling = node2.child;
-       node2.child = index1;
-       node2.degree = node2.degree + 1;
+        if (top_ == size_type(-1))
+            return;
+
+        //iterate from left to right of the children nodes
+        //merge a pair of children, creating paired children
+        //and store the indices
+        std::vector<size_type> paired_child_heaps;
+
+        size_type index1;
+        size_type index2;
+        size_type next_index;
+
+        index1 = data_[top_].child;
+
+        while (index1 != size_type(-1)){
+
+            index2 = data_[index1].right_sibling;
+
+            if (index2 == size_type(-1)){
+                paired_child_heaps.push_back(index1);
+                break;
+            }
+
+            next_index = data_[index2].right_sibling;
+
+            if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
+                merge(index2, index1);
+                paired_child_heaps.push_back(index1);
+            }
+            else{
+                merge(index1, index2);
+                paired_child_heaps.push_back(index2);
+            }
+
+            index1 = next_index;
+        }
+
+        //merge each paired children with the right most paired children going from right to left
+
+        size_type remaining_children = paired_child_heaps.size();
+        size_type new_top_;
+        size_type next_child;
+
+        if (remaining_children == 0){
+            new_top_ = size_type(-1);
+        }
+        else{
+            new_top_ = paired_child_heaps[remaining_children - 1];
+            remaining_children--;
+        }
+
+        while (remaining_children > 0){
+
+            next_child = paired_child_heaps[remaining_children - 1];
+
+            if (compare_(elements_[data_[next_child].item_index], elements_[data_[new_top_].item_index])){
+                merge(new_top_, next_child);
+                new_top_ = next_child;
+            }
+            else{
+                merge(next_child, new_top_);
+            }
+
+            remaining_children--;
+        }
+        paired_child_heaps.clear();
+        //where in data_ old last element is stored
+        size_type index = id_(elements_[elements_.size()-1]);
+
+        //copy the last element to location of old top element
+        elements_[data_[top_].item_index] = elements_[elements_.size()-1];
+
+        //point the item_index of the old element to correct location
+        data_[index].item_index = data_[top_].item_index;
+
+        //Invalidating the entries of node
+        data_[top_].parent = -1;
+        data_[top_].child = -1;
+        data_[top_].right_sibling = -1;
+        data_[top_].left_sibling = -1;
+        data_[top_].item_index = -1;
+
+        elements_.pop_back();
+
+        top_ = new_top_;
     }
 
+    template <class T, 
+              class Compare,
+              class Item_Map>
+        template<typename Char, typename Traits>
+    void mutable_pairing_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
+    {
+        if (top_ != size_type(-1)) {
+            print_recur(top_, os);
+            os << std::endl;
+        } 
+    }
+    
+
     /*
-     * Binomial Heap implementation used when an external map is provided
+     * Pairing Heap implementation used when an external map is provided
      * by the user
      */
     template <class T, 
               class Compare,
               class Item_Map = default_t> 
-    class mutable_binomial_heap
+    class mutable_pairing_heap
     {
         public:
             typedef T value_type;
             typedef size_t size_type;
         
         protected:
-            typedef mutable_binomial_heap_impl<value_type, Compare, Item_Map> search_impl;
+            typedef mutable_pairing_heap_impl<value_type, Compare, Item_Map> search_impl;
             
         public:
-            mutable_binomial_heap(): impl() 
+            mutable_pairing_heap(): impl() 
             {}
             
-            mutable_binomial_heap (size_type n,
+            mutable_pairing_heap (size_type n,
                 const Compare& cmp, const Item_Map& id) : impl(n, cmp, id)
             {}
             
             template<typename ForwardIterator>
-            mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
+            mutable_pairing_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp, const Item_Map& id):
                            impl (first, last, cmp, id)
             {}
@@ -570,7 +515,7 @@ namespace origin
           
             value_type& top()
             {
-               return impl.top(); 
+                return impl.top(); 
             }
           
             const value_type& top() const
@@ -580,29 +525,34 @@ namespace origin
           
             bool empty() const
             {
-               return impl.empty(); 
+                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
-               return impl.size();
+                return impl.size();
             }
           
             void pop()
             { 
                 impl.pop();
             }
-          
+
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os) 
+            {
+                impl.print(os);
+            } 
         protected:
             search_impl impl;
     };
 
     /*
-     * Binomial Heap Implementation in case of no external map
+     * Pairing Heap Implementation in case of no external map
      */
     template <class T, 
               class Compare>
-    class mutable_binomial_heap<T, Compare, default_t>
+    class mutable_pairing_heap<T, Compare, default_t>
     {
  
         public:
@@ -626,20 +576,20 @@ namespace origin
             };
 
 
-            typedef mutable_binomial_heap_impl<value_type, Compare, item_map> search_impl;
+            typedef mutable_pairing_heap_impl<value_type, Compare, item_map> search_impl;
 
         public:
-            mutable_binomial_heap() 
+            mutable_pairing_heap() 
             {};
             
-            mutable_binomial_heap (size_type n,
+            mutable_pairing_heap (size_type n,
                 const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
               
             { 
             }
             
             template<typename ForwardIterator>
-            mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
+            mutable_pairing_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp): id_(map_),
                            impl (first, last, cmp, id_)
             {
@@ -662,7 +612,7 @@ namespace origin
           
             value_type& top()
             {
-               return impl.top(); 
+                return impl.top(); 
             }
           
             const value_type& top() const
@@ -672,12 +622,12 @@ namespace origin
           
             bool empty() const
             {
-               return impl.empty(); 
+                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
-               return impl.size();
+                return impl.size();
             }
           
             void pop()
@@ -699,7 +649,7 @@ namespace origin
             search_impl impl;
 
     };
-    
+#if 0 
     /*
      * Non-Mutable Binomial Heap Implementation 
      */
@@ -1149,5 +1099,6 @@ namespace origin
           } while (i != size_type(-1));
        }
     }
+#endif
 }
 #endif // ORIGIN_HEAPS_PAIRING_HEAP_HPP
