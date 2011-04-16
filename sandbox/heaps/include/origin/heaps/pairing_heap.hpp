@@ -102,7 +102,17 @@ namespace origin
            * Return Value:
            * None       
            */
-          void merge (size_type index1, size_type index2);
+          void merge (size_type index1, size_type index2)
+          {
+              //make index1 heap a left child of index2 heap
+              data_[index1].parent = index2;
+              data_[index1].right_sibling = data_[index2].child;
+
+              if (data_[index2].child != size_type(-1))
+                  data_[data_[index2].child].left_sibling = index1;
+
+              data_[index2].child = index1;
+          }
 
        public:
           /*
@@ -248,7 +258,7 @@ namespace origin
            * Return Value:
            * size_type : Number of elements
            */
-          inline size_type size() const
+          size_type size() const
           {
              return elements_.size();
           }
@@ -350,24 +360,8 @@ namespace origin
             //make new node a left child of the existing root
             merge(index, top_);
         }
-    }
-    
-    template <class T, 
-              class Compare,
-              class Item_Map>
-    void mutable_pairing_heap_impl<T, Compare, Item_Map>::merge(size_type index1, size_type index2)
-    {
-        //make index1 heap a left child of index2 heap
-        data_[index1].parent = index2;
-        data_[index1].right_sibling = data_[index2].child;
+    } 
 
-        if (data_[index2].child != size_type(-1))
-            data_[data_[index2].child].left_sibling = index1;
-
-        data_[index2].child = index1;
-    }
-    
-    
     template <class T, 
               class Compare,
               class Item_Map>
@@ -380,53 +374,46 @@ namespace origin
         //merge a pair of children, creating paired children
         //and store the indices
         std::vector<size_type> paired_child_heaps;
+        size_type new_top_ = size_type(-1);
 
-        size_type index1;
-        size_type index2;
-        size_type next_index;
+        size_type index1 = data_[top_].child;
+        size_type index2 = size_type(-1);
+        size_type next_index = size_type(-1);
 
-        index1 = data_[top_].child;
-
-        while (index1 != size_type(-1)){
+        
+        while ((index1 != size_type(-1)) && (data_[index1].right_sibling != size_type(-1))){
 
             index2 = data_[index1].right_sibling;
-
-            if (index2 == size_type(-1)){
-                paired_child_heaps.push_back(index1);
-                break;
-            }
 
             next_index = data_[index2].right_sibling;
 
             if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
                 merge(index2, index1);
                 paired_child_heaps.push_back(index1);
+                new_top_ = index1;
             }
             else{
                 merge(index1, index2);
                 paired_child_heaps.push_back(index2);
+                new_top_ = index2;
             }
 
             index1 = next_index;
         }
 
+        if ((index1 != size_type(-1)) && (data_[index1].right_sibling == size_type(-1))){
+            paired_child_heaps.push_back(index1);
+            new_top_ = index1;
+        }
+
         //merge each paired children with the right most paired children going from right to left
 
         size_type remaining_children = paired_child_heaps.size();
-        size_type new_top_;
         size_type next_child;
 
-        if (remaining_children == 0){
-            new_top_ = size_type(-1);
-        }
-        else{
-            new_top_ = paired_child_heaps[remaining_children - 1];
-            remaining_children--;
-        }
+        while (remaining_children > 1){
 
-        while (remaining_children > 0){
-
-            next_child = paired_child_heaps[remaining_children - 1];
+            next_child = paired_child_heaps[remaining_children - 2];
 
             if (compare_(elements_[data_[next_child].item_index], elements_[data_[new_top_].item_index])){
                 merge(new_top_, next_child);
@@ -438,6 +425,7 @@ namespace origin
 
             remaining_children--;
         }
+
         paired_child_heaps.clear();
         //where in data_ old last element is stored
         size_type index = id_(elements_[elements_.size()-1]);
