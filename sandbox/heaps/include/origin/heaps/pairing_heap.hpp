@@ -386,7 +386,13 @@ namespace origin
             index2 = data_[index1].right_sibling;
 
             next_index = data_[index2].right_sibling;
+            data_[index1].parent = size_type(-1);
+            data_[index1].left_sibling = size_type(-1);
+            data_[index1].right_sibling = size_type(-1);
 
+            data_[index2].parent = size_type(-1);
+            data_[index2].left_sibling = size_type(-1);
+            data_[index2].right_sibling = size_type(-1);
             if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
                 merge(index2, index1);
                 paired_child_heaps.push_back(index1);
@@ -402,6 +408,9 @@ namespace origin
         }
 
         if ((index1 != size_type(-1)) && (data_[index1].right_sibling == size_type(-1))){
+            data_[index1].parent = size_type(-1);
+            data_[index1].left_sibling = size_type(-1);
+            data_[index1].right_sibling = size_type(-1);
             paired_child_heaps.push_back(index1);
             new_top_ = index1;
         }
@@ -857,7 +866,7 @@ namespace origin
            * Return Value:
            * size_type : Number of elements
            */
-          inline size_type size() const
+          size_type size() const
           {
              return elements_.size();
           }

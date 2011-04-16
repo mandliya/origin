@@ -295,7 +295,7 @@ namespace origin
            * Return Value:
            * size_type : Number of elements
            */
-          inline size_type size() const
+          size_type size() const
           {
              return elements_.size();
           }
@@ -637,7 +637,7 @@ namespace origin
                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
                return impl.size();
             }
@@ -735,7 +735,7 @@ namespace origin
                return impl.empty(); 
             }
           
-            inline size_type size() const
+            size_type size() const
             {
                return impl.size();
             }
