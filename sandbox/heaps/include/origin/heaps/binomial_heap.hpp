@@ -194,7 +194,7 @@ namespace origin
              }
           }
           
-          mutable_binomial_heap_impl (std::initializer_list<T> & lst, 
+          mutable_binomial_heap_impl (std::initializer_list<T> lst, 
                                      const Compare &cmp, 
                                      const Item_Map& id):
                                      compare_{cmp},
@@ -606,7 +606,7 @@ namespace origin
                            impl (first, last, cmp, id)
             {}
  
-            mutable_binomial_heap (std::initializer_list<T> & lst, 
+            mutable_binomial_heap (std::initializer_list<T> lst, 
                                      const Compare &cmp, 
                                      const Item_Map& id):
                                      impl (lst, cmp, id)
@@ -699,7 +699,7 @@ namespace origin
             {
             }
             
-            mutable_binomial_heap (std::initializer_list<T> & lst, 
+            mutable_binomial_heap (std::initializer_list<T> lst, 
                                      const Compare &cmp):id_{&map_},
                                      impl (lst, cmp, id_)
             {
@@ -902,7 +902,7 @@ namespace origin
              }
           }
          
-         binomial_heap (std::initializer_list<T> &lst, 
+         binomial_heap (std::initializer_list<T> lst, 
                                      const Compare &cmp):
                                      compare_{cmp},
                                      top_{-1}, head_{-1}
