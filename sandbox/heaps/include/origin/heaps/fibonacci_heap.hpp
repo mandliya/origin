@@ -18,11 +18,11 @@
 namespace origin
 {
     /* Forward Declaration */
-    struct fibonacci_heap_node;
+    //struct fibonacci_heap_node;
     
     /* Function Prototypes */
-    void fibonacci_link (fibonacci_heap_node&, fibonacci_heap_node&, 
-          fibonacci_heap_node&, fibonacci_heap_node&, size_t, size_t);
+    //void fibonacci_link (fibonacci_heap_node&, fibonacci_heap_node&, 
+    //      fibonacci_heap_node&, fibonacci_heap_node&, size_t, size_t);
    
     /* Constant Expressions */
     constexpr double phi() {return (1+sqrt(5))/2;}
@@ -94,7 +94,7 @@ namespace origin
            * top_ - index of the top element
            */ 
           
-          size_type top_, head_;
+          size_type top_, head_, nroot_;
          
           /*
            * print_recur: Helper function for displaying the fibonacci heap
@@ -166,7 +166,29 @@ namespace origin
            * Return Value:
            * size_type: Index of the new root
            */
-          size_type get_new_top(); 
+          size_type get_new_top();
+          
+          /*
+           * fibonacci_link: Function to swap two nodes of a tree
+           * Input: 
+           * None
+           * Output:
+           * Index of the new root
+           * Return Value:
+           * size_type: Index of the new root
+           */
+          void fibonacci_link(size_type y, size_type x);
+          
+          /*
+           * swap_node: Function to swap two nodes of a tree
+           * Input: 
+           * None
+           * Output:
+           * Index of the new root
+           * Return Value:
+           * size_type: Index of the new root
+           */
+          void swap_node(size_type x, size_type y);
           
        public:
           /*
@@ -193,7 +215,7 @@ namespace origin
            */
           mutable_fibonacci_heap_impl (size_type n,
                 const Compare &cmp, const Item_Map& id) :
-                compare_{cmp}, id_{id}, top_{-1}, head_{-1} 
+                compare_{cmp}, id_{id}, top_{-1}, head_{-1}, nroot_{0} 
           { 
           }
           
@@ -312,7 +334,7 @@ namespace origin
            * Return Value:
            * size_type : Number of elements
            */
-          inline size_type size() const
+          size_type size() const
           {
              return elements_.size();
           }
@@ -335,39 +357,78 @@ namespace origin
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::consolidate()
     {
        // Max Degree of fibonacci heap
-       size_type D = floor(rec_log_phi()*elements_.size())+1;
+       size_type D = floor(rec_log_phi()*log(elements_.size() - 1))+1;
 
        // Create an auxillary array of size D
-       std::vector<size_type> aux(D, -1);
+       std::vector<size_type> aux(D+1, size_type(-1));
 
-       size_type temp = head_;
-       size_type x, d, y;
+       size_type next = top_;
+       size_type pseudo_top = data_[top_].left_sibling;
+       size_type temp, d, y, i;
+       size_type nr = nroot_;
+       bool flag = false;
 
        do{
-          x = temp;
-          d = data_[d].degree;
+          temp = next;
+          d = data_[temp].degree;
+          next = data_[temp].right_sibling;
+          if(temp == pseudo_top)
+             flag = true;
 
-          while(aux[d] != -1) {
+          while((aux[d] != size_type(-1)) && (d<=D)) {
              y = aux[d];
-             if(!compare_(elements_[data_[x].item_index], elements_[data_[y].item_index])) {
+             if(!compare_(elements_[data_[temp].item_index], elements_[data_[y].item_index])) {
                 // Swap x, y
-                std::swap(data_[x].item_index, data_[y].item_index);
+                swap_node(temp, y);
+                std::swap(temp,y);
              }
 
-             fibonacci_link(data_[data_[y].left_sibling], 
-                   data_[data_[y].right_sibling], data_[y], data_[x], y, x);
-             aux[d] = -1;
+             fibonacci_link(y, temp);
+             aux[d] = size_type(-1);
              ++d;
           }
 
-          aux[d] = x;
+          aux[d] = temp;
+       } while(!flag);
+/*
+       std::cout<<"auxillary is ";
+       for(i=0;i<=D;++i){
+          if(aux[i]!=-1)
+          std::cout<<elements_[data_[aux[i]].item_index]<<",";
+       }
+       std::cout<<"\ntemp top is "<<elements_[data_[temp].item_index]<<"\n";
+       std::cout<<"\ntemp top right is "<<elements_[data_[data_[temp].right_sibling].item_index]<<"\n";
+       std::cout<<"\ntemp top left is "<<elements_[data_[data_[temp].left_sibling].item_index]<<"\n";
+*/
+       size_type temp_top = temp;
+       top_ = temp_top;
+       data_[temp_top].right_sibling = temp_top;
+       data_[temp_top].left_sibling = temp_top;
 
-          temp = data_[temp].right_sibling;
-       } while(temp != head_);
-
-       top_ = -1;
-
-       /* FIXME: Remaining to be completed tomorrow ;) */
+       for(i = 0; i<=D; ++i) {
+          if(aux[i] != size_type(-1) && aux[i]!=temp_top) {
+             // Add aux[i] to the root list
+             // Concatenate w.r.t. right neighbor
+             data_[data_[top_].right_sibling].left_sibling = aux[i]; 
+             data_[aux[i]].right_sibling = data_[top_].right_sibling;
+             data_[top_].right_sibling = aux[i];
+             data_[aux[i]].left_sibling = top_;
+             
+             if(!compare_(elements_[data_[top_].item_index], elements_[data_[aux[i]].item_index])) {
+                top_ = aux[i];
+                //temp_top = top_;
+             }
+        }
+       }
+/* 
+       std::cout<<"root list is: ";
+             size_type t= top_;
+             do{
+                std::cout<<elements_[data_[t].item_index]<<",";
+                t = data_[t].right_sibling;
+             }while(t!=top_);
+             std::cout<<"\n";
+*/
 
     }
 
@@ -401,10 +462,14 @@ namespace origin
 
        id_(d) = index;
 
-       if (head_ == size_type(-1)) {
+       nroot_++;
+
+       //if (head_ == size_type(-1)) {
+       if (top_ == size_type(-1)) {
           /* New heap */
-          head_ = index;
-          top_ = head_;
+          //head_ = index;
+          top_ = index;
+          //top_ = head_;
        } else {
           /* Concatenate w.r.t. right neighbor */
           data_[data_[top_].right_sibling].left_sibling = index;
@@ -442,12 +507,154 @@ namespace origin
     {
     }
     
+    template <class T, 
+              class Compare,
+              class Item_Map>
+    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::swap_node (size_type x, size_type y)
+    {
+       /*
+       std::cout<<"Swapping"<<elements_[data_[x].item_index]<<","<<elements_[data_[y].item_index]<<"\n";
+       std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
+       std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
+     */
+       data_[data_[y].left_sibling].right_sibling = x;
+       data_[x].left_sibling = data_[y].left_sibling;
+       data_[y].left_sibling = x;//data_[x].left_sibling;
+       data_[y].right_sibling = data_[x].right_sibling;
+       data_[data_[x].right_sibling].left_sibling = y;
+       data_[x].right_sibling = y;
+    /*
+       std::cout<<"After Swapping"<<elements_[data_[x].item_index]<<","<<elements_[data_[y].item_index]<<"\n";
+       std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
+       std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
+    */
+    }
+ 
+    template <class T, 
+              class Compare,
+              class Item_Map>
+    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::fibonacci_link (size_type y, size_type x)
+    {
+       //std::cout<<"making "<<elements_[data_[y].item_index]<<" child of "<<elements_[data_[x].item_index]<<"\n";
+       // Remove y from root list
+       data_[x].left_sibling = data_[y].left_sibling;
+       //data_[x].right_sibling = data_[y].right_sibling;
+       //std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
+       //data_[data_[y].right_sibling].left_sibling = x; //data_[y].left_sibling;
+       data_[data_[y].left_sibling].right_sibling = x;
+
+       // make y a child of x, increment degree of x
+       if(data_[x].degree>0) {
+          data_[y].right_sibling = data_[x].child;
+          data_[y].left_sibling = data_[data_[x].child].left_sibling;
+          data_[data_[data_[x].child].left_sibling].right_sibling = y;
+          data_[data_[x].child].left_sibling = y;
+       } else {
+          data_[y].right_sibling = data_[y].left_sibling = y;
+       }
+       
+       data_[y].parent = x;
+       data_[x].child = y;
+       data_[x].degree += 1;
+
+       // mark y= false
+       data_[y].mark = false;
+
+       /*
+       std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
+       std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
+       std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
+    */
+    }
     
     template <class T, 
               class Compare,
               class Item_Map>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::pop()
     {
+       size_type z = top_;
+       size_type x = data_[z].child;
+       size_type temp;
+
+       if (top_ == size_type(-1)) {
+          return;
+       }
+
+       //if(z != size_type(-1) ) {
+          if (x != size_type(-1)) {
+             do{
+                // Add x to root list
+                /* Concatenate w.r.t. right neighbor */
+                data_[data_[top_].right_sibling].left_sibling = x;
+                temp = data_[x].right_sibling;
+                data_[x].right_sibling = data_[top_].right_sibling;
+                data_[top_].right_sibling = x;
+                data_[x].left_sibling = top_;
+                nroot_++;
+                //std::cout<<"nroot is "<<nroot_<<"\n";
+                
+                // Make x's parent as NULL
+                data_[x].parent = -1;
+                x = temp;
+             }while(x != data_[z].child);
+          }
+
+          // Remove z from the root list
+          //std::cout<<elements_[data_[data_[z].left_sibling].right_sibling]<<"\t"<<elements_[data_[z].right_sibling]<<"\n";
+          //std::cout<<elements_[data_[data_[z].right_sibling].left_sibling]<<"\t"<<elements_[data_[z].left_sibling]<<"\n";
+          data_[data_[z].left_sibling].right_sibling = data_[z].right_sibling;
+          data_[data_[z].right_sibling].left_sibling = data_[z].left_sibling;
+          nroot_--;
+          //std::cout<<"nroot is "<<nroot_<<"\n";
+
+          if(z == data_[z].right_sibling) {
+             top_ = -1;
+          } else {
+             top_ = data_[z].right_sibling;
+             //print(std::cout);
+             consolidate();
+
+             /*
+             std::cout<<"root lis is: ";
+             size_type t= top_;
+             do{
+                std::cout<<elements_[data_[t].item_index]<<",";
+                t = data_[t].right_sibling;
+             }while(t!=top_);
+             std::cout<<"\n";*/
+          }
+      // }
+
+
+       // where in data_ old last element is stored
+       size_type index = id_(elements_[elements_.size()-1]);
+    
+       // copy the last element to location of old top element
+       elements_[data_[z].item_index] = elements_[elements_.size()-1];
+    
+       //point the item_index of the old element to correct location
+       data_[index].item_index = data_[z].item_index;
+    
+       // Invalidating the entries of node
+       data_[z].parent = -1;
+       data_[z].child = -1;
+       data_[z].right_sibling = -1;
+       data_[z].left_sibling = -1;
+       data_[z].degree = 0;
+       data_[z].item_index = -1;
+    
+       elements_.pop_back();
+
+/*       
+       std::cout<<elements_[data_[top_].item_index]<<","<<elements_[data_[data_[top_].right_sibling].item_index]<<","
+          <<elements_[data_[data_[data_[top_].right_sibling].right_sibling].item_index]<<"\n";
+       std::cout<<elements_[data_[data_[top_].child].item_index]<<","<<elements_[data_[data_[data_[top_].child].right_sibling].item_index];
+*/       
     }
     
     template <class T, 
@@ -456,13 +663,13 @@ namespace origin
        template<typename Char, typename Traits>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
     {
-       if (head_ != size_type(-1)) {
-          size_type i = head_;
+       if (top_ != size_type(-1)) {
+          size_type i = top_;
           do {
              print_recur(i, os);
              os << std::endl;
              i = data_[i].right_sibling;
-          } while (i != head_);
+          } while (i != top_);
        }
     }
       
@@ -476,22 +683,29 @@ namespace origin
      * Return Value:
      * None
     */
+/*
     void fibonacci_link (fibonacci_heap_node& y_left, fibonacci_heap_node& y_right, 
           fibonacci_heap_node& y, fibonacci_heap_node& x, size_t y_index, size_t x_index)
     {
+       
        // Remove node1 from the root list
        y_left.right_sibling = y.right_sibling;
        y_right.left_sibling = y.left_sibling;
 
        // Make y a child of x
        y.parent = x_index;
+       y.right_sibling = x.child;
+       y.left_sibling = x.child
        x.child = y_index;
-       ++x.degree;
+       x.degree += 1;
+
+       // Is this required?
+       y.left_sibling = y_index;
 
        // Unmark y
        y.mark = false;
     }
-
+*/
    
     
     /*
