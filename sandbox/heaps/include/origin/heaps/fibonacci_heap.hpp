@@ -362,6 +362,12 @@ namespace origin
        // Create an auxillary array of size D
        std::vector<size_type> aux(D+1, size_type(-1));
 
+       for(auto &x:aux) {
+          x = -1;
+          //std::cout<<"aux "<<x<<"\n";
+       }
+
+       size_type a = 0;
        size_type next = top_;
        size_type pseudo_top = data_[top_].left_sibling;
        size_type temp, d, y, i;
@@ -379,11 +385,14 @@ namespace origin
              y = aux[d];
              if(!compare_(elements_[data_[temp].item_index], elements_[data_[y].item_index])) {
                 // Swap x, y
-                swap_node(temp, y);
-                std::swap(temp,y);
+                std::cout<<"Swapping\n";
+              //  swap_node(temp, y);
+              //  std::swap(temp,y);
+                fibonacci_link(temp, y);
+                temp = y;
+             } else {
+                fibonacci_link(y, temp);
              }
-
-             fibonacci_link(y, temp);
              aux[d] = size_type(-1);
              ++d;
           }
@@ -420,16 +429,16 @@ namespace origin
              }
         }
        }
-/* 
+ 
        std::cout<<"root list is: ";
-             size_type t= top_;
-             do{
-                std::cout<<elements_[data_[t].item_index]<<",";
-                t = data_[t].right_sibling;
-             }while(t!=top_);
-             std::cout<<"\n";
-*/
+       size_type t= top_;
+       do{
+          std::cout<<elements_[data_[t].item_index]<<",";
+          t = data_[t].right_sibling;
+       }while(t!=top_);
+       std::cout<<"\n";
 
+       //print(std::cout);
     }
 
     template <class T, 
@@ -512,26 +521,26 @@ namespace origin
               class Item_Map>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::swap_node (size_type x, size_type y)
     {
-       /*
+       
        std::cout<<"Swapping"<<elements_[data_[x].item_index]<<","<<elements_[data_[y].item_index]<<"\n";
        std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
        std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
-     */
+     
        data_[data_[y].left_sibling].right_sibling = x;
        data_[x].left_sibling = data_[y].left_sibling;
        data_[y].left_sibling = x;//data_[x].left_sibling;
+       data_[x].right_sibling = data_[y].item_index;
        data_[y].right_sibling = data_[x].right_sibling;
        data_[data_[x].right_sibling].left_sibling = y;
-       data_[x].right_sibling = y;
-    /*
+    
        std::cout<<"After Swapping"<<elements_[data_[x].item_index]<<","<<elements_[data_[y].item_index]<<"\n";
        std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
        std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
-    */
+    
     }
  
     template <class T, 
@@ -539,13 +548,17 @@ namespace origin
               class Item_Map>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::fibonacci_link (size_type y, size_type x)
     {
-       //std::cout<<"making "<<elements_[data_[y].item_index]<<" child of "<<elements_[data_[x].item_index]<<"\n";
+       std::cout<<"making "<<elements_[data_[y].item_index]<<" child of "<<elements_[data_[x].item_index]<<"\n";
        // Remove y from root list
-       data_[x].left_sibling = data_[y].left_sibling;
+       std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
+/*       data_[x].left_sibling = data_[y].left_sibling;
        //data_[x].right_sibling = data_[y].right_sibling;
-       //std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
        //data_[data_[y].right_sibling].left_sibling = x; //data_[y].left_sibling;
        data_[data_[y].left_sibling].right_sibling = x;
+*/
+       
+       data_[data_[y].left_sibling].right_sibling = data_[y].right_sibling; 
+       data_[data_[y].right_sibling].left_sibling = data_[y].left_sibling; 
 
        // make y a child of x, increment degree of x
        if(data_[x].degree>0) {
@@ -564,12 +577,11 @@ namespace origin
        // mark y= false
        data_[y].mark = false;
 
-       /*
+       
        std::cout<<"Right of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[x].item_index]<<" is "<<elements_[data_[data_[x].left_sibling].item_index]<<"\n";
        std::cout<<"Right of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].right_sibling].item_index]<<"\n";
        std::cout<<"Left of "<<elements_[data_[y].item_index]<<" is "<<elements_[data_[data_[y].left_sibling].item_index]<<"\n";
-    */
     }
     
     template <class T, 
@@ -582,6 +594,7 @@ namespace origin
        size_type temp;
 
        if (top_ == size_type(-1)) {
+          std::cout<<"returning from pop \n";
           return;
        }
 
@@ -604,6 +617,13 @@ namespace origin
              }while(x != data_[z].child);
           }
 
+             std::cout<<"root list is: ";
+             size_type t= top_;
+             do{
+                std::cout<<elements_[data_[t].item_index]<<",";
+                t = data_[t].right_sibling;
+             }while(t!=top_);
+             std::cout<<"\n";
           // Remove z from the root list
           //std::cout<<elements_[data_[data_[z].left_sibling].right_sibling]<<"\t"<<elements_[data_[z].right_sibling]<<"\n";
           //std::cout<<elements_[data_[data_[z].right_sibling].left_sibling]<<"\t"<<elements_[data_[z].left_sibling]<<"\n";
@@ -613,6 +633,7 @@ namespace origin
           //std::cout<<"nroot is "<<nroot_<<"\n";
 
           if(z == data_[z].right_sibling) {
+             std::cout<<"setting top as -1\n";
              top_ = -1;
           } else {
              top_ = data_[z].right_sibling;
@@ -630,7 +651,7 @@ namespace origin
           }
       // }
 
-
+/*
        // where in data_ old last element is stored
        size_type index = id_(elements_[elements_.size()-1]);
     
@@ -649,7 +670,7 @@ namespace origin
        data_[z].item_index = -1;
     
        elements_.pop_back();
-
+*/
 /*       
        std::cout<<elements_[data_[top_].item_index]<<","<<elements_[data_[data_[top_].right_sibling].item_index]<<","
           <<elements_[data_[data_[data_[top_].right_sibling].right_sibling].item_index]<<"\n";
