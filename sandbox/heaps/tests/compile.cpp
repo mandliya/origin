@@ -16,6 +16,7 @@
 #include <boost/pending/indirect_cmp.hpp>
 #include <origin/heaps/binomial_heap.hpp>
 #include <origin/heaps/binary_heap.hpp>
+#include <origin/heaps/fibonacci_heap.hpp>
 
 using namespace origin;
 using namespace std;
@@ -29,11 +30,11 @@ int test_heap_external_map(T &item_label)
     int i;
    
     typedef indirect_cmp<float*,std::less<float>> ICmp;
-    for (int N = 2; N < 200; ++N) {
+    for (int N = 99000; N < 99001; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
         
-        for (int t = 0; t < 10; ++t) {
+        for (int t = 0; t < 1; ++t) {
             std::vector<float> v, w(N);
             ICmp cmp(&w[0], std::less<float>());
 
@@ -44,9 +45,10 @@ int test_heap_external_map(T &item_label)
                 w[c] = c;
             
             std::random_shuffle(w.begin(), w.end());
+            
             for (i = 0; i < N; ++i)
                 Q.push(i);
-            
+           
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen(); r /= 2.0;
@@ -75,7 +77,6 @@ int test_heap_external_map(T &item_label)
             //Perform the above process again in the empty heap
             //This tests the correctness of the heap in the scenario
             //push () --> pop () and then again push()
-            
             for (int c = 0; c < int(w.size()); ++c)
                 w[c] = c;
             std::random_shuffle(w.begin(), w.end());
@@ -83,13 +84,14 @@ int test_heap_external_map(T &item_label)
 
             for (i = 0; i < N; ++i)
                 Q.push(i);
+        
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen(); r /= 2.0;
                 w[u] = w[u] - r;
                 Q.update(u);
             }
-            
+           
             for (i = 0; i < N; ++i) {
                 v.push_back(w[Q.top()]);
                 Q.pop();
@@ -298,7 +300,18 @@ int main()
     } else {
         std::cout<<"mutable binomial heap test failed \n";
     }
-  
+ 
+    typedef mutable_fibonacci_heap<int, ICmp, decltype(item_label)> mfibonacci;
+    
+    result = test_heap_external_map<mfibonacci>(item_label);
+    
+    if (result > 0) {
+        std::cout << "mutable fibonacci heap passed test" << std::endl; 
+    } else {
+        std::cout<<"mutable fibonacci heap test failed \n";
+    }
+ 
+    std::cout<<"testing binary heap\n";
     typedef mutable_binary_heap<int, ICmp, decltype(item_label)> mbinary;
     
     result = test_heap_external_map<mbinary>(item_label);
@@ -308,7 +321,8 @@ int main()
     } else {
         std::cout<<"mutable binary heap test failed \n";
     }
-
+    std::cout<<"done testing binary heap\n";
+    
     typedef mutable_binomial_heap<int, ICmp> mbinomial_int;
     
     result = test_heap_internal_map<mbinomial_int>();
@@ -319,6 +333,15 @@ int main()
         std::cout<<"mutable binomial heap (internal map) test failed \n";
     }
 
+    typedef mutable_fibonacci_heap<int, ICmp> mfibonacci_int;
+    
+    result = test_heap_internal_map<mfibonacci_int>();
+    
+    if (result > 0) {
+        std::cout << "mutable fibonacci heap (internal map) passed test" << std::endl; 
+    } else {
+        std::cout<<"mutable fibonacci heap (internal map) test failed \n";
+    }
 
     typedef mutable_binary_heap<int, ICmp> mbinary_int;
     

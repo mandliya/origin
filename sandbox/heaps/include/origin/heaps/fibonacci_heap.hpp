@@ -17,14 +17,7 @@
 
 namespace origin
 {
-    /* Forward Declaration */
-    //struct fibonacci_heap_node;
-    
-    /* Function Prototypes */
-    //void fibonacci_link (fibonacci_heap_node&, fibonacci_heap_node&, 
-    //      fibonacci_heap_node&, fibonacci_heap_node&, size_t, size_t);
-   
-    /* Constant Expressions */
+    // Constant Expressions
     constexpr double phi() {return (1+sqrt(5))/2;}
     constexpr double rec_log_phi() {return 1/log(phi());} // Reciprocal of naturallog(phi)
 
@@ -122,17 +115,6 @@ namespace origin
           }
           
           /*
-           * merge: Function to merge two fibonacci heaps
-           * Input: 
-           * size_type x : Index of the root element of the heap to be merged
-           * Output:
-           * Merges the heap pointed to by x in the main heap pointed to by head_
-           * Return Value:
-           * None       
-           */
-          void merge (size_type index);
-          
-          /*
            * consolidate: Function to consolidate
            * Input: 
            * size_type x : Index of the root element of the heap to be merged
@@ -165,18 +147,6 @@ namespace origin
            */
           void cascading_cut (size_type y);
 
-          /*
-           * mutable_fibonacci_heap_union: Unites the heap pointed to by head_ with 
-           * the heap specified
-           * Input: 
-           * size_type index: Index of the root element of the heap to be united
-           * Output:
-           * United fibonacci heap
-           * Return Value:
-           * None       
-           */
-          void mutable_fibonacci_heap_union (size_type index);
-           
           /*
            * fibonacci_link: Function to swap two nodes of a tree
            * Input: 
@@ -362,23 +332,22 @@ namespace origin
 
        size_type next = top_;
        size_type pseudo_top = data_[top_].left_sibling;
-       size_type temp, d, y, i;
+       size_type temp, d, i;
        bool flag = false;
 
        do{
           temp = next;
           d = data_[temp].degree;
           next = data_[temp].right_sibling;
-          if(temp == pseudo_top)
+          if (temp == pseudo_top)
              flag = true;
 
           while((aux[d] != size_type(-1)) && (d<=D)) {
-             y = aux[d];
-             if(!compare_(elements_[data_[temp].item_index], elements_[data_[y].item_index])) {
-                fibonacci_link(temp, y);
-                temp = y;
+             if (!compare_(elements_[data_[temp].item_index], elements_[data_[aux[d]].item_index])) {
+                fibonacci_link(temp, aux[d]);
+                temp = aux[d];
              } else {
-                fibonacci_link(y, temp);
+                fibonacci_link(aux[d], temp);
              }
              aux[d] = size_type(-1);
              ++d;
@@ -395,7 +364,7 @@ namespace origin
        for(i = 0; i<=D; ++i) {
           if(aux[i] != size_type(-1) && aux[i]!=temp_top) {
              // Add aux[i] to the root list
-             // Concatenate w.r.t. right neighbor
+             // Concatenate w.r.t. right neighbor of top
              data_[data_[top_].right_sibling].left_sibling = aux[i]; 
              data_[aux[i]].right_sibling = data_[top_].right_sibling;
              data_[top_].right_sibling = aux[i];
@@ -429,10 +398,10 @@ namespace origin
        id_(d) = index;
 
        if (top_ == size_type(-1)) {
-          /* New heap */
+          // New heap
           top_ = index;
        } else {
-          /* Concatenate w.r.t. right neighbor */
+          // Concatenate w.r.t. right neighbor of top
           data_[data_[top_].right_sibling].left_sibling = index;
           data_[index].right_sibling = data_[top_].right_sibling;
 
@@ -459,7 +428,7 @@ namespace origin
           cascading_cut(y);
        }
 
-       if(compare_(d, elements_[top_]))
+       if(compare_(d, elements_[data_[top_].item_index]))
           top_ = index;
     }
     
@@ -467,21 +436,33 @@ namespace origin
     template <class T, 
               class Compare,
               class Item_Map>
-    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::merge (size_type index)
-    {
-    }
-     
-    template <class T, 
-              class Compare,
-              class Item_Map>
-    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::cut (size_type index, size_type y)
+    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::cut (size_type x, size_type y)
     {
        if(data_[y].degree == 1) {
-          // set y's child as -1
-          // decrement degre of y
-          // remove y as x's parent
+          // Set y's child as -1
+          data_[y].child = -1;
        } else {
+          if (data_[y].child == x) { 
+             data_[y].child = data_[x].right_sibling;
+          }
+          data_[data_[x].left_sibling].right_sibling = data_[x].right_sibling;
+          data_[data_[x].right_sibling].left_sibling = data_[x].left_sibling;
        }
+       
+       // Decrement degre of y
+       data_[y].degree -= 1;
+       
+       // Remove y as x's parent
+       data_[x].parent = -1;
+
+       // Add x to the root list
+       data_[x].left_sibling = top_;
+       data_[x].right_sibling = data_[top_].right_sibling;
+       data_[data_[top_].right_sibling].left_sibling = x;
+       data_[top_].right_sibling = x;
+
+       // Mark x as false
+       data_[x].mark = false;
     }
 
     template <class T, 
@@ -489,14 +470,15 @@ namespace origin
               class Item_Map>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::cascading_cut (size_type y)
     {
-       
-    }
-    
-    template <class T, 
-              class Compare,
-              class Item_Map>
-    void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::mutable_fibonacci_heap_union (size_type index)
-    {
+       size_type z = data_[y].parent;
+       if (z != size_type(-1)) {
+          if (data_[y].mark == false) {
+             data_[y].mark = true;
+          } else {
+             cut(y, z);
+             cascading_cut(z);
+          }
+       }
     }
     
     template <class T, 
@@ -508,7 +490,7 @@ namespace origin
        data_[data_[y].left_sibling].right_sibling = data_[y].right_sibling; 
        data_[data_[y].right_sibling].left_sibling = data_[y].left_sibling; 
 
-       // make y a child of x, increment degree of x
+       // Make y a child of x, increment degree of x
        if(data_[x].degree>0) {
           data_[y].right_sibling = data_[x].child;
           data_[y].left_sibling = data_[data_[x].child].left_sibling;
@@ -542,7 +524,7 @@ namespace origin
        if (data_[z].degree > 0) {
           do{
              // Add x to root list
-             /* Concatenate w.r.t. right neighbor */
+             // Concatenate w.r.t. right neighbor of top
              data_[data_[top_].right_sibling].left_sibling = x;
              temp = data_[x].right_sibling;
              data_[x].right_sibling = data_[top_].right_sibling;
@@ -604,41 +586,6 @@ namespace origin
        }
     }
       
-    /*
-     * fibonacci_link: Links the specified nodes in the heap
-     * Input: 
-     * size_type y: element in the heap
-     * size_type z: element in the heap
-     * Output:
-     * links element y and z in the heap
-     * Return Value:
-     * None
-    */
-/*
-    void fibonacci_link (fibonacci_heap_node& y_left, fibonacci_heap_node& y_right, 
-          fibonacci_heap_node& y, fibonacci_heap_node& x, size_t y_index, size_t x_index)
-    {
-       
-       // Remove node1 from the root list
-       y_left.right_sibling = y.right_sibling;
-       y_right.left_sibling = y.left_sibling;
-
-       // Make y a child of x
-       y.parent = x_index;
-       y.right_sibling = x.child;
-       y.left_sibling = x.child
-       x.child = y_index;
-       x.degree += 1;
-
-       // Is this required?
-       y.left_sibling = y_index;
-
-       // Unmark y
-       y.mark = false;
-    }
-*/
-   
-    
     /*
      * Fibonacci Heap implementation used when an external map is provided
      * by the user
