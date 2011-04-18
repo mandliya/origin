@@ -17,6 +17,7 @@
 #include <origin/heaps/binomial_heap.hpp>
 #include <origin/heaps/binary_heap.hpp>
 #include <origin/heaps/fibonacci_heap.hpp>
+#include <origin/heaps/pairing_heap.hpp>
 
 using namespace origin;
 using namespace std;
@@ -30,7 +31,7 @@ int test_heap_external_map(T &item_label)
     int i;
    
     typedef indirect_cmp<float*,std::less<float>> ICmp;
-    for (int N = 99000; N < 99001; ++N) {
+    for (int N = 90000; N < 90002; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
         
@@ -311,7 +312,6 @@ int main()
         std::cout<<"mutable fibonacci heap test failed \n";
     }
  
-    std::cout<<"testing binary heap\n";
     typedef mutable_binary_heap<int, ICmp, decltype(item_label)> mbinary;
     
     result = test_heap_external_map<mbinary>(item_label);
@@ -321,8 +321,17 @@ int main()
     } else {
         std::cout<<"mutable binary heap test failed \n";
     }
-    std::cout<<"done testing binary heap\n";
+ 
+    typedef mutable_pairing_heap<int, ICmp, decltype(item_label)> mpairing;
     
+    result = test_heap_external_map<mpairing>(item_label);
+    
+    if (result > 0) {
+        std::cout << "mutable pairing heap passed test" << std::endl; 
+    } else {
+        std::cout<<"mutable pairing heap test failed \n";
+    }
+   
     typedef mutable_binomial_heap<int, ICmp> mbinomial_int;
     
     result = test_heap_internal_map<mbinomial_int>();
@@ -353,6 +362,15 @@ int main()
         std::cout<<"mutable binary heap (internal map) test failed \n";
     }
 
+    typedef mutable_pairing_heap<int, ICmp> mpairing_int;
+    
+    result = test_heap_internal_map<mpairing_int>();
+    
+    if (result > 0) {
+        std::cout << "mutable pairing heap(internal map) passed test" << std::endl; 
+    } else {
+        std::cout<<"mutable pairing heap(internal map) test failed \n";
+    }
 
     typedef binomial_heap<int, ICmp> binomial;
  
@@ -373,5 +391,16 @@ int main()
     } else {
         std::cout<<"non-mutable binary heap test failed \n";
     }
-    return 0;
+ 
+    typedef pairing_heap<int, ICmp> pairing;
+    
+    result = test_non_mutable_heap<pairing>();
+    
+    if (result > 0) {
+        std::cout << "non-mutable pairing heap passed test" << std::endl; 
+    } else {
+        std::cout<<"non-mutable pairing heap test failed \n";
+    }
+
+   return 0;
 }

@@ -20,7 +20,7 @@ namespace origin
     {
        public:
           size_t item_index;
-    
+
           /* Index of parent of the element in the heap */
           size_t parent;
           
@@ -35,7 +35,7 @@ namespace origin
           
           pairing_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, left_sibling{-1} {};
     };
-    
+
     /* Class: Mutable Pairing Heap 
      * Template parameters
      * T : Value type - Type of data to be stored in the heap
@@ -52,7 +52,7 @@ namespace origin
        private:
           typedef T value_type;
           typedef size_t size_type;
-          
+
           /* Random access container which holds the heap elements */
           std::vector<T> elements_;
           std::vector<pairing_heap_node> data_;
@@ -157,7 +157,7 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             mutable_pairing_heap_impl (ForwardIterator first, ForwardIterator last,
+          mutable_pairing_heap_impl (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp, const Item_Map& id) :
                    compare_{cmp}, 
                    id_{id}, top_{-1}
@@ -166,6 +166,16 @@ namespace origin
                 push(*first);
                 ++first;
              }
+          }
+
+          mutable_pairing_heap_impl (std::initializer_list<T> lst,
+                   const Compare &cmp, const Item_Map& id):
+                   compare_{cmp},
+                   id_{id}, top_{-1}
+          {
+              for (auto &x : lst) {
+                  push(x);
+              }
           }
           
           /*
@@ -369,6 +379,109 @@ namespace origin
     {
         if (top_ == size_type(-1))
             return;
+        
+        //iterate from left to right of the children nodes
+        //merge a pair of children, creating paired children
+        //and store the indices
+        size_type new_top_ = size_type(-1);
+
+        size_type index1 = data_[top_].child;
+        size_type index2 = size_type(-1);
+        size_type next_index = size_type(-1);
+        
+        size_type prev_pair = new_top_;
+
+        
+        while ((index1 != size_type(-1)) && (data_[index1].right_sibling != size_type(-1))){
+
+            index2 = data_[index1].right_sibling;
+            next_index = data_[index2].right_sibling;
+
+            data_[index1].parent = size_type(-1);
+            data_[index1].left_sibling = size_type(-1);
+            data_[index1].right_sibling = size_type(-1);
+
+            data_[index2].parent = size_type(-1);
+            data_[index2].left_sibling = size_type(-1);
+            data_[index2].right_sibling = size_type(-1);
+
+            if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
+                merge(index2, index1);
+                new_top_ = index1;
+            }
+            else{
+                merge(index1, index2);
+                new_top_ = index2;
+            }
+
+            //store the prev pair for the second pass
+            data_[new_top_].left_sibling = prev_pair;
+            prev_pair = new_top_;
+
+            index1 = next_index;
+        }
+
+        if ((index1 != size_type(-1)) && (data_[index1].right_sibling == size_type(-1))){
+
+            data_[index1].parent = size_type(-1);
+            data_[index1].right_sibling = size_type(-1);
+
+            new_top_ = index1;
+            data_[new_top_].left_sibling = prev_pair;
+        }
+
+        //merge each paired children with the right most paired children going from right to left
+
+        size_type merge_pair;
+        size_type next_pair;
+
+        while ((new_top_ != size_type(-1)) && (data_[new_top_].left_sibling != size_type(-1))){
+
+            merge_pair = data_[new_top_].left_sibling;
+            next_pair = data_[merge_pair].left_sibling;
+
+            data_[new_top_].left_sibling = size_type(-1);
+            data_[merge_pair].left_sibling = size_type(-1);
+
+            if (compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
+                merge(new_top_, merge_pair);
+                new_top_ = merge_pair;
+            }
+            else{
+                merge(merge_pair, new_top_);
+            }
+            
+            data_[new_top_].left_sibling = next_pair;
+        }
+
+        //where in data_ old last element is stored
+        size_type index = id_(elements_[elements_.size()-1]);
+
+        //copy the last element to location of old top element
+        elements_[data_[top_].item_index] = elements_[elements_.size()-1];
+
+        //point the item_index of the old element to correct location
+        data_[index].item_index = data_[top_].item_index;
+
+        //Invalidating the entries of node
+        data_[top_].parent = -1;
+        data_[top_].child = -1;
+        data_[top_].right_sibling = -1;
+        data_[top_].left_sibling = -1;
+        data_[top_].item_index = -1;
+
+        elements_.pop_back();
+
+        top_ = new_top_;
+    }
+
+    /*template <class T, 
+              class Compare,
+              class Item_Map>
+    void mutable_pairing_heap_impl<T, Compare, Item_Map>::pop()
+    {
+        if (top_ == size_type(-1))
+            return;
 
         //iterate from left to right of the children nodes
         //merge a pair of children, creating paired children
@@ -455,7 +568,7 @@ namespace origin
         elements_.pop_back();
 
         top_ = new_top_;
-    }
+    }*/
 
     template <class T, 
               class Compare,
@@ -498,6 +611,11 @@ namespace origin
             mutable_pairing_heap (ForwardIterator first, ForwardIterator last,
                            const Compare& cmp, const Item_Map& id):
                            impl (first, last, cmp, id)
+            {}
+
+            mutable_pairing_heap (std::initializer_list<T> lst,
+                            const Compare &cmp, const Item_Map& id):
+                            impl (lst, cmp, id)
             {}
  
             void update(const value_type& d) 
@@ -587,8 +705,14 @@ namespace origin
             
             template<typename ForwardIterator>
             mutable_pairing_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp): id_(map_),
+                           const Compare& cmp): id_{&map_},
                            impl (first, last, cmp, id_)
+            {
+            }
+
+            mutable_pairing_heap (std::initializer_list<T> lst,
+                           const Compare &cmp): id_{&map_},
+                           impl (lst, cmp, id_)
             {
             }
  
@@ -758,7 +882,7 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             pairing_heap (ForwardIterator first, ForwardIterator last,
+          pairing_heap (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp) :
                    compare_{cmp}, top_{-1}
           {
@@ -767,7 +891,16 @@ namespace origin
                 ++first;
              }
           }
-          
+
+          pairing_heap (std::initializer_list<T> lst,
+                   const Compare &cmp):
+                   compare_{cmp}, top_{-1}
+          {
+              for (auto &x : lst) {
+                  push(x);
+              }
+          }
+ 
           /*
            * print: Function for displaying the pairing heap
            * Input:
@@ -912,19 +1045,20 @@ namespace origin
         //iterate from left to right of the children nodes
         //merge a pair of children, creating paired children
         //and store the indices
-        std::vector<size_type> paired_child_heaps;
         size_type new_top_ = size_type(-1);
 
         size_type index1 = data_[top_].child;
         size_type index2 = size_type(-1);
         size_type next_index = size_type(-1);
+        
+        size_type prev_pair = new_top_;
 
         
         while ((index1 != size_type(-1)) && (data_[index1].right_sibling != size_type(-1))){
 
             index2 = data_[index1].right_sibling;
-
             next_index = data_[index2].right_sibling;
+
             data_[index1].parent = size_type(-1);
             data_[index1].left_sibling = size_type(-1);
             data_[index1].right_sibling = size_type(-1);
@@ -932,49 +1066,56 @@ namespace origin
             data_[index2].parent = size_type(-1);
             data_[index2].left_sibling = size_type(-1);
             data_[index2].right_sibling = size_type(-1);
+
             if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
                 merge(index2, index1);
-                paired_child_heaps.push_back(index1);
                 new_top_ = index1;
             }
             else{
                 merge(index1, index2);
-                paired_child_heaps.push_back(index2);
                 new_top_ = index2;
             }
+
+            //store the prev pair for the second pass
+            data_[new_top_].left_sibling = prev_pair;
+            prev_pair = new_top_;
 
             index1 = next_index;
         }
 
         if ((index1 != size_type(-1)) && (data_[index1].right_sibling == size_type(-1))){
+
             data_[index1].parent = size_type(-1);
-            data_[index1].left_sibling = size_type(-1);
             data_[index1].right_sibling = size_type(-1);
-            paired_child_heaps.push_back(index1);
+
             new_top_ = index1;
+            data_[new_top_].left_sibling = prev_pair;
         }
 
         //merge each paired children with the right most paired children going from right to left
 
-        size_type remaining_children = paired_child_heaps.size();
-        size_type next_child;
+        size_type merge_pair;
+        size_type next_pair;
 
-        while (remaining_children > 1){
+        while ((new_top_ != size_type(-1)) && (data_[new_top_].left_sibling != size_type(-1))){
 
-            next_child = paired_child_heaps[remaining_children - 2];
+            merge_pair = data_[new_top_].left_sibling;
+            next_pair = data_[merge_pair].left_sibling;
 
-            if (compare_(elements_[data_[next_child].item_index], elements_[data_[new_top_].item_index])){
-                merge(new_top_, next_child);
-                new_top_ = next_child;
+            data_[new_top_].left_sibling = size_type(-1);
+            data_[merge_pair].left_sibling = size_type(-1);
+
+            if (compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
+                merge(new_top_, merge_pair);
+                new_top_ = merge_pair;
             }
             else{
-                merge(next_child, new_top_);
+                merge(merge_pair, new_top_);
             }
-
-            remaining_children--;
+            
+            data_[new_top_].left_sibling = next_pair;
         }
 
-        paired_child_heaps.clear();
         //where in data_ old last element is stored
         size_type index = reversemap_.back();
 

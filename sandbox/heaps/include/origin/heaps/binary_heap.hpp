@@ -112,8 +112,29 @@ namespace origin
                    compare_{cmp}, id_{id}
             {
                 while(first != last) {
-                    push(*first);
+                    elements_.push_back(*first);
+                    id_(*first) = elements_.size() - 1;
                     ++first;
+                }
+                size_type index = elements_.size() / 2;
+                while (index > 0){
+                    index--;
+                    heapify(index); 
+                }
+            }
+  
+            mutable_binary_heap_impl (std::initializer_list<T> lst, 
+                   const Compare &cmp, const Item_Map& id):
+                   compare_{cmp}, id_{id}
+            {
+                for (auto &x : lst) {
+                    elements_.push_back(x);
+                    id_(x) = elements_.size() - 1;
+                }
+                size_type index = elements_.size() / 2;
+                while (index > 0){
+                    index--;
+                    heapify(index); 
                 }
             }
 
@@ -307,6 +328,10 @@ namespace origin
         size_type index = id_(d);
         elements_[index] = d;
 
+        //if root was modified, no action required
+        if (index == 0)
+            return;
+
         size_type parent_index = (index - 1) / 2;
 
         //after update, element may need to move up the heap
@@ -361,6 +386,11 @@ namespace origin
                            impl (first, last, cmp, id)
             {}
 
+            mutable_binary_heap (std::initializer_list<T> lst, 
+                           const Compare &cmp, const Item_Map& id):
+                           impl (lst, cmp, id)
+            {}
+ 
             void update(const value_type& d) 
             {
                 impl.update(d); 
@@ -441,8 +471,13 @@ namespace origin
 
             template<typename ForwardIterator>
             mutable_binary_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp): id_(map_),
+                           const Compare& cmp): id_{&map_},
                            impl (first, last, cmp, id_)
+            {}
+
+            mutable_binary_heap (std::initializer_list<T> lst, 
+                           const Compare &cmp): id_{&map_},
+                           impl (lst, cmp, id_)
             {}
 
             /*
@@ -582,10 +617,32 @@ namespace origin
                    compare_{cmp}
             {
                 while(first != last) {
-                    push(*first);
+                    elements_.push_back(*first);
+                    id_(*first) = elements_.size() - 1;
                     ++first;
                 }
+                size_type index = elements_.size() / 2;
+                while (index > 0){
+                    index--;
+                    heapify(index); 
+                }
             }
+
+            binary_heap (std::initializer_list<T> lst, 
+                   const Compare &cmp):
+                   compare_{cmp}
+            {
+                for (auto &x : lst) {
+                    elements_.push_back(x);
+                    id_(x) = elements_.size() - 1;
+                }
+                size_type index = elements_.size() / 2;
+                while (index > 0){
+                    index--;
+                    heapify(index); 
+                }
+            }
+
 
             /*
              * push: Insets the given element in the heap
