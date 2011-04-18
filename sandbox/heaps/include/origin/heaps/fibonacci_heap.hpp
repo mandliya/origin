@@ -211,6 +211,18 @@ namespace origin
                 ++first;
              }
           }
+
+          mutable_fibonacci_heap_impl (std::initializer_list<T> lst, 
+                                     const Compare &cmp, 
+                                     const Item_Map& id):
+                                     compare_{cmp},
+                                     id_{id}, top_{-1}
+          {
+              for (auto &x : lst) {
+                  push (x);
+              }
+          }
+
           
           /*
            * print: Function for displaying the fibonacci heap
@@ -616,6 +628,12 @@ namespace origin
                            impl (first, last, cmp, id)
             {}
  
+            mutable_fibonacci_heap (std::initializer_list<T> lst, 
+                                     const Compare &cmp, 
+                                     const Item_Map& id):
+                                     impl (lst, cmp, id)
+            {}
+        
             void update(const value_type& d) 
             { 
                 impl.update(d); 
@@ -704,10 +722,16 @@ namespace origin
             
             template<typename ForwardIterator>
             mutable_fibonacci_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp): id_(map_),
+                           const Compare& cmp): id_{&map_},
                            impl (first, last, cmp, id_)
             {
             }
+
+            mutable_fibonacci_heap (std::initializer_list<T> lst,
+                                     const Compare &cmp):id_{&map_},
+                                     impl (lst, cmp, id_)
+            {}
+
  
             /*
              * The assumption is that heap never stores the actual value. It 
