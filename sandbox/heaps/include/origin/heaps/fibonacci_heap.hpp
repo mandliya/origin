@@ -786,6 +786,7 @@ namespace origin
 
     };
  
+    
     /* Class: Non Mutable Fibonacci Heap 
      * Template parameters
      * T : Value type - Type of data to be stored in the heap
@@ -929,7 +930,7 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             fibonacci_heap (ForwardIterator first, ForwardIterator last,
+          fibonacci_heap (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp) : compare_{cmp}, top_{-1}
           {
              while(first != last) {
@@ -937,6 +938,17 @@ namespace origin
                 ++first;
              }
           }
+
+          fibonacci_heap (std::initializer_list<T> lst, 
+                                     const Compare &cmp):
+                                     compare_{cmp},
+                                     top_{-1}
+          {
+              for (auto &x : lst) {
+                  push(x);
+              }
+          }
+       
           
           /*
            * print: Function for displaying the fibonacci heap
@@ -1033,6 +1045,7 @@ namespace origin
           void pop();
     };
      
+
     template <class T, 
               class Compare>
     void fibonacci_heap<T, Compare>::consolidate()

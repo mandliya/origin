@@ -892,14 +892,14 @@ namespace origin
            * None       
            */
           template<typename ForwardIterator>
-             binomial_heap (ForwardIterator first, ForwardIterator last,
+          binomial_heap (ForwardIterator first, ForwardIterator last,
                    const Compare &cmp) :
                    compare_{cmp}, top_{-1}, head_{-1}
           {
-             while(first != last) {
-                push(*first);
-                ++first;
-             }
+              while(first != last) {
+                  push(*first);
+                  ++first;
+              }
           }
          
          binomial_heap (std::initializer_list<T> lst, 
