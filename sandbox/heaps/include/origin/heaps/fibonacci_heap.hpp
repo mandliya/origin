@@ -449,16 +449,9 @@ namespace origin
               class Item_Map>
     void mutable_fibonacci_heap_impl<T, Compare, Item_Map>::cut (size_type x, size_type y)
     {
-       if(data_[y].degree == 1) {
-          // Set y's child as -1
-          data_[y].child = -1;
-       } else {
-          if (data_[y].child == x) { 
-             data_[y].child = data_[x].right_sibling;
-          }
-          data_[data_[x].left_sibling].right_sibling = data_[x].right_sibling;
-          data_[data_[x].right_sibling].left_sibling = data_[x].left_sibling;
-       }
+       data_[y].child = data_[x].right_sibling;
+       data_[data_[x].left_sibling].right_sibling = data_[x].right_sibling;
+       data_[data_[x].right_sibling].left_sibling = data_[x].left_sibling;
        
        // Decrement degre of y
        data_[y].degree -= 1;
@@ -529,10 +522,6 @@ namespace origin
        size_type x = data_[z].child;
        size_type temp;
 
-       if (top_ == size_type(-1)) {
-          return;
-       }
-       
        if (data_[z].degree > 0) {
           do{
              // Add x to root list
