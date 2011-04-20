@@ -478,6 +478,7 @@ namespace origin
        while( z != size_type(-1)) {
           if (data_[y].mark == false) {
              data_[y].mark = true;
+             return;
           } else {
              cut(y, z);
              y = z;
@@ -526,16 +527,18 @@ namespace origin
           do{
              // Add x to root list
              // Concatenate w.r.t. right neighbor of top
-             data_[data_[top_].right_sibling].left_sibling = x;
              temp = data_[x].right_sibling;
-             data_[x].right_sibling = data_[top_].right_sibling;
-             data_[top_].right_sibling = x;
-             data_[x].left_sibling = top_;
              
              // Make x's parent as NULL
              data_[x].parent = -1;
              x = temp;
           }while(x != data_[z].child);
+         
+          // Attach the childlist list to root list
+          data_[data_[top_].right_sibling].left_sibling = data_[x].left_sibling;
+          data_[data_[x].left_sibling].right_sibling = data_[top_].right_sibling;
+          data_[x].left_sibling = top_;
+          data_[top_].right_sibling = x;
        }
        
        // Remove z from the root list
@@ -1167,6 +1170,7 @@ namespace origin
        while( z != size_type(-1)) {
           if (data_[y].mark == false) {
              data_[y].mark = true;
+             return;
           } else {
              cut(y, z);
              y = z;
