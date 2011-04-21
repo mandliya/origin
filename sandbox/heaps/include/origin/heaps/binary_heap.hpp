@@ -62,6 +62,35 @@ namespace origin
              */
             void swap_elements (size_type index1, size_type index2);
 
+            /*
+             * print_recur: Helper function for displaying the binary heap
+             * Input:
+             * size_type x : Index of the element
+             * ostresm &os : Reference to the ouput stream
+             * Output:
+             * Prints the nodes for a particular binary tree identified by x
+             * Return Value: None       
+             */
+            void print_recur(size_type x, std::ostream& os)
+            {
+                size_type total_size = elements_.size();
+                
+                os << elements_[x];
+                size_type i = 2 * x + 1;
+                
+                if (i < total_size) {
+                    os << "(";
+                    print_recur (i, os);
+                    
+                    os << " ";
+                    i = i + 1;
+                    if (i < total_size) {
+                        print_recur (i, os);
+                    }
+                    os << ")";
+                }
+            }
+
 
         public:
 
@@ -229,6 +258,18 @@ namespace origin
              */
             void update(const value_type& d);
 
+            /*
+             * print: Function for displaying the binary heap
+             * Input:
+             * ostresm &os : Reference to the ouput stream
+             * Output:
+             * Outputs the binary heap to the specified output stream
+             * Return Value:
+             * None       
+             * Note: This a helper function developed for unit testing
+             */
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os);
     };
 
     template <class T, 
@@ -356,6 +397,18 @@ namespace origin
         }
     }
 
+    template <class T, 
+              class Compare,
+              class Item_Map>
+    template<typename Char, typename Traits>
+    void mutable_binary_heap_impl<T, Compare, Item_Map>::print(std::basic_ostream<Char, Traits>& os)
+    {
+        if (elements_.size() > 0) {
+            print_recur(0, os);
+            os << std::endl;
+        } 
+    }
+
     /*
      * Binary Heap implementation used when an external map is provided
      * by the user
@@ -426,6 +479,12 @@ namespace origin
                 impl.pop();
             }
 
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os) 
+            {
+                impl.print(os);
+            } 
+ 
         protected:
             search_impl impl;
     };
@@ -522,6 +581,12 @@ namespace origin
                 map_.erase(top_element);
             }
 
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os) 
+            {
+                impl.print(os);
+            }
+ 
         protected:
             internal_map map_;
             item_map id_;
@@ -572,6 +637,34 @@ namespace origin
              */
             void swap_elements (size_type index1, size_type index2);
 
+            /*
+             * print_recur: Helper function for displaying the binary heap
+             * Input:
+             * size_type x : Index of the element
+             * ostresm &os : Reference to the ouput stream
+             * Output:
+             * Prints the nodes for a particular binary tree identified by x
+             * Return Value: None       
+             */
+            void print_recur(size_type x, std::ostream& os)
+            {
+                size_type total_size = elements_.size();
+                
+                os << elements_[x];
+                size_type i = 2 * x + 1;
+                
+                if (i < total_size) {
+                    os << "(";
+                    print_recur (i, os);
+                    
+                    os << " ";
+                    i = i + 1;
+                    if (i < total_size) {
+                        print_recur (i, os);
+                    }
+                    os << ")";
+                }
+            }
 
         public:
 
@@ -723,6 +816,18 @@ namespace origin
              */
             void pop();
 
+            /*
+             * print: Function for displaying the binary heap
+             * Input:
+             * ostresm &os : Reference to the ouput stream
+             * Output:
+             * Outputs the binary heap to the specified output stream
+             * Return Value:
+             * None       
+             * Note: This a helper function developed for unit testing
+             */
+            template<typename Char, typename Traits>
+            void print(std::basic_ostream<Char, Traits>& os);
     };
 
     template <class T, 
@@ -803,6 +908,16 @@ namespace origin
 
     }
 
+    template <class T, 
+              class Compare>
+    template<typename Char, typename Traits>
+    void binary_heap<T, Compare>::print(std::basic_ostream<Char, Traits>& os)
+    {
+        if (elements_.size() > 0) {
+            print_recur(0, os);
+            os << std::endl;
+        } 
+    }
 }
 
 
