@@ -234,7 +234,7 @@ namespace origin
            * Note: This a helper function developed for unit testing
            */
           template<typename Char, typename Traits>
-             void print(std::basic_ostream<Char, Traits>& os);
+          void print(std::basic_ostream<Char, Traits>& os);
           
           
           /*
@@ -531,8 +531,8 @@ namespace origin
              
              // Make x's parent as NULL
              data_[x].parent = -1;
-             x = temp;
-          }while(x != data_[z].child);
+             x = temp;//data_[x].right_sibling;
+          } while(x != data_[z].child);
          
           // Attach the childlist list to root list
           data_[data_[top_].right_sibling].left_sibling = data_[x].left_sibling;
@@ -953,7 +953,7 @@ namespace origin
            * Note: This a helper function developed for unit testing
            */
           template<typename Char, typename Traits>
-             void print(std::basic_ostream<Char, Traits>& os);
+          void print(std::basic_ostream<Char, Traits>& os);
           
           
           /*
