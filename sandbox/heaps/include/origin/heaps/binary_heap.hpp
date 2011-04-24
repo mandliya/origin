@@ -138,6 +138,8 @@ namespace origin
                                       const Compare &cmp, const Item_Map& id) :
                                       compare_{cmp}, id_{id}
             {
+                reserve(std::distance(first, last));
+
                 while(first != last) {
                     elements_.push_back(*first);
                     id_(*first) = elements_.size() - 1;
@@ -154,6 +156,8 @@ namespace origin
                                       const Compare &cmp, const Item_Map& id):
                                       compare_{cmp}, id_{id}
             {
+                reserve(lst.size());
+
                 for (auto &x : lst) {
                     elements_.push_back(x);
                     id_(x) = elements_.size() - 1;
@@ -243,6 +247,16 @@ namespace origin
              * None
              */
             void pop();
+  
+            void reserve(size_type n)
+            {
+                elements_.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return elements_.capacity();
+            }
 
             /*
              * Update: Updates the given element in the heap
@@ -469,6 +483,16 @@ namespace origin
                 impl.pop();
             }
 
+            void reserve(size_type n)
+            {
+                impl.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return impl.capacity();
+            }
+
             template<typename Char, typename Traits>
             void print(std::basic_ostream<Char, Traits>& os) 
             {
@@ -568,6 +592,16 @@ namespace origin
                 const value_type top_element = impl.top();
                 impl.pop();
                 map_.erase(top_element);
+            }
+
+            void reserve(size_type n)
+            {
+                impl.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return impl.capacity();
             }
 
             template<typename Char, typename Traits>
@@ -695,6 +729,8 @@ namespace origin
             binary_heap (ForwardIterator first, ForwardIterator last,
                          const Compare &cmp) : compare_{cmp}
             {
+                reserve(std::distance(first, last));
+
                 while(first != last) {
                     elements_.push_back(*first);
                     id_(*first) = elements_.size() - 1;
@@ -710,6 +746,8 @@ namespace origin
             binary_heap (std::initializer_list<T> lst, 
                          const Compare &cmp): compare_{cmp}
             {
+                reserve(lst.size());
+
                 for (auto &x : lst) {
                     elements_.push_back(x);
                     id_(x) = elements_.size() - 1;
@@ -800,6 +838,16 @@ namespace origin
              * None
              */
             void pop();
+
+            void reserve(size_type n)
+            {
+                elements_.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return elements_.capacity();
+            }
 
             /*
              * print: Function for displaying the binary heap

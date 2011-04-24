@@ -159,6 +159,8 @@ namespace origin
                                      const Compare &cmp, const Item_Map& id) :
                                      compare_{cmp}, id_{id}, top_{-1}
           {
+             reserve(std::distance(first, last));
+
              while(first != last) {
                 push(*first);
                 ++first;
@@ -169,6 +171,8 @@ namespace origin
                                      const Compare &cmp, const Item_Map& id):
                                      compare_{cmp}, id_{id}, top_{-1}
           {
+              reserve(lst.size());
+
               for (auto &x : lst) {
                   push(x);
               }
@@ -279,6 +283,18 @@ namespace origin
            * None
            */
           void pop();
+
+          void reserve(size_type n)
+          {
+              elements_.reserve(n);
+              data_.reserve(n);
+          }
+
+          size_type capacity() const
+          {
+              return elements_.capacity();
+          }
+
     };
     
     template <class T, 
@@ -553,6 +569,16 @@ namespace origin
                 impl.pop();
             }
 
+            void reserve(size_type n)
+            {
+                impl.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return impl.capacity();
+            }
+
             template<typename Char, typename Traits>
             void print(std::basic_ostream<Char, Traits>& os) 
             {
@@ -653,7 +679,17 @@ namespace origin
                 impl.pop();
                 map_.erase(top_element);
             }
-            
+ 
+            void reserve(size_type n)
+            {
+                impl.reserve(n);
+            }
+
+            size_type capacity() const
+            {
+                return impl.capacity();
+            }
+ 
             template<typename Char, typename Traits>
             void print(std::basic_ostream<Char, Traits>& os) 
             {
@@ -778,6 +814,8 @@ namespace origin
           pairing_heap (ForwardIterator first, ForwardIterator last,
                         const Compare &cmp) : compare_{cmp}, top_{-1}
           {
+             reserve(std::distance(first, last));
+
              while(first != last) {
                 push(*first);
                 ++first;
@@ -787,6 +825,8 @@ namespace origin
           pairing_heap (std::initializer_list<T> lst,
                         const Compare &cmp) : compare_{cmp}, top_{-1}
           {
+              reserve(lst.size());
+
               for (auto &x : lst) {
                   push(x);
               }
@@ -884,6 +924,18 @@ namespace origin
            * None
            */
           void pop();
+          
+          void reserve(size_type n)
+          {
+              elements_.reserve(n);
+              data_.reserve(n);
+              reversemap_.reserve(n);
+          }
+
+          size_type capacity() const
+          {
+              return elements_.capacity();
+          }
     };
     
     template <class T, 
