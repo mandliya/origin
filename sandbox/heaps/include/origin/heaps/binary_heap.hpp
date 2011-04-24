@@ -102,25 +102,23 @@ namespace origin
              * Return Value:
              * None       
              */
-            mutable_binary_heap_impl () {};
+            mutable_binary_heap_impl ()
+            {}
 
             /*
-             * mutable_binary_heap_impl: 3 argument constructor
+             * mutable_binary_heap_impl: 2 argument constructor
              * Input: 
-             * size_type n: number of elements in the heap initially
              * Compare &cmp: comparison function predicate
              * Item_Map: Lambda function for map
              * Output:
-             * Instantiates a heap of n elements with given comparison function
+             * Instantiates a heap with given comparison function
              * and property map
              * Return Value:
              * None
              */
-            mutable_binary_heap_impl (size_type n,
-                  const Compare &cmp, const Item_Map& id) :
-                  compare_{cmp}, id_{id}
-            { 
-            }
+            mutable_binary_heap_impl (const Compare &cmp, const Item_Map& id) :
+                                      compare_{cmp}, id_{id}
+            {}
 
             /*
              * mutable_binary_heap_impl: range based constructor
@@ -130,15 +128,15 @@ namespace origin
              * Compare &cmp: comparison function predicate
              * Item_Map: Lambda function for map
              * Output:
-             * Instantiates a heap of n elements with given comparison function
+             * Instantiates a heap of elements with given comparison function
              * and property map
              * Return Value:
              * None       
              */
             template<typename ForwardIterator>
             mutable_binary_heap_impl (ForwardIterator first, ForwardIterator last,
-                   const Compare &cmp, const Item_Map& id) :
-                   compare_{cmp}, id_{id}
+                                      const Compare &cmp, const Item_Map& id) :
+                                      compare_{cmp}, id_{id}
             {
                 while(first != last) {
                     elements_.push_back(*first);
@@ -153,8 +151,8 @@ namespace origin
             }
   
             mutable_binary_heap_impl (std::initializer_list<T> lst, 
-                   const Compare &cmp, const Item_Map& id):
-                   compare_{cmp}, id_{id}
+                                      const Compare &cmp, const Item_Map& id):
+                                      compare_{cmp}, id_{id}
             {
                 for (auto &x : lst) {
                     elements_.push_back(x);
@@ -355,6 +353,9 @@ namespace origin
 
         elements_.pop_back();
 
+        if(elements_.size() == 0)
+            return;
+
         //Find correct position for new root
         heapify(0);
 
@@ -369,31 +370,21 @@ namespace origin
         size_type index = id_(d);
         elements_[index] = d;
 
-        //if root was modified, no action required
-        if (index == 0)
-            return;
-
-        size_type parent_index = (index - 1) / 2;
+        size_type parent_index;
 
         //after update, element may need to move up the heap
-        if (compare_(elements_[index], elements_[parent_index])) {
-            while (index > 0){
-                parent_index = (index - 1) / 2;
-                if (compare_(elements_[index], elements_[parent_index])){
+        while (index > 0){
+            parent_index = (index - 1) / 2;
+            if (compare_(elements_[index], elements_[parent_index])){
 
-                    //swap child and parent in the heap structure
-                    swap_elements(index, parent_index);
+                //swap child and parent in the heap structure
+                swap_elements(index, parent_index);
 
-                    //new index will be the parents index
-                    index = parent_index;
-                }
-                else
-                    break;
+                //new index will be the parents index
+                index = parent_index;
             }
-        }
-        //else, element may need to move down the heap
-        else {
-            heapify(index);
+            else
+                break;
         }
     }
 
@@ -426,22 +417,21 @@ namespace origin
             typedef mutable_binary_heap_impl<value_type, Compare, Item_Map> search_impl;
 
         public:
-            mutable_binary_heap(): impl() 
+            mutable_binary_heap() : impl() 
             {}
 
-            mutable_binary_heap (size_type n,
-                const Compare& cmp, const Item_Map& id) : impl(n, cmp, id)
+            mutable_binary_heap (const Compare& cmp, const Item_Map& id) : impl(cmp, id)
             {}
 
             template<typename ForwardIterator>
             mutable_binary_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp, const Item_Map& id):
-                           impl (first, last, cmp, id)
+                                 const Compare& cmp, const Item_Map& id):
+                                 impl (first, last, cmp, id)
             {}
 
             mutable_binary_heap (std::initializer_list<T> lst, 
-                           const Compare &cmp, const Item_Map& id):
-                           impl (lst, cmp, id)
+                                 const Compare &cmp, const Item_Map& id):
+                                 impl (lst, cmp, id)
             {}
  
             void update(const value_type& d) 
@@ -456,7 +446,7 @@ namespace origin
 
             value_type& top()
             {
-               return impl.top(); 
+                return impl.top(); 
             }
 
             const value_type& top() const
@@ -466,12 +456,12 @@ namespace origin
 
             bool empty() const
             {
-               return impl.empty();
+                return impl.empty();
             }
 
             size_type size() const
             {
-               return impl.size();
+                return impl.size();
             }
 
             void pop()
@@ -521,22 +511,21 @@ namespace origin
             typedef mutable_binary_heap_impl<value_type, Compare, item_map> search_impl;
 
         public:
-            mutable_binary_heap() 
-            {};
+            mutable_binary_heap() : impl()
+            {}
 
-            mutable_binary_heap (size_type n,
-                const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
+            mutable_binary_heap (const Compare& cmp): id_{&map_}, impl (cmp, id_)
             {}
 
             template<typename ForwardIterator>
             mutable_binary_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp): id_{&map_},
-                           impl (first, last, cmp, id_)
+                                 const Compare& cmp): id_{&map_},
+                                 impl (first, last, cmp, id_)
             {}
 
             mutable_binary_heap (std::initializer_list<T> lst, 
-                           const Compare &cmp): id_{&map_},
-                           impl (lst, cmp, id_)
+                                 const Compare &cmp): id_{&map_},
+                                 impl (lst, cmp, id_)
             {}
 
             /*
@@ -556,7 +545,7 @@ namespace origin
 
             value_type& top()
             {
-               return impl.top(); 
+                return impl.top(); 
             }
 
             const value_type& top() const
@@ -566,12 +555,12 @@ namespace origin
 
             bool empty() const
             {
-               return impl.empty(); 
+                return impl.empty(); 
             }
 
             size_type size() const
             {
-               return impl.size();
+                return impl.size();
             }
 
             void pop()
@@ -676,21 +665,19 @@ namespace origin
              * Return Value:
              * None       
              */
-            binary_heap () {};
+            binary_heap ()
+            {}
 
             /*
-             * binary_heap: 2 argument constructor
+             * binary_heap: 1 argument constructor
              * Input: 
-             * size_type n: number of elements in the heap initially
              * Compare &cmp: comparison function predicate
              * Output:
-             * Instantiates a heap of n elements with given comparison function
+             * Instantiates a heap with given comparison function
              * Return Value:
              * None
              */
-            binary_heap (size_type n,
-                  const Compare &cmp) :
-                  compare_{cmp}
+            binary_heap (const Compare &cmp) : compare_{cmp}
             {}
 
             /*
@@ -700,14 +687,13 @@ namespace origin
              * ForwardIterator last: Iterator to the last element of a container
              * Compare &cmp: comparison function predicate
              * Output:
-             * Instantiates a heap of n elements with given comparison function
+             * Instantiates a heap of elements with given comparison function
              * Return Value:
              * None       
              */
             template<typename ForwardIterator>
             binary_heap (ForwardIterator first, ForwardIterator last,
-                   const Compare &cmp) :
-                   compare_{cmp}
+                         const Compare &cmp) : compare_{cmp}
             {
                 while(first != last) {
                     elements_.push_back(*first);
@@ -722,8 +708,7 @@ namespace origin
             }
 
             binary_heap (std::initializer_list<T> lst, 
-                   const Compare &cmp):
-                   compare_{cmp}
+                         const Compare &cmp): compare_{cmp}
             {
                 for (auto &x : lst) {
                     elements_.push_back(x);
@@ -902,6 +887,9 @@ namespace origin
         swap_elements(0, elements_.size()-1);
 
         elements_.pop_back();
+
+        if(elements_.size() == 0)
+            return;
 
         //Find correct position for new root
         heapify(0);

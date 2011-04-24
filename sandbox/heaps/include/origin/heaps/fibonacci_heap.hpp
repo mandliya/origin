@@ -166,25 +166,23 @@ namespace origin
            * Return Value:
            * None       
            */
-          mutable_fibonacci_heap_impl () {};
+          mutable_fibonacci_heap_impl ()
+          {}
           
           /*
            * mutable_fibonacci_heap_impl: 3 argument constructor
            * Input: 
-           * size_type n: number of elements in the heap initially
            * Compare &cmp: comparison function predicate
            * Item_Map: Lambda function for map
            * Output:
-           * Instantiates a heap of n elements with given comparison function
+           * Instantiates a heap with given comparison function
            * and property map
            * Return Value:
            * None
            */
-          mutable_fibonacci_heap_impl (size_type n,
-                const Compare &cmp, const Item_Map& id) :
-                compare_{cmp}, id_{id}, top_{-1}
-          { 
-          }
+          mutable_fibonacci_heap_impl (const Compare &cmp, const Item_Map& id) :
+                                       compare_{cmp}, id_{id}, top_{-1}
+          {}
           
           /*
            * mutable_fibonacci_heap_impl: range based constructor
@@ -194,16 +192,15 @@ namespace origin
            * Compare &cmp: comparison function predicate
            * Item_Map: Lambda function for map
            * Output:
-           * Instantiates a heap of n elements with given comparison function
+           * Instantiates a heap of elements with given comparison function
            * and property map
            * Return Value:
            * None       
            */
           template<typename ForwardIterator>
-             mutable_fibonacci_heap_impl (ForwardIterator first, ForwardIterator last,
-                   const Compare &cmp, const Item_Map& id) :
-                   compare_{cmp}, 
-                   id_{id}, top_{-1}
+          mutable_fibonacci_heap_impl (ForwardIterator first, ForwardIterator last,
+                                       const Compare &cmp, const Item_Map& id) :
+                                       compare_{cmp}, id_{id}, top_{-1}
           {
              while(first != last) {
                 push(*first);
@@ -212,10 +209,8 @@ namespace origin
           }
           
           mutable_fibonacci_heap_impl (std::initializer_list<T> lst, 
-                                     const Compare &cmp, 
-                                     const Item_Map& id):
-                                     compare_{cmp},
-                                     id_{id}, top_{-1}
+                                       const Compare &cmp, const Item_Map& id) :
+                                       compare_{cmp}, id_{id}, top_{-1}
           {
               for (auto &x : lst) {
                   push (x);
@@ -606,23 +601,21 @@ namespace origin
             typedef mutable_fibonacci_heap_impl<value_type, Compare, Item_Map> search_impl;
             
         public:
-            mutable_fibonacci_heap(): impl() 
+            mutable_fibonacci_heap() : impl() 
             {}
             
-            mutable_fibonacci_heap (size_type n,
-                const Compare& cmp, const Item_Map& id) : impl(n, cmp, id)
+            mutable_fibonacci_heap (const Compare& cmp, const Item_Map& id) : impl(cmp, id)
             {}
             
             template<typename ForwardIterator>
             mutable_fibonacci_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp, const Item_Map& id):
-                           impl (first, last, cmp, id)
+                                    const Compare& cmp, const Item_Map& id) :
+                                    impl (first, last, cmp, id)
             {}
  
             mutable_fibonacci_heap (std::initializer_list<T> lst, 
-                                     const Compare &cmp, 
-                                     const Item_Map& id):
-                                     impl (lst, cmp, id)
+                                    const Compare &cmp, const Item_Map& id) :
+                                    impl (lst, cmp, id)
             {}
         
             void update(const value_type& d) 
@@ -702,25 +695,21 @@ namespace origin
             typedef mutable_fibonacci_heap_impl<value_type, Compare, item_map> search_impl;
 
         public:
-            mutable_fibonacci_heap() 
-            {};
+            mutable_fibonacci_heap() : impl() 
+            {}
             
-            mutable_fibonacci_heap (size_type n,
-                const Compare& cmp): map_{n}, id_{&map_}, impl (n, cmp, id_)
-              
-            { 
-            }
+            mutable_fibonacci_heap (const Compare& cmp): id_{&map_}, impl (cmp, id_)
+            {}
             
             template<typename ForwardIterator>
             mutable_fibonacci_heap (ForwardIterator first, ForwardIterator last,
-                           const Compare& cmp): id_(map_),
-                           impl (first, last, cmp, id_)
-            {
-            }
+                                    const Compare& cmp): id_(map_),
+                                    impl (first, last, cmp, id_)
+            {}
  
             mutable_fibonacci_heap (std::initializer_list<T> lst,
-                                     const Compare &cmp):id_{&map_},
-                                     impl (lst, cmp, id_)
+                                    const Compare &cmp):id_{&map_},
+                                    impl (lst, cmp, id_)
             {}
 
             /*
@@ -889,24 +878,20 @@ namespace origin
            * Return Value:
            * None       
            */
-          fibonacci_heap () {};
+          fibonacci_heap ()
+          {}
           
           /*
-           * fibonacci_heap_impl: 3 argument constructor
+           * fibonacci_heap_impl: 1 argument constructor
            * Input: 
-           * size_type n: number of elements in the heap initially
            * Compare &cmp: comparison function predicate
-           * Item_Map: Lambda function for map
            * Output:
-           * Instantiates a heap of n elements with given comparison function
-           * and property map
+           * Instantiates a heap with given comparison function
            * Return Value:
            * None
            */
-          fibonacci_heap (size_type n,
-                const Compare &cmp) : compare_{cmp}, top_{-1}
-          { 
-          }
+          fibonacci_heap (const Compare &cmp) : compare_{cmp}, top_{-1}
+          {}
           
           /*
            * fibonacci_heap_impl: range based constructor
@@ -914,16 +899,14 @@ namespace origin
            * ForwardIterator first: Iterator to the first element of a container 
            * ForwardIterator last: Iterator to the last element of a container
            * Compare &cmp: comparison function predicate
-           * Item_Map: Lambda function for map
            * Output:
            * Instantiates a heap of n elements with given comparison function
-           * and property map
            * Return Value:
            * None       
            */
           template<typename ForwardIterator>
           fibonacci_heap (ForwardIterator first, ForwardIterator last,
-                   const Compare &cmp) : compare_{cmp}, top_{-1}
+                          const Compare &cmp) : compare_{cmp}, top_{-1}
           {
              while(first != last) {
                 push(*first);
@@ -932,9 +915,7 @@ namespace origin
           }
 
           fibonacci_heap (std::initializer_list<T> lst, 
-                                     const Compare &cmp):
-                                     compare_{cmp},
-                                     top_{-1}
+                          const Compare &cmp) : compare_{cmp}, top_{-1}
           {
               for (auto &x : lst) {
                   push(x);
