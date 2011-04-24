@@ -186,6 +186,7 @@ namespace origin
                                       const Compare &cmp, const Item_Map& id) :
                                       compare_{cmp}, id_{id}, top_{-1}, head_{-1}
           {
+             reserve(std::distance(first, last));
              while(first != last) {
                 push(*first);
                 ++first;
@@ -196,18 +197,20 @@ namespace origin
                                       const Compare &cmp, const Item_Map& id) :
                                       compare_{cmp}, id_{id}, top_{-1}, head_{-1}
           {
-              for (auto &x : lst) {
-                  push (x);
-              }
+             reserve(lst.size());
+             for (auto &x : lst) {
+                 push (x);
+             }
           }
 
           mutable_binomial_heap_impl (std::initializer_list<T> lst, 
                                       const Item_Map& id):
                                       compare_{Compare()}, id_{id}, top_{-1}, head_{-1}
           {
-              for (auto &x : lst) {
-                  push (x);
-              }
+             reserve(lst.size());
+             for (auto &x : lst) {
+                 push (x);
+             }
           }
           /*
            * print: Function for displaying the binomial heap
@@ -303,7 +306,18 @@ namespace origin
           {
              return elements_.size();
           }
+
+          void reserve(size_type n)
+          {
+             elements_.reserve(n);
+             data_.reserve(n);
+          }
           
+          size_type capacity() const
+          {
+             return elements_.capacity();
+          }
+
           /*
            * pop: Removes the top element from the heap
            * Input: 
@@ -629,12 +643,12 @@ namespace origin
                                    
             void update(const value_type& d) 
             { 
-                impl.update(d); 
+               impl.update(d); 
             }
           
             void push(const value_type& d)
             { 
-                impl.push(d); 
+               impl.push(d); 
             }
           
             value_type& top()
@@ -644,7 +658,7 @@ namespace origin
           
             const value_type& top() const
             {
-                return impl.top();
+               return impl.top();
             }
           
             bool empty() const
@@ -656,16 +670,26 @@ namespace origin
             {
                return impl.size();
             }
-          
+            
+            void reserve(size_type n)
+            {
+               impl.reserve(n);
+            }
+            
+            size_type capacity() const
+            {
+               return impl.capacity();
+            }         
+
             void pop()
             { 
-                impl.pop();
+               impl.pop();
             }
 
             template<typename Char, typename Traits>
             void print(std::basic_ostream<Char, Traits>& os)
             {
-                impl.print(os);
+               impl.print(os);
             }
 
         protected:
@@ -733,12 +757,12 @@ namespace origin
              */
             void update(const value_type& d)
             {
-                impl.update(d); 
+               impl.update(d); 
             }
           
             void push(const value_type& d)
             {   
-                impl.push(d); 
+               impl.push(d); 
             }
           
             value_type& top()
@@ -748,7 +772,7 @@ namespace origin
           
             const value_type& top() const
             {
-                return impl.top();
+               return impl.top();
             }
           
             bool empty() const
@@ -760,18 +784,28 @@ namespace origin
             {
                return impl.size();
             }
-          
+
+            void reserve(size_type n)
+            {
+               impl.reserve(n);
+            }
+            
+            size_type capacity() const
+            {
+               return impl.capacity();
+            }         
+
             void pop()
             {   
-                const value_type top_element = impl.top();
-                impl.pop();
-                map_.erase(top_element);
+               const value_type top_element = impl.top();
+               impl.pop();
+               map_.erase(top_element);
             }
             
             template<typename Char, typename Traits>
             void print(std::basic_ostream<Char, Traits>& os) 
             {
-                impl.print(os);
+               impl.print(os);
             }
                 
         protected:
@@ -910,25 +944,28 @@ namespace origin
           binomial_heap (ForwardIterator first, ForwardIterator last,
                          const Compare &cmp) : compare_{cmp}, top_{-1}, head_{-1}
           {
-              while(first != last) {
-                  push(*first);
-                  ++first;
-              }
+             reserve(std::distance(first, last));
+             while(first != last) {
+                 push(*first);
+                 ++first;
+             }
           }
          
          binomial_heap (std::initializer_list<T> lst, 
                         const Compare &cmp) : compare_{cmp}, top_{-1}, head_{-1}
           {
-              for (auto &x : lst) {
-                  push(x);
-              }
+             reserve(lst.size());
+             for (auto &x : lst) {
+                 push(x);
+             }
           }
        
           binomial_heap (std::initializer_list<T> lst) : compare_{Compare()}, top_{-1}, head_{-1}
           {
-              for (auto &x : lst) {
-                  push(x);
-              }
+             reserve(lst.size());
+             for (auto &x : lst) {
+                 push(x);
+             }
           }
        
 
@@ -1013,7 +1050,18 @@ namespace origin
           {
              return elements_.size();
           }
+
+          void reserve(size_type n)
+          {
+             reversemap_.reserve(n);
+             elements_.reserve(n);
+             data_.reserve(n);
+          }
           
+          size_type capacity() const
+          {
+             return elements_.capacity();
+          }
           /*
            * pop: Removes the top element from the heap
            * Input: 
