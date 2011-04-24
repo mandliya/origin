@@ -19,6 +19,7 @@
 #include <origin/heaps/fibonacci_heap.hpp>
 #include <origin/heaps/pairing_heap.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/timer.hpp>
 #include <iterator>
 
 using namespace origin;
@@ -46,14 +47,14 @@ class indirect_compare {
 };
 
 template <class Heap, class T>
-int test_heap_external_map(T &item_label) 
+int test_heap_external_map(T &item_label, int node) 
 {
   
     mt19937 gen;
     int i;
    
     typedef indirect_compare<float*, std::less<float>> ICmp;
-    for (int N = 90000; N < 90002; ++N) {
+    for (int N = node; N < node+1; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
 
@@ -138,14 +139,14 @@ int test_heap_external_map(T &item_label)
 }
 
 template <class Heap>
-int test_heap_internal_map() 
+int test_heap_internal_map(int node) 
 {
   
     mt19937 gen;
     int i;
    
     typedef indirect_compare<float*,std::less<float>> ICmp;
-    for (int N = 90000; N < 90002; ++N) {
+    for (int N = node; N < node+1; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
         
@@ -226,12 +227,12 @@ int test_heap_internal_map()
 }
 
 template <class Heap>
-int test_non_mutable_heap() 
+int test_non_mutable_heap(int node) 
 {
     int i;
    
     typedef indirect_compare<float*,std::less<float>> ICmp;
-    for (int N = 90000; N < 90002; ++N) {
+    for (int N = node; N < node+1; ++N) {
         
         for (int t = 0; t < 1; ++t) {
             std::vector<float> v, w(N);
@@ -301,135 +302,179 @@ int test_non_mutable_heap()
 int main()
 {
     int result;
+    timer t;
     typedef indirect_compare<float*,std::less<float>> ICmp;
 
     std::unordered_map<val_type, size_t> id_;
+    auto item_label = [&](val_type x) -> size_t &{return id_[x];};
 
     //for (int x=0; x < 200; ++x) {
     //    id_[x] = 0;
     //}
 
-    auto item_label = [&](val_type x) -> size_t &{return id_[x];};
+    std::cout<<"\tmbinom\tmfibo\tmbinar\tmpair\tmbinomi\tmfiboi\tmbinari\tmpairi\tbinom\tfibo\tbinar\tpair\n";
+
+    for(int node = 100000; node<1000000; node=node+20000) {
+    std::cout<<node<<"\t";
+    std::cout.flush();
+
             
     typedef mutable_binomial_heap<val_type, ICmp, decltype(item_label)> mbinomial;
     
-    result = test_heap_external_map<mbinomial>(item_label);
+    result = test_heap_external_map<mbinomial>(item_label, node);
     
     if (result > 0) {
-        std::cout << "mutable binomial heap passed test" << std::endl; 
+    //    std::cout << "mutable binomial heap passed test" << std::endl; 
+        std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
     } else {
         std::cout<<"mutable binomial heap test failed \n";
     }
  
     typedef mutable_fibonacci_heap<val_type, ICmp, decltype(item_label)> mfibonacci;
     
-    result = test_heap_external_map<mfibonacci>(item_label);
+    result = test_heap_external_map<mfibonacci>(item_label, node);
     
     if (result > 0) {
-        std::cout << "mutable fibonacci heap passed test" << std::endl; 
+         std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+ //      std::cout << "mutable fibonacci heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable fibonacci heap test failed \n";
     }
  
     typedef mutable_binary_heap<val_type, ICmp, decltype(item_label)> mbinary;
     
-    result = test_heap_external_map<mbinary>(item_label);
+    result = test_heap_external_map<mbinary>(item_label, node);
     
     if (result > 0) {
-        std::cout << "mutable binary heap passed test" << std::endl; 
+         std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+ //      std::cout << "mutable binary heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable binary heap test failed \n";
     }
  
     typedef mutable_pairing_heap<val_type, ICmp, decltype(item_label)> mpairing;
     
-    result = test_heap_external_map<mpairing>(item_label);
+    result = test_heap_external_map<mpairing>(item_label, node);
     
     if (result > 0) {
-        std::cout << "mutable pairing heap passed test" << std::endl; 
+           std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+   //  std::cout << "mutable pairing heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable pairing heap test failed \n";
     }
    
     typedef mutable_binomial_heap<val_type, ICmp> mbinomial_int;
     
-    result = test_heap_internal_map<mbinomial_int>();
+    result = test_heap_internal_map<mbinomial_int>(node);
     
     if (result > 0) {
-        std::cout << "mutable binomial heap (internal map) passed test" << std::endl; 
+             std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+//   std::cout << "mutable binomial heap (internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable binomial heap (internal map) test failed \n";
     }
 
     typedef mutable_fibonacci_heap<val_type, ICmp> mfibonacci_int;
     
-    result = test_heap_internal_map<mfibonacci_int>();
+    result = test_heap_internal_map<mfibonacci_int>(node);
     
     if (result > 0) {
-        std::cout << "mutable fibonacci heap (internal map) passed test" << std::endl; 
+         std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+ //      std::cout << "mutable fibonacci heap (internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable fibonacci heap (internal map) test failed \n";
     }
 
     typedef mutable_binary_heap<val_type, ICmp> mbinary_int;
     
-    result = test_heap_internal_map<mbinary_int>();
+    result = test_heap_internal_map<mbinary_int>(node);
     
     if (result > 0) {
-        std::cout << "mutable binary heap(internal_map) passed test" << std::endl; 
+        std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+//        std::cout << "mutable binary heap(internal_map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable binary heap (internal map) test failed \n";
     }
 
     typedef mutable_pairing_heap<val_type, ICmp> mpairing_int;
     
-    result = test_heap_internal_map<mpairing_int>();
+    result = test_heap_internal_map<mpairing_int>(node);
     
     if (result > 0) {
-        std::cout << "mutable pairing heap(internal map) passed test" << std::endl; 
+         std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+ //      std::cout << "mutable pairing heap(internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable pairing heap(internal map) test failed \n";
     }
 
     typedef binomial_heap<val_type, ICmp> binomial;
  
-    result = test_non_mutable_heap<binomial>();
+    result = test_non_mutable_heap<binomial>(node);
     
     if (result > 0) {
-        std::cout << "non-mutable binomial heap passed test" << std::endl; 
+         std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+ //      std::cout << "non-mutable binomial heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable binomial heap test failed \n";
     }
 
     typedef fibonacci_heap<val_type, ICmp> fibonacci;
  
-    result = test_non_mutable_heap<fibonacci>();
+    result = test_non_mutable_heap<fibonacci>(node);
     
     if (result > 0) {
-        std::cout << "non-mutable fibonacci heap passed test" << std::endl; 
+           std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+   //  std::cout << "non-mutable fibonacci heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable fibonnacci heap test failed \n";
     }
 
     typedef binary_heap<val_type, ICmp> binary;
  
-    result = test_non_mutable_heap<binary>();
+    result = test_non_mutable_heap<binary>(node);
     
     if (result > 0) {
-        std::cout << "non-mutable binary heap passed test" << std::endl; 
+        std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+//        std::cout << "non-mutable binary heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable binary heap test failed \n";
     }
  
     typedef pairing_heap<val_type, ICmp> pairing;
     
-    result = test_non_mutable_heap<pairing>();
+    result = test_non_mutable_heap<pairing>(node);
     
     if (result > 0) {
-        std::cout << "non-mutable pairing heap passed test" << std::endl; 
+        std::cout<<t.elapsed()<<"\t";
+        std::cout.flush();
+        t.restart();
+//        std::cout << "non-mutable pairing heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable pairing heap test failed \n";
     }
-
+   std::cout<<"\n";
+   }
    return 0;
 }
