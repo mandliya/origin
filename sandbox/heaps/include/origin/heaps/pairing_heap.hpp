@@ -123,8 +123,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          mutable_pairing_heap_impl ()
-          {}
+          mutable_pairing_heap_impl () = default;
           
           /*
            * mutable_pairing_heap_impl: 2 argument constructor
@@ -784,8 +783,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          pairing_heap ()
-          {}
+          pairing_heap () = default;
           
           /*
            * pairing_heap: 1 argument constructor

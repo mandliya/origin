@@ -150,8 +150,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          mutable_binomial_heap_impl ()
-          {}
+          mutable_binomial_heap_impl () = default;
           
           /*
            * mutable_binomial_heap_impl: 2 argument constructor
@@ -914,8 +913,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          binomial_heap ()
-          {}
+          binomial_heap () = default;
           
           /*
            * mutable_binomial_heap_impl: 1 argument constructor

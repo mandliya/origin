@@ -166,8 +166,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          mutable_fibonacci_heap_impl ()
-          {}
+          mutable_fibonacci_heap_impl () = default;
           
           /*
            * mutable_fibonacci_heap_impl: 3 argument constructor
@@ -912,8 +911,7 @@ namespace origin
            * Return Value:
            * None       
            */
-          fibonacci_heap ()
-          {}
+          fibonacci_heap () = default;
           
           /*
            * fibonacci_heap_impl: 1 argument constructor

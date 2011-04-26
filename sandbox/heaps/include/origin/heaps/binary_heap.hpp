@@ -102,8 +102,7 @@ namespace origin
              * Return Value:
              * None       
              */
-            mutable_binary_heap_impl ()
-            {}
+            mutable_binary_heap_impl () = default;
 
             /*
              * mutable_binary_heap_impl: 2 argument constructor
@@ -699,8 +698,7 @@ namespace origin
              * Return Value:
              * None       
              */
-            binary_heap ()
-            {}
+            binary_heap () = default;
 
             /*
              * binary_heap: 1 argument constructor
