@@ -5,4 +5,5 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-origin_run_test(compile compile.cpp)
+# origin_run_test(compile compile.cpp)
+origin_run_test(binary_heap binary_heap.cpp)
