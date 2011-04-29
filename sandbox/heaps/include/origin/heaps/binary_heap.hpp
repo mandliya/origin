@@ -236,7 +236,7 @@ namespace origin
       }
     }
 
-  template<typename T, class Comp, class Index>
+  template<typename T, typename Comp, typename Index>
     void mutable_binary_heap_impl<T, Comp, Index>::heapify(size_type parent)
     {
       size_type total_size = elements_.size();
