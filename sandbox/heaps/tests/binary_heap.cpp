@@ -24,12 +24,10 @@ using namespace std;
 using namespace origin;
 
 template<typename Seq>
-  void print(Seq const& seq, bool nl = true)
+  void print(Seq const& seq)
   {
     for(auto i : seq)
       cout << i << " ";
-    if(nl)
-      cout << "\n";
   }
 
 int main()
@@ -64,22 +62,25 @@ int main()
     auto index = bind(idist, eng);
     for(int i = 0; i < 10; ++i) {
       int n = index();
-      print(h.data(), false); cout << " | "; print(v);
+      print(h.data()); cout << " | "; print(v);
+      cout << " --> " << is_heap(h.data().begin(), h.data().end(), less) << "\n";
       v[n] = var();
       h.update(n);
-      print(h.data(), false); cout << " | "; print(v);
+      print(h.data()); cout << " | "; print(v);
+      cout << " --> " << is_heap(h.data().begin(), h.data().end(), less) << "\n";
       cout << "~~~~~~~~\n";
 
       // Create a copy of the heap and make sure that it's sorted by copying
       // its results out to a new vector.
-      /*
+      
       mutable_binary_heap<size_t, decltype(less)> h2 = h;
       vector<int> v2(v.size());
       for(size_t i = 0; i < v.size(); ++i, h2.pop())
         v2[i] = v[h2.top()];
       print(v2);
-      assert(( is_sorted(v2.begin(), v2.end(), greater<int>{}) ));
-      */
+      cout << is_sorted(v2.begin(), v2.end(), greater<int>{}) << "\n";
+//       assert(( is_sorted(v2.begin(), v2.end(), greater<int>{}) ));
+      
     }
   }
 }

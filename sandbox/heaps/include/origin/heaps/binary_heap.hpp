@@ -272,7 +272,7 @@ namespace origin
   template<typename T, typename Comp, typename Index>
     void mutable_binary_heap_impl<T, Comp, Index>::update(value_type const& x)
     {
-      assert(( elements_[index_(x)] == x ));
+//       assert(( elements_[index_(x)] == x ));
 
       //update the element with the new value
       size_type index = index_(x);
