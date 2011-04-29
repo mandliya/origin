@@ -8,6 +8,7 @@
 #ifndef ORIGIN_HEAPS_BINARY_HEAP_HPP
 #define ORIGIN_HEAPS_BINARY_HEAP_HPP
 
+#include <cassert>
 #include <iosfwd>
 #include <vector>
 #include <unordered_map>
@@ -27,154 +28,75 @@ namespace origin
   template<typename T, typename Comp, typename Index>
     class mutable_binary_heap_impl
     {
+    public:
       typedef std::vector<T> container_type;
-    private:
       typedef T value_type;
-      typedef Comp value_compare;   // FIXME: Should be key compare?
+      typedef Comp value_compare;   // FIXME: Should be called key compare?
       typedef Index index_mapping;
       typedef typename container_type::size_type size_type;
-
     private:
-      /*
-        * heapify: Function to heapify after root is swapped with last element
-        * Input:
-        * size_type x : Index of the root element of the heap
-        * Output:
-        * Finds the correct place for element x in the heap
-        * Return Value:
-        * None
-        */
+      // Heapify after root is swapped with last element
       void heapify (size_type index);
 
-      /*
-        * swap_elements: Function to swap two elements in the heap
-        * Input:
-        * size_type index1: Index of the one element
-        * size_type index2: Index of the second element
-        * Output:
-        * Swaps the two elements
-        * Return Value:
-        * None
-        */
+      // Swap two elements in the heap by their indexes.
       void swap_elements (size_type index1, size_type index2);
 
-      /*
-        * print_recur: Helper function for displaying the binary heap
-        * Input:
-        * size_type x : Index of the element
-        * ostresm &os : Reference to the ouput stream
-        * Output:
-        * Prints the nodes for a particular binary tree identified by x
-        * Return Value: None
-        */
+      // Recursively print the heap as a tree
       template<typename Char, typename Traits>
-      void print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
-      {
-          size_type sz = elements_.size();
+        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
+        {
+            size_type sz = elements_.size();
 
-          os << elements_[x];
-          size_type i = 2 * x + 1;
+            os << elements_[x];
+            size_type i = 2 * x + 1;
 
-          if (i < sz) {
-              os << "(";
-              print_recur (i, os);
+            if (i < sz) {
+                os << "(";
+                print_recur (i, os);
 
-              os << " ";
-              i = i + 1;
-              if (i < sz) {
-                  print_recur (i, os);
-              }
-              os << ")";
-          }
-      }
+                os << " ";
+                i = i + 1;
+                if (i < sz) {
+                    print_recur (i, os);
+                }
+                os << ")";
+            }
+        }
 
+    public:
+      /**
+       * @brief Default constructor
+       */
+      mutable_binary_heap_impl(value_compare const& comp, 
+                               index_mapping const& index)
+        : compare_{comp}, index_{index}
+      { }
 
-  public:
-
-      /*
-        * mutable_binary_heap_impl: Default constructor
-        * Input:
-        * None
-        * Output:
-        * Return Value:
-        * None
-        */
-      mutable_binary_heap_impl () = default;
-
-      /*
-        * mutable_binary_heap_impl: 2 argument constructor
-        * Input:
-        * Comp &cmp: comparison function predicate
-        * Index: Lambda function for map
-        * Output:
-        * Instantiates a heap with given comparison function
-        * and property map
-        * Return Value:
-        * None
-        */
-      mutable_binary_heap_impl (const Comp &cmp, const Index& id) :
-                                compare_{cmp}, index_{id}
-      {}
-
-      /*
-        * mutable_binary_heap_impl: range based constructor
-        * Input:
-        * ForwardIterator first: Iterator to the first element of a container
-        * ForwardIterator last: Iterator to the last element of a container
-        * Comp &cmp: comparison function predicate
-        * Index: Lambda function for map
-        * Output:
-        * Instantiates a heap of elements with given comparison function
-        * and property map
-        * Return Value:
-        * None
-        */
+      /**
+       * @brief Range constructor
+       */
       template<typename ForwardIterator>
-      mutable_binary_heap_impl (ForwardIterator first, ForwardIterator last,
-                                const Comp &cmp, const Index& id) :
-                                compare_{cmp}, index_{id}
+        mutable_binary_heap_impl(ForwardIterator first, 
+                                 ForwardIterator last,
+                                 value_compare const& comp, 
+                                 index_mapping const& id) 
+        : compare_{comp}, index_{id}
       {
-          reserve(std::distance(first, last));
-
-          while(first != last) {
-              elements_.push_back(*first);
-              index_(*first) = elements_.size() - 1;
-              ++first;
-          }
-          size_type index = elements_.size() / 2;
-          while (index > 0){
-              index--;
-              heapify(index);
-          }
+        reserve(std::distance(first, last));
+        while(first != last) {
+          elements_.push_back(*first);
+          index_(*first) = elements_.size() - 1;
+          ++first;
+        }
+        size_type index = elements_.size() / 2;
+        while (index > 0){
+          index--;
+          heapify(index);
+        }
       }
 
-
-      /*
-        * push: Insets the given element in the heap
-        * Input:
-        * value_type &d: Reference to element which has to be inserted
-        * Output:
-        * Heap with the new element inserted
-        * Return Value:
-        * None
-        * Precondition: Element d must already be present in the map
-        */
-      void push(const value_type& x);
-
-      /*
-        * top: Constant Function to return the const top element of the heap
-        * Input:
-        * None
-        * Output:
-        * top element
-        * Return Value:
-        * value_type &: Reference to the top element is retured
-        */
-      value_type const& top() const
-      {
-          return elements_[0];
-      }
-
+      /** @name Properties */
+      //@{
       /**
        * Return true if the heap has no elements.
        */
@@ -206,8 +128,18 @@ namespace origin
       {
         return index_;
       }
+      
+      /**
+       * Return a reference to the underlying container.
+       */
+      container_type const& data() const
+      {
+        return elements_;
+      }
+      //@}
 
-
+      /** @name Capacity */
+      //@{
       /**
        * Return the capacity allocated to the heap.
        */
@@ -223,43 +155,38 @@ namespace origin
       {
           elements_.reserve(n);
       }
+      //@}
 
+      /** @name Heap operations */
+      //@{
+      /**
+       * Return the element on the top of the heap.
+       */
+      value_type const& top() const
+      {
+          return elements_[0];
+      }
 
-      /*
-        * pop: Removes the top element from the heap
-        * Input:
-        * None
-        * Output:
-        * binary heap with a new top element
-        * Return Value:
-        * None
-        */
+      /**
+       * Update the given key within the heap.
+       */
+      void update(const value_type& x);
+
+      /**
+       * Push the given element onto the heap.
+       */
+      void push(const value_type& x);
+
+      /**
+       * Pop the top element from the heap. This operation completes in
+       * O(lg n) time.
+       */
       void pop();
+      //@}
 
-      /*
-        * Update: Updates the given element in the heap
-        * Input:
-        * value_type &d: Reference to element which has to be updated
-        * Output:
-        * Updated heap
-        * Return Value:
-        * None
-        * Precondition: Element d must already be updated in the map
-        */
-      void update(const value_type& d);
-
-      /*
-        * print: Function for displaying the binary heap
-        * Input:
-        * ostresm &os : Reference to the ouput stream
-        * Output:
-        * Outputs the binary heap to the specified output stream
-        * Return Value:
-        * None
-        * Note: This a helper function developed for unit testing
-        */
+      // FIXME: Go away?
       template<typename Char, typename Traits>
-      void print(std::basic_ostream<Char, Traits>& os);
+        void print(std::basic_ostream<Char, Traits>& os);
 
     private:
       // Return the results of comparing the mth element with the nth element.
@@ -345,12 +272,15 @@ namespace origin
   template<typename T, typename Comp, typename Index>
     void mutable_binary_heap_impl<T, Comp, Index>::update(value_type const& x)
     {
+      assert(( elements_[index_(x)] == x ));
+
       //update the element with the new value
       size_type index = index_(x);
 
-      // This is an invariant, not an insertion.
-      assert(( elements_[index] == x ));
-      // elements_[index] = x;
+      // FIXME: This seems wrong. The heap should always observe the
+      // precondition above. The object at the index associated with the key
+      // x must be equal to x. Re-inserting the value should be a no-op.
+      elements_[index] = x;
 
       // After update, element may need to move up the heap
       while(index > 0){
@@ -389,14 +319,14 @@ namespace origin
            typename Index = default_t>
     class mutable_binary_heap
     {
+      typedef mutable_binary_heap_impl<T, Comp, Index> impl_type;
     public:
       typedef T value_type;
       typedef Comp value_compare;
       typedef Index index_mapping;
       typedef std::size_t size_type;
-    private:
-      typedef mutable_binary_heap_impl<value_type, Comp, Index> impl_type;
-    public:
+      typedef typename impl_type::container_type container_type;
+      
       /**
        * @brief Default constructor
        * Initialize an empty heap. The value compare function and index mapping
@@ -448,9 +378,20 @@ namespace origin
         return impl_.size();
       }
 
+      /**
+       * Return the value comparison operation.
+       */
       value_compare value_comp() const
       {
         return impl_.value_comp();
+      }
+      
+      /**
+       * Return a reference to the underlying container.
+       */
+      container_type const& data() const
+      { 
+        return impl_.data();
       }
       //@}
 
@@ -518,8 +459,10 @@ namespace origin
       impl_type impl_;
     };
 
+    
   // The default specialization of mutable binary heaps defines its own
   // index map (a hash table).
+  // FIXME: Document me!
   template<typename T, typename Comp>
     class mutable_binary_heap<T, Comp, default_t>
     {
@@ -551,6 +494,8 @@ namespace origin
 
       typedef mutable_binary_heap_impl<T, Comp, index_map_func> impl_type;
     public:
+      typedef typename impl_type::container_type container_type;
+
       /**
        * @brief Default constructor
        */
@@ -585,6 +530,14 @@ namespace origin
       size_type size() const
       {
           return impl_.size();
+      }
+
+      /**
+       * Return a reference to the underlying container.
+       */
+      container_type const& data() const
+      { 
+        return impl_.data();
       }
 
       void reserve(size_type n)
