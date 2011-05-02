@@ -281,16 +281,22 @@ namespace origin
       // precondition above. The object at the index associated with the key
       // x must be equal to x. Re-inserting the value should be a no-op.
       elements_[index] = x;
+      size_type parent = (index - 1) / 2;
 
-      // After update, element may need to move up the heap
-      while(index > 0){
-        size_type parent = (index - 1) / 2;
-        if(compare_elems(index, parent)){
-          swap_elements(index, parent);
-          index = parent;
-        } else {
-          break;
+      // After update, element may need to move up the heap, except for root element
+      if ((index > 0) && (compare_elems(index, parent))) {
+        while(index > 0){
+          parent = (index - 1) / 2;
+          if(compare_elems(index, parent)){
+            swap_elements(index, parent);
+            index = parent;
+          } else {
+            break;
+          }
         }
+      } else {
+        //else, element may need to move down the heap
+        heapify(index);
       }
     }
 
