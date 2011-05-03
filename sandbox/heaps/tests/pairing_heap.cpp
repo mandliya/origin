@@ -5,7 +5,7 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#include <origin/heaps/binary_heap.hpp>
+#include <origin/heaps/pairing_heap.hpp>
 
 #include "check_heap.hpp"
 
@@ -15,5 +15,5 @@ using namespace origin;
 int main()
 {
   default_random_engine eng;
-  check_heap<binary_heap>(eng);
+  check_heap<pairing_heap>(eng);
 }

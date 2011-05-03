@@ -11,6 +11,7 @@
 #include <cassert>
 #include <iosfwd>
 #include <vector>
+#include <algorithm>
 #include <unordered_map>
 
 #include <origin/utility/meta.hpp>
