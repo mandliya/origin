@@ -1052,41 +1052,41 @@ namespace origin
   template<typename T, typename Comp, typename Alloc>
     void binomial_heap<T, Comp, Alloc>::binomial_heap_union(size_type index)
     {
-        /* Merge the root lists */
-        merge(index);
-        if (data_[head_].right_sibling == size_type(-1)) {
-          return;
-        }
+      /* Merge the root lists */
+      merge(index);
+      if (data_[head_].right_sibling == size_type(-1)) {
+        return;
+      }
         
-        size_type x = head_;
-        size_type next_x = data_[head_].right_sibling;
-        size_type prev_x = size_type(-1);
-        
-        while (next_x != size_type(-1)) {
-          if ((data_[x].degree != data_[next_x].degree) 
-                || (data_[next_x].right_sibling != size_type(-1) 
-                    && data_[data_[next_x].right_sibling].degree 
-                    == data_[x].degree)) {
-              prev_x = x;
-              x = next_x;
+      size_type x = head_;
+      size_type next_x = data_[head_].right_sibling;
+      size_type prev_x = size_type(-1);
+      
+      while (next_x != size_type(-1)) {
+        if ((data_[x].degree != data_[next_x].degree) 
+              || (data_[next_x].right_sibling != size_type(-1) 
+              && data_[data_[next_x].right_sibling].degree 
+              == data_[x].degree)) {
+          prev_x = x;
+          x = next_x;
+        } else {
+          if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
+            data_[x].right_sibling = data_[next_x].right_sibling;
+            binomial_link(data_[next_x], data_[x], next_x, x);
           } else {
-              if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
-                data_[x].right_sibling = data_[next_x].right_sibling;
-                binomial_link(data_[next_x], data_[x], next_x, x);
-              } else {
-                if (prev_x == size_type (-1)) {
-                    head_ = next_x;
-                } else {
-                    data_[prev_x].right_sibling = next_x;
-                }
-                
-                binomial_link(data_[x], data_[next_x], x, next_x);
-                x = next_x;
-              }
+            if (prev_x == size_type (-1)) {
+              head_ = next_x;
+            } else {
+              data_[prev_x].right_sibling = next_x;
+            }
+             
+            binomial_link(data_[x], data_[next_x], x, next_x);
+            x = next_x;
           }
-          
-          next_x = data_[x].right_sibling;
         }
+        
+        next_x = data_[x].right_sibling;
+      }
     }
   
   
@@ -1107,11 +1107,11 @@ namespace origin
         size_type tmp_sibling;
         
         while (tmp_head != size_type(-1)) {
-            tmp_sibling = data_[tmp_head].right_sibling;
-            data_[tmp_head].parent = size_type(-1);
-            data_[tmp_head].right_sibling = new_head;
-            new_head = tmp_head;
-            tmp_head = tmp_sibling;
+          tmp_sibling = data_[tmp_head].right_sibling;
+          data_[tmp_head].parent = size_type(-1);
+          data_[tmp_head].right_sibling = new_head;
+          new_head = tmp_head;
+          tmp_head = tmp_sibling;
         }
       }
       
@@ -1119,14 +1119,14 @@ namespace origin
         head_ = new_head;
       } else {
         if (head_ == top_) {
-            head_ = data_[head_].right_sibling;
+          head_ = data_[head_].right_sibling;
         } else {
-            size_type tmp = head_;
-            while (data_[tmp].right_sibling != top_) {
-              tmp = data_[tmp].right_sibling;
-            }
+          size_type tmp = head_;
+          while (data_[tmp].right_sibling != top_) {
+            tmp = data_[tmp].right_sibling;
+          }
             
-            data_[tmp].right_sibling = data_[top_].right_sibling;
+          data_[tmp].right_sibling = data_[top_].right_sibling;
         }
         
         binomial_heap_union(new_head);
