@@ -18,19 +18,12 @@
 #include <origin/heaps/binary_heap.hpp>
 #include <origin/heaps/fibonacci_heap.hpp>
 #include <origin/heaps/pairing_heap.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/timer.hpp>
 #include <iterator>
 
 using namespace origin;
 using namespace std;
-using namespace boost;
 
-//type of value_type used in the implementation
-typedef int val_type;
-//typedef std::string val_type;
-
-template <class Map, class Compare>
+template<class Map, class Compare>
 class indirect_compare {
   public:
     indirect_compare(const Map& df, const Compare& c): d(df), cmp(c)
@@ -39,7 +32,7 @@ class indirect_compare {
     template <class A, class B>
     bool operator()(A u, B v) const
     {
-        return cmp(d[lexical_cast<int>(u)], d[lexical_cast<int>(v)]);
+        return cmp(d[u], d[v]);
     }
   protected:
     Map d;
@@ -53,14 +46,14 @@ int test_heap_external_map(T &item_label, int node)
     mt19937 gen;
     int i;
    
-    typedef indirect_compare<float*, std::less<float>> ICmp;
+    typedef indirect_compare<float*, std::greater<float>> ICmp;
     for (int N = node; N < node+1; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
 
         for (int t = 0; t < 1; ++t) {
             std::vector<float> v, w(N);
-            ICmp cmp(&w[0], std::less<float>());
+            ICmp cmp(&w[0], std::greater<float>());
 
             Heap Q(cmp, item_label);
    
@@ -70,18 +63,18 @@ int test_heap_external_map(T &item_label, int node)
             std::random_shuffle(w.begin(), w.end());
             
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
            
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen();
                 r /= 2.0;
                 w[u] = w[u] - r;
-                Q.update(boost::lexical_cast<val_type>(u));
+                Q.update(u);
             }
            
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             
@@ -107,17 +100,17 @@ int test_heap_external_map(T &item_label, int node)
             v.clear();
 
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
         
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen(); r /= 2.0;
                 w[u] = w[u] - r;
-                Q.update(boost::lexical_cast<val_type>(u));
+                Q.update(u);
             }
            
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             std::sort(w.begin(), w.end());
@@ -145,14 +138,14 @@ int test_heap_internal_map(int node)
     mt19937 gen;
     int i;
    
-    typedef indirect_compare<float*,std::less<float>> ICmp;
+    typedef indirect_compare<float*,std::greater<float>> ICmp;
     for (int N = node; N < node+1; ++N) {
         uniform_int_distribution<> distrib(0, N-1);
         auto rand_gen = std::bind(distrib, gen);
         
         for (int t = 0; t < 1; ++t) {
             std::vector<float> v, w(N);
-            ICmp cmp(&w[0], std::less<float>());
+            ICmp cmp(&w[0], std::greater<float>());
 
             Heap Q(cmp);
     
@@ -162,17 +155,17 @@ int test_heap_internal_map(int node)
             
             std::random_shuffle(w.begin(), w.end());
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
             
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen(); r /= 2.0;
                 w[u] = w[u] - r;
-                Q.update(boost::lexical_cast<val_type>(u));
+                Q.update(u);
             }
             
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             
@@ -195,16 +188,16 @@ int test_heap_internal_map(int node)
             v.clear();
 
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
             for (i = 0; i < N; ++i) {
                 int u = rand_gen();
                 float r = rand_gen(); r /= 2.0;
                 w[u] = w[u] - r;
-                Q.update(boost::lexical_cast<val_type>(u));
+                Q.update(u);
             }
             
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             
@@ -231,12 +224,12 @@ int test_non_mutable_heap(int node)
 {
     int i;
    
-    typedef indirect_compare<float*,std::less<float>> ICmp;
+    typedef indirect_compare<float*,std::greater<float>> ICmp;
     for (int N = node; N < node+1; ++N) {
         
         for (int t = 0; t < 1; ++t) {
             std::vector<float> v, w(N);
-            ICmp cmp(&w[0], std::less<float>());
+            ICmp cmp(&w[0], std::greater<float>());
 
             Heap Q(cmp);
     
@@ -246,10 +239,10 @@ int test_non_mutable_heap(int node)
             
             std::random_shuffle(w.begin(), w.end());
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
             
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             
@@ -272,10 +265,10 @@ int test_non_mutable_heap(int node)
             v.clear();
 
             for (i = 0; i < N; ++i)
-                Q.push(boost::lexical_cast<val_type>(i));
+                Q.push(i);
             
             for (i = 0; i < N; ++i) {
-                v.push_back(w[boost::lexical_cast<float>(Q.top())]);
+                v.push_back(w[Q.top()]);
                 Q.pop();
             }
             
@@ -302,179 +295,134 @@ int test_non_mutable_heap(int node)
 int main()
 {
     int result;
-    timer t;
-    typedef indirect_compare<float*,std::less<float>> ICmp;
+    typedef indirect_compare<float*,std::greater<float>> ICmp;
 
-    std::unordered_map<val_type, size_t> id_;
-    auto item_label = [&](val_type x) -> size_t &{return id_[x];};
+    std::unordered_map<int, size_t> id_;
+    auto item_label = [&](int x) -> size_t &{return id_[x];};
 
-    //for (int x=0; x < 200; ++x) {
-    //    id_[x] = 0;
-    //}
-
-    std::cout<<"\tmbinom\tmfibo\tmbinar\tmpair\tmbinomi\tmfiboi\tmbinari\tmpairi\tbinom\tfibo\tbinar\tpair\n";
-
-    for(int node = 100000; node<1000000; node=node+20000) {
-    std::cout<<node<<"\t";
-    std::cout.flush();
-
-            
-    typedef mutable_binomial_heap<val_type, ICmp, decltype(item_label)> mbinomial;
+    //number of elements in the heap
+    int node = 10;
+     
+    typedef mutable_binomial_heap<int, ICmp, decltype(item_label)> mbinomial;
     
     result = test_heap_external_map<mbinomial>(item_label, node);
     
     if (result > 0) {
-    //    std::cout << "mutable binomial heap passed test" << std::endl; 
-        std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
+        std::cout << "mutable binomial heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable binomial heap test failed \n";
     }
  
-    typedef mutable_fibonacci_heap<val_type, ICmp, decltype(item_label)> mfibonacci;
+    typedef mutable_fibonacci_heap<int, ICmp, decltype(item_label)> mfibonacci;
     
     result = test_heap_external_map<mfibonacci>(item_label, node);
     
     if (result > 0) {
-         std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
- //      std::cout << "mutable fibonacci heap passed test" << std::endl; 
+        std::cout << "mutable fibonacci heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable fibonacci heap test failed \n";
     }
- 
-    typedef mutable_binary_heap<val_type, ICmp, decltype(item_label)> mbinary;
+
+    typedef mutable_binary_heap<int, ICmp, decltype(item_label)> mbinary;
     
     result = test_heap_external_map<mbinary>(item_label, node);
     
     if (result > 0) {
-         std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
- //      std::cout << "mutable binary heap passed test" << std::endl; 
+        std::cout << "mutable binary heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable binary heap test failed \n";
     }
  
-    typedef mutable_pairing_heap<val_type, ICmp, decltype(item_label)> mpairing;
+    typedef mutable_pairing_heap<int, ICmp, decltype(item_label)> mpairing;
     
     result = test_heap_external_map<mpairing>(item_label, node);
     
     if (result > 0) {
-           std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-   //  std::cout << "mutable pairing heap passed test" << std::endl; 
+        std::cout << "mutable pairing heap passed test" << std::endl; 
     } else {
         std::cout<<"mutable pairing heap test failed \n";
     }
    
-    typedef mutable_binomial_heap<val_type, ICmp> mbinomial_int;
+    typedef mutable_binomial_heap<int, ICmp> mbinomial_int;
     
     result = test_heap_internal_map<mbinomial_int>(node);
     
     if (result > 0) {
-             std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-//   std::cout << "mutable binomial heap (internal map) passed test" << std::endl; 
+        std::cout << "mutable binomial heap (internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable binomial heap (internal map) test failed \n";
     }
 
-    typedef mutable_fibonacci_heap<val_type, ICmp> mfibonacci_int;
+    typedef mutable_fibonacci_heap<int, ICmp> mfibonacci_int;
     
     result = test_heap_internal_map<mfibonacci_int>(node);
     
     if (result > 0) {
-         std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
- //      std::cout << "mutable fibonacci heap (internal map) passed test" << std::endl; 
+        std::cout << "mutable fibonacci heap (internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable fibonacci heap (internal map) test failed \n";
     }
 
-    typedef mutable_binary_heap<val_type, ICmp> mbinary_int;
+    typedef mutable_binary_heap<int, ICmp> mbinary_int;
     
     result = test_heap_internal_map<mbinary_int>(node);
     
     if (result > 0) {
-        std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-//        std::cout << "mutable binary heap(internal_map) passed test" << std::endl; 
+        std::cout << "mutable binary heap(internal_map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable binary heap (internal map) test failed \n";
     }
 
-    typedef mutable_pairing_heap<val_type, ICmp> mpairing_int;
+    typedef mutable_pairing_heap<int, ICmp> mpairing_int;
     
     result = test_heap_internal_map<mpairing_int>(node);
     
     if (result > 0) {
-         std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
- //      std::cout << "mutable pairing heap(internal map) passed test" << std::endl; 
+        std::cout << "mutable pairing heap(internal map) passed test" << std::endl; 
     } else {
         std::cout<<"mutable pairing heap(internal map) test failed \n";
     }
 
-    typedef binomial_heap<val_type, ICmp> binomial;
+    typedef binomial_heap<int, ICmp> binomial;
  
     result = test_non_mutable_heap<binomial>(node);
     
     if (result > 0) {
-         std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
- //      std::cout << "non-mutable binomial heap passed test" << std::endl; 
+        std::cout << "non-mutable binomial heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable binomial heap test failed \n";
     }
 
-    typedef fibonacci_heap<val_type, ICmp> fibonacci;
+    typedef fibonacci_heap<int, ICmp> fibonacci;
  
     result = test_non_mutable_heap<fibonacci>(node);
     
     if (result > 0) {
-           std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-   //  std::cout << "non-mutable fibonacci heap passed test" << std::endl; 
+        std::cout << "non-mutable fibonacci heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable fibonnacci heap test failed \n";
     }
 
-    typedef binary_heap<val_type, ICmp> binary;
+    typedef binary_heap<int, ICmp> binary;
  
     result = test_non_mutable_heap<binary>(node);
     
     if (result > 0) {
-        std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-//        std::cout << "non-mutable binary heap passed test" << std::endl; 
+        std::cout << "non-mutable binary heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable binary heap test failed \n";
     }
  
-    typedef pairing_heap<val_type, ICmp> pairing;
+    typedef pairing_heap<int, ICmp> pairing;
     
     result = test_non_mutable_heap<pairing>(node);
     
     if (result > 0) {
-        std::cout<<t.elapsed()<<"\t";
-        std::cout.flush();
-        t.restart();
-//        std::cout << "non-mutable pairing heap passed test" << std::endl; 
+        std::cout << "non-mutable pairing heap passed test" << std::endl; 
     } else {
         std::cout<<"non-mutable pairing heap test failed \n";
     }
    std::cout<<"\n";
-   }
+   
    return 0;
 }
