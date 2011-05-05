@@ -350,7 +350,7 @@ namespace origin
       tmp = data_[top_index].right_sibling;
       
       while (tmp != size_type(-1)) {
-        if (compare_(elements_[data_[tmp].item_index], elements_[data_[top_index].item_index])) {
+        if (!compare_(elements_[data_[tmp].item_index], elements_[data_[top_index].item_index])) {
             top_index = tmp;
         }
         
@@ -390,7 +390,7 @@ namespace origin
       } else {
         /* Unite the 1 element heap with the existing heap */
         mutable_binomial_heap_union(index);
-        if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
+        if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
             top_ = index;
       }
   }
@@ -408,7 +408,7 @@ namespace origin
       elements_[data_[index].item_index] = d;
       
       while (parent != size_type(-1) && 
-            compare_(d, elements_[data_[parent].item_index])) {
+            !compare_(d, elements_[data_[parent].item_index])) {
         elements_[data_[index].item_index] = elements_[data_[parent].item_index];
         elements_[data_[parent].item_index] = d;
 
@@ -420,7 +420,7 @@ namespace origin
 
       id_(d) = index;
       
-      if (compare_(d, elements_[data_[top_].item_index])) {
+      if (!compare_(d, elements_[data_[top_].item_index])) {
         top_ = index;
       }
   }
@@ -481,7 +481,7 @@ namespace origin
             prev_x = x;
             x = next_x;
         } else {
-            if (compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
+            if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
               data_[x].right_sibling = data_[next_x].right_sibling;
               binomial_link(data_[next_x], data_[x], next_x, x);
             } else {
@@ -973,7 +973,7 @@ namespace origin
       tmp = data_[top_index].right_sibling;
       
       while (tmp != size_type(-1)) {
-        if(compare_(elements_[data_[tmp].item_index], 
+        if(!compare_(elements_[data_[tmp].item_index], 
                     elements_[data_[top_index].item_index])) 
         {
           top_index = tmp;
@@ -1013,7 +1013,7 @@ namespace origin
       } else {
         /* Unite the 1 element heap with the existing heap */
         binomial_heap_union(index);
-        if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
+        if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
           top_ = index;
       }
     }
@@ -1068,7 +1068,7 @@ namespace origin
               prev_x = x;
               x = next_x;
           } else {
-              if (compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
+              if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
                 data_[x].right_sibling = data_[next_x].right_sibling;
                 binomial_link(data_[next_x], data_[x], next_x, x);
               } else {

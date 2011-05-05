@@ -325,7 +325,7 @@ namespace origin
       }
       else {
           //else, unite the 1 element heap with the existing heap
-          if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
+          if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
               //make existing root a left child of updated node
               merge(top_, index);
               top_ = index;
@@ -372,7 +372,7 @@ namespace origin
       data_[index].right_sibling = size_type(-1);
 
       //unite the new heap with the existing heap
-      if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
+      if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
           //make existing root a left child of updated node
           merge(top_, index);
           top_ = index;
@@ -416,7 +416,7 @@ namespace origin
           data_[index2].left_sibling = size_type(-1);
           data_[index2].right_sibling = size_type(-1);
 
-          if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
+          if (!compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
               merge(index2, index1);
               new_top_ = index1;
           }
@@ -454,7 +454,7 @@ namespace origin
           data_[new_top_].left_sibling = size_type(-1);
           data_[merge_pair].left_sibling = size_type(-1);
 
-          if (compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
+          if (!compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
               merge(new_top_, merge_pair);
               new_top_ = merge_pair;
           }
@@ -871,7 +871,7 @@ namespace origin
       }
       else {
           //else, unite the 1 element heap with the existing heap
-          if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
+          if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index])){
               //make existing root a left child of updated node
               merge(top_, index);
               top_ = index;
@@ -915,7 +915,7 @@ namespace origin
           data_[index2].left_sibling = size_type(-1);
           data_[index2].right_sibling = size_type(-1);
 
-          if (compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
+          if (!compare_(elements_[data_[index1].item_index], elements_[data_[index2].item_index])){
               merge(index2, index1);
               new_top_ = index1;
           }
@@ -953,7 +953,7 @@ namespace origin
           data_[new_top_].left_sibling = size_type(-1);
           data_[merge_pair].left_sibling = size_type(-1);
 
-          if (compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
+          if (!compare_(elements_[data_[merge_pair].item_index], elements_[data_[new_top_].item_index])){
               merge(new_top_, merge_pair);
               new_top_ = merge_pair;
           }

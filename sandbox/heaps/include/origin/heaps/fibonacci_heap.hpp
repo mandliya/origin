@@ -366,7 +366,7 @@ namespace origin
              flag = true;
 
           while((aux[d] != size_type(-1)) && (d<=D)) {
-             if (!compare_(elements_[data_[temp].item_index], elements_[data_[aux[d]].item_index])) {
+             if (compare_(elements_[data_[temp].item_index], elements_[data_[aux[d]].item_index])) {
                 fibonacci_link(temp, aux[d]);
                 temp = aux[d];
              } else {
@@ -393,7 +393,7 @@ namespace origin
              data_[top_].right_sibling = aux[i];
              data_[aux[i]].left_sibling = top_;
              
-             if(!compare_(elements_[data_[top_].item_index], elements_[data_[aux[i]].item_index])) {
+             if(compare_(elements_[data_[top_].item_index], elements_[data_[aux[i]].item_index])) {
                 top_ = aux[i];
              }
         }
@@ -431,7 +431,7 @@ namespace origin
           data_[top_].right_sibling = index;
           data_[index].left_sibling = top_;
           
-          if (compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
+          if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
              top_ = index;
        }
     }
@@ -446,12 +446,12 @@ namespace origin
        elements_[data_[index].item_index] = d;
        size_type y = data_[index].parent;
 
-       if ((y != (size_type)-1) && !compare_(elements_[data_[y].item_index], d)) {
+       if ((y != (size_type)-1) && compare_(elements_[data_[y].item_index], d)) {
           cut(index, y);
           cascading_cut(y);
        }
 
-       if(compare_(d, elements_[data_[top_].item_index]))
+       if(!compare_(d, elements_[data_[top_].item_index]))
           top_ = index;
     }
     
@@ -967,7 +967,7 @@ namespace origin
             flag = true;
 
         while((aux[d] != size_type(-1)) && (d<=D)) {
-            if (!compare_(elements_[data_[temp].item_index], elements_[data_[aux[d]].item_index])) {
+            if (compare_(elements_[data_[temp].item_index], elements_[data_[aux[d]].item_index])) {
               fibonacci_link(temp, aux[d]);
               temp = aux[d];
             } else {
@@ -994,7 +994,7 @@ namespace origin
           data_[top_].right_sibling = aux[i];
           data_[aux[i]].left_sibling = top_;
           
-          if(!compare_(elements_[data_[top_].item_index], elements_[data_[aux[i]].item_index])) {
+          if(compare_(elements_[data_[top_].item_index], elements_[data_[aux[i]].item_index])) {
             top_ = aux[i];
           }
         }
@@ -1030,7 +1030,7 @@ namespace origin
         data_[top_].right_sibling = index;
         data_[index].left_sibling = top_;
         
-        if(compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
+        if(!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
           top_ = index;
       }
     }
