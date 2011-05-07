@@ -12,7 +12,7 @@ list(APPEND CMAKE_MODULE_PATH ${ORIGIN_ROOT}/cmake)
 include(Origin)
 
 origin_component(
-  heaps
+  binning
   VERSION 0.1.0
   DEPENDS core
   AUTHORS
@@ -20,6 +20,7 @@ origin_component(
     Brian Bartman <bbartmanboost -at- gmail.com>
 )
 
-add_subdirectory(tests)
+subdirs(include tests)
+#add_subdirectory(tests)
 
 
