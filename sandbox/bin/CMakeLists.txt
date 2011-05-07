@@ -20,7 +20,7 @@ origin_component(
     Brian Bartman <bbartmanboost -at- gmail.com>
 )
 
+# variables which are visible through out CMake.
+set(BINNING_HEADER_FILES "")
 subdirs(include tests)
-#add_subdirectory(tests)
-
 
