@@ -23,8 +23,9 @@ namespace origin { namespace binning {
  *  @param BinType - bin type is the index which holds the element
  *  
  *  
- *  
- *  
+ *  @note this class is actually missing the allocator typedef which is present 
+ *  inside of most containers. This is because this container takes containers
+ *  as parameters.
  *
  *  @todo add something which changes the default parameters into maps if 
  *  BinFunc returns a string.
@@ -47,6 +48,7 @@ public:
     typedef typename bucket_type::pointer           pointer;
     typedef typename bucket_type::const_pointer     const_pointer;
     typedef typename bucket_type::size_type         size_type;
+
 
     /** @name default constructor.
      *  @brief Default construct a bin_table.
