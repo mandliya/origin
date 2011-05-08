@@ -1,1 +1,1 @@
-subdirs(compile_test run_test)
+subdirs(compile_tests run_tests)
