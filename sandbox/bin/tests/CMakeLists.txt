@@ -1,1 +1,1 @@
-subdirs(bin_table)
+subdirs(bin_table algorithm)
