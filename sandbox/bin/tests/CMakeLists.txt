@@ -1,1 +1,1 @@
-subdirs(bin_table algorithm)
+subdirs(integration bin_table algorithm)
