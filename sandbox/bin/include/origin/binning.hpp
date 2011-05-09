@@ -8,5 +8,7 @@
 #ifndef ORIGIN_BINNING_AGGREGATE_FILE_HPP
 #define ORIGIN_BINNING_AGGREGATE_FILE_HPP
 
+#include <origin/binning/bin_table.hpp>
+#include <origin/binning/algorithm.hpp>
 
 #endif
