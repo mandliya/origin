@@ -8,13 +8,21 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <origin/utility/typestr.hpp>
 #include <origin/perf.hpp>
 
 using namespace std;
 using namespace origin;
 
+
 int main()
 {
-  perf::timer<std::chrono::system_clock> timer;
-  ::sleep(2);
+  perf::system_timing ts;
+  
+  {
+    ORIGIN_SYS_TIMER(ts, test);
+    ::sleep(1);
+  }
+  
+  ts.print(cout);
 }
