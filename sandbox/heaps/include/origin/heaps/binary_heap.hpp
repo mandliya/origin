@@ -24,7 +24,7 @@ namespace origin
    * location of the element within the data structure and preserve the heap
    * invariant.
    *
-   * @tparam T      The value type
+   * @tparam T      The value type.
    * @tparam Comp   A Strict_weak_order on T
    * @tparam Map    A Mapping between T and an index
    * @tparam Alloc  An Allocator type
@@ -36,23 +36,15 @@ namespace origin
     class mutable_binary_heap
     {
     public:
-      typedef T value_type;
-      typedef Comp value_compare;   // FIXME: Should be called key compare?
-
-      // FIXME: Should these be private?
-      typedef std::vector<T> container_type;
-      typedef std::unordered_map<value_type, size_t> map_type; //FIXME: Use traits class
-      
       typedef Alloc allocator_type;
+      typedef T value_type;
+      typedef Comp value_compare;
       typedef typename Alloc::size_type size_type;
     private:
-      // Heapify after root is swapped with last element
-      void heapify(size_type index);
-
-      // Recursively print the heap as a tree
-      // FIXME: Write this as an out-of body function.
-      template<typename Char, typename Traits>
-        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os);
+      typedef std::vector<T> container_type;
+      typedef std::unordered_map<value_type, size_t> map_type; //FIXME: Use traits class
+    public:
+      
 
     public:
       /** @name Initialization */
@@ -200,22 +192,48 @@ namespace origin
         void print(std::basic_ostream<Char, Traits>& os);
 
     private:
-      // Return the results of comparing the mth element with the nth element.
-      // Note that the comparison is inverted in order to define the correct
-      // heap order.
-      bool compare_elems(size_type m, size_type n)
+      // Return the object at the given index.
+      value_type& get(size_type n)
       {
-        return compare_(elements_[n], elements_[m]);
+        assert(( !empty() && n < size() ));
+        return elements_[n];
+      }
+      
+      value_type const& get(size_type n) const
+      {
+        assert(( !empty() && n < size() ));
+        return elements_[n];
+      }
+      
+      // Return the index of the given value. The value must be in the heap.
+      size_type index(value_type const& x) const
+      {
+        assert(( index_.find(x) != index_.end() ));
+        return index_[x];
+      }
+      
+      // Comparing the value of the mth element with the nth element.
+      bool compare(size_type m, size_type n) const
+      {
+        return compare_(get(m), get(n));
       }
 
-      // Swap two elements in the heap by their indexes.
-      void swap_elements(size_type m, size_type n)
+      // Swap two elements in the heap and exchange their indexes.
+      void exchange(size_type m, size_type n)
       {
-        // Swap two elements in the heap and update their indexes.
-        std::swap(elements_[m], elements_[n]);
-        index_[elements_[m]] = m;
-        index_[elements_[n]] = n;
+        std::swap(get(m), get(n));
+        index_[get(m)] = m;
+        index_[get(n)] = n;
       }
+
+      void up_heap(size_type n);
+      void down_heap(size_type n);
+
+      // Recursively print the heap as a tree
+      // FIXME: Write this as an out-of body function.
+      template<typename Char, typename Traits>
+        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os);
+
 
     private:
       container_type elements_;
@@ -223,44 +241,74 @@ namespace origin
       map_type index_;
     };
 
+  // Bubble the object at the given index up the heap.
   template<typename T, typename Comp, typename Map, typename Alloc>
-    void mutable_binary_heap<T, Comp, Map, Alloc>::heapify(size_type parent)
+    void mutable_binary_heap<T, Comp, Map, Alloc>::up_heap(size_type n)
     {
-      size_type total_size = elements_.size();
-      size_type new_parent = parent;
+      while(n > 0) {
+        size_type p = (n - 1) / 2;
+        if(!compare(n, p)) {
+          exchange(n, p);
+          n = p;
+        } else
+          break;
+      }
+    }
+  
+  // Bubble the object at the given index down the heap.
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::down_heap(size_type n)
+    {
+      auto parent = [](size_t x) { return x == 0 ? 0 : (x - 1) / 2; }
+      auto left = [](size_t x) { return x * 2 + 1; }
+      
+      size_t c = left(n);
+      // Elem Item    = Data[Current];
+      
+      while(c < size()) {
+        // Find the right child to compare against
+        if(c < (size() - 1) && compare(c, c + 1))
+          ++c;
+        
+        if(compare(n, c)) {
+          exchange(n, c);
+          n = c;
+          c = left(c);
+        } else
+          break;
+      }
 
+      // FIXME: What the fuck does this do?
+      Data[Current] = Item; 
+      /*
+      size_type sz = elements_.size();
+      size_type p = n;
+ 
       do {
-        swap_elements(parent, new_parent);
-        parent = new_parent;
+        exchange(n, p);
+        n = p;
 
-        size_type left = 2 * parent + 1;
-        size_type right = 2 * parent + 2;
+        size_type left = 2 * n + 1;
+        size_type right = 2 * n + 2;
 
-        if((left < total_size) && compare_elems(left, parent))
-          new_parent = left;
-        if((right < total_size) && compare_elems(right, new_parent))
-          new_parent = right;
-      } while(parent != new_parent);
+        if((left < sz) && compare(left, n))
+          p = left;
+        if((right < sz) && compare(right, p))
+          p = right;
+      } while(n != p);
+      */
     }
     
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::push(value_type const& x)
     {
       // Push element into the heap structure
+      size_type n = elements_.size();
       elements_.push_back(x);
-      size_type index = elements_.size() - 1;
-      index_[x] = index;
-
-      // Move the element up the heap until condition satisfied
-      while(index > 0) {
-        size_type parent = (index - 1) / 2;
-        if(compare_elems(index, parent)) {
-          swap_elements(index, parent);
-          index = parent;
-        } else {
-          break;
-        }
-      }
+      index_[x] = n;
+      
+      // Adjust the heap.
+      up_heap(n);
     }
 
 
@@ -268,44 +316,36 @@ namespace origin
     void mutable_binary_heap<T, Comp, Map, Alloc>::pop()
     {
       //swap root with last element and delete old root
-      swap_elements(0, elements_.size() - 1);
+      exchange(0, elements_.size() - 1);
       elements_.pop_back();
 
       // Preserve the heap invariant.
       if(!empty()) {
-        heapify(0);
+        down_heap(0);
       }
     }
 
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::update(value_type const& x)
     {
-      assert(( elements_[index_(x)] == x ));
+      assert(( get(index(x)) == x ));
 
       //update the element with the new value
-      size_type index = index_[x];
+      size_type n = index(x);
 
       // FIXME: This seems wrong. The heap should always observe the
       // precondition above. The object at the index associated with the key
       // x must be equal to x. Re-inserting the value should be a no-op.
-      elements_[index] = x;
-      size_type parent = (index - 1) / 2;
+      get(n) = x;
+      size_type parent = (n - 1) / 2;
 
-      // After update, element may need to move up the heap, except for root element
-      if ((index > 0) && (compare_elems(index, parent))) {
-        while(index > 0){
-          parent = (index - 1) / 2;
-          if(compare_elems(index, parent)){
-            swap_elements(index, parent);
-            index = parent;
-          } else {
-            break;
-          }
-        }
-      } else {
-        //else, element may need to move down the heap
-        heapify(index);
-      }
+      // FIXME: This entirely wrong.
+      if(n == 0)
+        return; 
+      else if(compare(n, parent))
+        up_heap(n);
+      else
+        down_heap(n);
     }
 
 
@@ -317,7 +357,7 @@ namespace origin
         {
           size_type sz = elements_.size();
 
-          os << elements_[x];
+          os << get(x);
           size_type i = 2 * x + 1;
 
           if (i < sz) {
@@ -327,7 +367,7 @@ namespace origin
             os << " ";
             i = i + 1;
             if (i < sz) {
-              print_recur (i, os);
+              print_recur(i, os);
             }
             os << ")";
           }
@@ -432,6 +472,12 @@ namespace origin
       value_compare value_comp() const
       {
         return compare_;
+      }
+      
+      
+      container_type const& data() const
+      {
+        return elements_;
       }
       //@}
 
