@@ -55,7 +55,7 @@ int test_heap_external_map(T &item_label, int node)
             std::vector<float> v, w(N);
             ICmp cmp(&w[0], std::greater<float>());
 
-            Heap Q(cmp, item_label);
+            Heap Q(cmp);
    
             for (int c = 0; c < int(w.size()); ++c)
                 w[c] = c;
@@ -302,7 +302,7 @@ int main()
 
     //number of elements in the heap
     int node = 10;
-     
+  /*   
     typedef mutable_binomial_heap<int, ICmp, decltype(item_label)> mbinomial;
     
     result = test_heap_external_map<mbinomial>(item_label, node);
@@ -322,8 +322,8 @@ int main()
     } else {
         std::cout<<"mutable fibonacci heap test failed \n";
     }
-
-    typedef mutable_binary_heap<int, ICmp, decltype(item_label)> mbinary;
+*/
+    typedef mutable_binary_heap<int, ICmp> mbinary;
     
     result = test_heap_external_map<mbinary>(item_label, node);
     
@@ -332,7 +332,7 @@ int main()
     } else {
         std::cout<<"mutable binary heap test failed \n";
     }
- 
+/* 
     typedef mutable_pairing_heap<int, ICmp, decltype(item_label)> mpairing;
     
     result = test_heap_external_map<mpairing>(item_label, node);
@@ -372,7 +372,8 @@ int main()
     } else {
         std::cout<<"mutable binary heap (internal map) test failed \n";
     }
-
+*/
+  /*
     typedef mutable_pairing_heap<int, ICmp> mpairing_int;
     
     result = test_heap_internal_map<mpairing_int>(node);
@@ -423,6 +424,6 @@ int main()
         std::cout<<"non-mutable pairing heap test failed \n";
     }
    std::cout<<"\n";
-   
+*/   
    return 0;
 }
