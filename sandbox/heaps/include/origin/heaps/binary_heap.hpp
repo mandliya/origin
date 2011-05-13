@@ -49,31 +49,10 @@ namespace origin
       // Heapify after root is swapped with last element
       void heapify(size_type index);
 
-      // Swap two elements in the heap by their indexes.
-      void swap_elements(size_type index1, size_type index2);
-
       // Recursively print the heap as a tree
       // FIXME: Write this as an out-of body function.
       template<typename Char, typename Traits>
-        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
-        {
-          size_type sz = elements_.size();
-
-          os << elements_[x];
-          size_type i = 2 * x + 1;
-
-          if (i < sz) {
-            os << "(";
-            print_recur (i, os);
-
-            os << " ";
-            i = i + 1;
-            if (i < sz) {
-              print_recur (i, os);
-            }
-            os << ")";
-          }
-        }
+        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os);
 
     public:
       /** @name Initialization */
@@ -229,44 +208,20 @@ namespace origin
         return compare_(elements_[n], elements_[m]);
       }
 
+      // Swap two elements in the heap by their indexes.
+      void swap_elements(size_type m, size_type n)
+      {
+        // Swap two elements in the heap and update their indexes.
+        std::swap(elements_[m], elements_[n]);
+        index_[elements_[m]] = m;
+        index_[elements_[n]] = n;
+      }
+
     private:
       container_type elements_;
       value_compare compare_;
       map_type index_;
     };
-
-  template<typename T, typename Comp, typename Map, typename Alloc>
-    void
-    mutable_binary_heap<T, Comp, Map, Alloc>::swap_elements(size_type m,
-                                                            size_type n)
-    {
-      // Swap two elements in the heap structure
-      std::swap(elements_[m], elements_[n]);
-
-      // And update their external map values accordingly
-      index_[elements_[m]] = m;
-      index_[elements_[n]] = n;
-    }
-
-  template<typename T, typename Comp, typename Map, typename Alloc>
-    void mutable_binary_heap<T, Comp, Map, Alloc>::push(value_type const& x)
-    {
-      // Push element into the heap structure
-      elements_.push_back(x);
-      size_type index = elements_.size() - 1;
-      index_[x] = index;
-
-      // Move the element up the heap until condition satisfied
-      while(index > 0) {
-        size_type parent = (index - 1) / 2;
-        if(compare_elems(index, parent)) {
-          swap_elements(index, parent);
-          index = parent;
-        } else {
-          break;
-        }
-      }
-    }
 
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::heapify(size_type parent)
@@ -287,6 +242,27 @@ namespace origin
           new_parent = right;
       } while(parent != new_parent);
     }
+    
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::push(value_type const& x)
+    {
+      // Push element into the heap structure
+      elements_.push_back(x);
+      size_type index = elements_.size() - 1;
+      index_[x] = index;
+
+      // Move the element up the heap until condition satisfied
+      while(index > 0) {
+        size_type parent = (index - 1) / 2;
+        if(compare_elems(index, parent)) {
+          swap_elements(index, parent);
+          index = parent;
+        } else {
+          break;
+        }
+      }
+    }
+
 
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::pop()
@@ -304,7 +280,7 @@ namespace origin
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::update(value_type const& x)
     {
-//       assert(( elements_[index_(x)] == x ));
+      assert(( elements_[index_(x)] == x ));
 
       //update the element with the new value
       size_type index = index_[x];
@@ -331,6 +307,31 @@ namespace origin
         heapify(index);
       }
     }
+
+
+    // Recursively print the heap as a tree
+    template<typename T, typename Comp, typename Map, typename Alloc>
+      template<typename Char, typename Traits>
+        void mutable_binary_heap<T, Comp, Map, Alloc>::
+          print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
+        {
+          size_type sz = elements_.size();
+
+          os << elements_[x];
+          size_type i = 2 * x + 1;
+
+          if (i < sz) {
+            os << "(";
+            print_recur (i, os);
+
+            os << " ";
+            i = i + 1;
+            if (i < sz) {
+              print_recur (i, os);
+            }
+            os << ")";
+          }
+        }
 
   template<typename T, typename Comp, typename Map, typename Alloc>
     template<typename Char, typename Traits>
