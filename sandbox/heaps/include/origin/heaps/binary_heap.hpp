@@ -19,74 +19,98 @@
 namespace origin
 {
   /**
-   * @internal
-   * Impelements a mutable binary heap.
-
-   * @tparam T      The type of data to be stored in the heap; the value type
-   * @tparam Comp   A Strict_weak_order over T
-   * @tparam Map_Traits  A Mapping between values and an index.
+   * A mutable binary heap is a binary heap that allows the values in the to
+   * be modified by an external program. The heap is updated to adjust the
+   * location of the element within the data structure and preserve the heap
+   * invariant.
+   *
+   * @tparam T      The value type
+   * @tparam Comp   A Strict_weak_order on T
+   * @tparam Map    A Mapping between T and an index
+   * @tparam Alloc  An Allocator type
    */
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
-    class mutable_binary_heap_impl
+  template<typename T, 
+           typename Comp = std::less<T>, 
+           typename Map = default_t, 
+           typename Alloc = std::allocator<T>>
+    class mutable_binary_heap
     {
     public:
-      typedef std::vector<T> container_type;
       typedef T value_type;
       typedef Comp value_compare;   // FIXME: Should be called key compare?
-      typedef std::unordered_map<value_type, size_t> id_map; //FIXME: Use actual traits class
-      typedef typename container_type::size_type size_type;
+
+      // FIXME: Should these be private?
+      typedef std::vector<T> container_type;
+      typedef std::unordered_map<value_type, size_t> map_type; //FIXME: Use traits class
+      
+      typedef Alloc allocator_type;
+      typedef typename Alloc::size_type size_type;
     private:
       // Heapify after root is swapped with last element
-      void heapify (size_type index);
+      void heapify(size_type index);
 
       // Swap two elements in the heap by their indexes.
-      void swap_elements (size_type index1, size_type index2);
+      void swap_elements(size_type index1, size_type index2);
 
       // Recursively print the heap as a tree
+      // FIXME: Write this as an out-of body function.
       template<typename Char, typename Traits>
         void print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
         {
-            size_type sz = elements_.size();
+          size_type sz = elements_.size();
 
-            os << elements_[x];
-            size_type i = 2 * x + 1;
+          os << elements_[x];
+          size_type i = 2 * x + 1;
 
+          if (i < sz) {
+            os << "(";
+            print_recur (i, os);
+
+            os << " ";
+            i = i + 1;
             if (i < sz) {
-                os << "(";
-                print_recur (i, os);
-
-                os << " ";
-                i = i + 1;
-                if (i < sz) {
-                    print_recur (i, os);
-                }
-                os << ")";
+              print_recur (i, os);
             }
+            os << ")";
+          }
         }
 
     public:
+      /** @name Initialization */
+      //@{
       /**
        * @brief Default constructor
+       * Initialize an empty heap. The value compare function may be optionally 
+       * given.
+       *
+       * @param comp  A value_compare function object
        */
-      mutable_binary_heap_impl(value_compare const& comp, 
-                               id_map const& index)
-        : compare_{comp}, index_{index}
+      mutable_binary_heap(value_compare const& comp = value_compare{})
+        : compare_{comp}
       { }
 
+      // FIXME: Generalize this operation for input iterators.
       /**
        * @brief Range constructor
+       * Initialize the heap with the elements in the range [first, last).
+       * 
+       * @tparam Iter   A Forward_Iterator whose reference type is convertible
+       * the the value type of the heap.
+       * 
+       * @param first   An iterator referencing the first object in the range
+       * @param last    An iterator past the end of the the range
+       * @param comp    A value_compare function object
        */
-      template<typename ForwardIterator>
-        mutable_binary_heap_impl(ForwardIterator first, 
-                                 ForwardIterator last,
-                                 value_compare const& comp, 
-                                 id_map const& id) 
-        : compare_{comp}, index_{id}
+      template<typename Iter>
+        mutable_binary_heap(Iter first,
+                            Iter last,
+                            value_compare const& comp = value_compare{}) 
+        : compare_{comp}
       {
         reserve(std::distance(first, last));
         while(first != last) {
           elements_.push_back(*first);
-          index_(*first) = elements_.size() - 1;
+          index_[*first] = elements_.size() - 1;
           ++first;
         }
         size_type index = elements_.size() / 2;
@@ -95,6 +119,20 @@ namespace origin
           heapify(index);
         }
       }
+
+      // FIXME: Implement me!
+      /**
+       * @brief Initializer list constructor
+       * Initialize the heap with the elements from the given initializer list.
+       * 
+       * @param list  An initializer list of 
+       * @param comp  A value_compare function object
+       */
+      mutable_binary_heap(std::initializer_list<T> list,
+                          value_compare const& comp = value_compare{})
+      { }
+      //@}
+
 
       /** @name Properties */
       //@{
@@ -122,14 +160,7 @@ namespace origin
         return compare_;
       }
 
-      /**
-       * Return the index mapping function.
-       */
-      id_map index_map() const
-      {
-        return index_;
-      }
-      
+      // FIXME: I think that this should probably go away.
       /**
        * Return a reference to the underlying container.
        */
@@ -201,12 +232,12 @@ namespace origin
     private:
       container_type elements_;
       value_compare compare_;
-      id_map index_;
+      map_type index_;
     };
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
+  template<typename T, typename Comp, typename Map, typename Alloc>
     void
-    mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::swap_elements(size_type m,
+    mutable_binary_heap<T, Comp, Map, Alloc>::swap_elements(size_type m,
                                                             size_type n)
     {
       // Swap two elements in the heap structure
@@ -217,8 +248,8 @@ namespace origin
       index_[elements_[n]] = n;
     }
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
-    void mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::push(value_type const& x)
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::push(value_type const& x)
     {
       // Push element into the heap structure
       elements_.push_back(x);
@@ -237,8 +268,8 @@ namespace origin
       }
     }
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
-    void mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::heapify(size_type parent)
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::heapify(size_type parent)
     {
       size_type total_size = elements_.size();
       size_type new_parent = parent;
@@ -257,8 +288,8 @@ namespace origin
       } while(parent != new_parent);
     }
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
-    void mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::pop()
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::pop()
     {
       //swap root with last element and delete old root
       swap_elements(0, elements_.size() - 1);
@@ -270,8 +301,8 @@ namespace origin
       }
     }
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
-    void mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::update(value_type const& x)
+  template<typename T, typename Comp, typename Map, typename Alloc>
+    void mutable_binary_heap<T, Comp, Map, Alloc>::update(value_type const& x)
     {
 //       assert(( elements_[index_(x)] == x ));
 
@@ -301,171 +332,16 @@ namespace origin
       }
     }
 
-  template<typename T, typename Comp, typename Map_Traits, typename Alloc>
+  template<typename T, typename Comp, typename Map, typename Alloc>
     template<typename Char, typename Traits>
-      void
-      mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc>::
+      void 
+      mutable_binary_heap<T, Comp, Map, Alloc>::
         print(std::basic_ostream<Char, Traits>& os)
-        {
-          if(elements_.size() > 0)
-              print_recur(0, os);
-        }
-
- /**
-  * A mutable binary heap is a binary heap that allows the values in the to
-  * be modified by an external program. The heap is updated to adjust the
-  * location of the element within the data structure and preserve the heap
-  * invariant.
-  *
-  * @tparam T     The value type
-  * @tparam Comp  A Strict_weak_order on T
-  * @tparam Map_Traits A Mapping between T and an index, or default_t.
-  */
-  template<typename T,
-           typename Comp = std::less<T>,
-           typename Map_Traits = default_t,
-           typename Alloc = std::allocator<T>>
-    class mutable_binary_heap
-    {
-      typedef mutable_binary_heap_impl<T, Comp, Map_Traits, Alloc> impl_type;
-    public:
-      typedef T value_type;
-      typedef Comp value_compare;
-      typedef std::size_t size_type;
-      typedef std::unordered_map<value_type, size_type> id_map; //FIXME: Use the real traits class 
-      typedef typename impl_type::container_type container_type;
-      
-      /**
-       * @brief Default constructor
-       * Initialize an empty heap. The value compare function and index mapping
-       * may be optionally given.
-       *
-       * @param comp
-       * @param ix
-       */
-      mutable_binary_heap(value_compare const& comp = value_compare{},
-                          id_map const& ix = id_map{})
-        : impl_(comp, ix)
-      { }
-
-      /**
-       * @brief Range constructor
-       */
-      template<typename ForwardIterator>
-        mutable_binary_heap(ForwardIterator first,
-                            ForwardIterator last,
-                            value_compare const& comp = value_compare{},
-                            id_map const& ix = id_map{})
-          : impl_(first, last, comp, ix)
-        { }
-
-      /**
-       * @brief Initializer list constructor
-       */
-      mutable_binary_heap(std::initializer_list<T> list,
-                          value_compare const& comp = value_compare{},
-                          id_map const& ix = id_map{})
-        : impl_(list.begin(), list.end(), comp, ix)
-      { }
-
-      /** @name Properties */
-      //@{
-      /**
-       * Return true if the heap has no elements.
-       */
-      bool empty() const
       {
-        return impl_.empty();
+        if(elements_.size() > 0)
+            print_recur(0, os);
       }
 
-      /**
-       * Return the number of elements in the heap.
-       */
-      size_type size() const
-      {
-        return impl_.size();
-      }
-
-      /**
-       * Return the value comparison operation.
-       */
-      value_compare value_comp() const
-      {
-        return impl_.value_comp();
-      }
-      
-      /**
-       * Return a reference to the underlying container.
-       */
-      container_type const& data() const
-      { 
-        return impl_.data();
-      }
-      //@}
-
-      /**
-       * Return the number of objects allocated to the heap.
-       */
-      size_type capacity() const
-      {
-          return impl_.capacity();
-      }
-
-      /**
-       * Reserve additional capacity for the heap.
-       */
-      void reserve(size_type n)
-      {
-          impl_.reserve(n);
-      }
-
-      /** @name Heap operations */
-      //@{
-      /**
-       * Return the object at the top of the heap.
-       */
-      value_type const& top() const
-      {
-          return impl_.top();
-      }
-
-      /**
-       * Insert the given object into the heap. This operation completes in
-       * O(lg n) time.
-       */
-      void push(value_type const& x)
-      {
-          impl_.push(x);
-      }
-
-      /**
-       * Update the heap after a change to the value of the given object. This
-       * operation completes in O(lg n) time.
-       */
-      void update(value_type const& x)
-      {
-          impl_.update(x);
-      }
-
-      /**
-       * Remove the top object from the heap. This operation completes in
-       * O(lg n) time.
-       */
-      void pop()
-      {
-          impl_.pop();
-      }
-      //@}
-
-      template<typename Char, typename Traits>
-      void print(std::basic_ostream<Char, Traits>& os)
-      {
-          impl_.print(os);
-      }
-
-    protected:
-      impl_type impl_;
-    };
 
   // FIXME: Find a nice data structure reference for the documentation (CLR?).
   // FIXME: This is basically std::priority_queue. Why not reuse that
