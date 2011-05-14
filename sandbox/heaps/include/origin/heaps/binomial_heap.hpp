@@ -16,65 +16,68 @@
 
 namespace origin
 {
-  /*
-   * An adaptation of CLRS's Binomial heap implementation
-   * in Chapter 19, 3rd Ed, pages .
-   */
-  
   /**
    * @internal
-   * The binomial heap node...
+   * The binomial heap node stores the non-dependent (template) link structure 
+   * for a node in a binomial heap. This includes..
    */
   struct binomial_heap_node
   {
     public:
-      size_t item_index;
+      typedef std::size_t size_type;
 
-      /* Index of parent of the element in the heap */
-      size_t parent;
+      binomial_heap_node()
+        : parent{-1}, child{-1}, right_sibling{-1}, degree{0} 
+      { }
       
-      /* Index of the child element in the heap */
-      size_t child;
-      
-      /* Index of the right neighbour of the element in the heap */
-      size_t right_sibling;
-      
-      /* Degree of the element */
-      size_t degree;
-      binomial_heap_node ():parent{-1}, child{-1}, right_sibling{-1}, degree{0} {};
+      size_type item_index;     // ???
+      size_type parent;         // Parent index
+      size_type child;          // First? child index
+      size_type right_sibling;  // Right sibling index
+      size_type degree;         // Number of children?
   };
 
-  // Link two binomial heap nodes.
+  /** 
+   * @internal
+   * Link the two nodes.
+   */
   void binomial_link(binomial_heap_node& node1, 
                      binomial_heap_node& node2, 
                      size_t index1, 
-                     size_t index2);
+                     size_t index2)
+  {
+    node1.parent = index2;
+    node1.right_sibling = node2.child;
+    node2.child = index1;
+    node2.degree = node2.degree + 1;
+  }
+
   
-  /* Class: Mutable Binomial Heap 
-   * Template parameters
-   * T : Value type - Type of data to be stored in the heap
-   * Compare : Binary function predicate - This gives the ordering between the
-   *           element (max/min heap)
-   * Item_Map : Property Map - External property map used to find the 
-   *                  index of element in the heap
+  /** 
+   * The mutable binomial heap...
+   *
+   * @tparam T
+   * @tparam Comp
+   * @tparam Map
+   * @tparam Alloc
    */
   template<typename T, 
-           typename Compare,
-           typename Item_Map,
-           typename Alloc> 
-    class mutable_binomial_heap_impl
+           typename Comp = std::less<T>,
+           typename Map = default_t,
+           typename Alloc = std::allocator<T>> 
+    class mutable_binomial_heap
     {
     private:
       typedef T value_type;
       typedef size_t size_type;
-      typedef Compare value_compare;
+      typedef Comp value_compare;
       
       /* Random access container which holds the heap elements */
       std::vector<T, Alloc> elements_;
       std::vector<binomial_heap_node> data_;
         
-      Compare compare_;
-      Item_Map id_;     // Index map
+      value_compare compare_;
+      std::unordered_map<T, size_type> id_;     // Index map
       
       size_type top_;   // Index of the root element
       size_type head_;  // Index of the top element
@@ -140,74 +143,35 @@ namespace origin
       size_type get_new_top(); 
         
     public:
-      /*
-       * mutable_binomial_heap_impl: Default constructor
-       * Input: 
-       * None
-       * Output:
-       * Return Value:
-       * None       
+      /**
+       * @brief Default constructor
        */
-      mutable_binomial_heap_impl () = default;
+      mutable_binomial_heap(value_compare const& comp = value_compare{}) 
+        : compare_{comp}, top_{-1}, head_{-1} 
+      { }
         
-      /*
-       * mutable_binomial_heap_impl: 2 argument constructor
-       * Input: 
-       * Compare &cmp: comparison function predicate
-       * Item_Map: Lambda function for map
-       * Output:
-       * Instantiates a heap with given comparison function
-       * and property map
-       * Return Value:
-       * None
+      /**
+       * @brief Range constructor
        */
-      mutable_binomial_heap_impl (const Compare &cmp, const Item_Map& id) :
-                                  compare_{cmp}, id_{id}, top_{-1}, head_{-1} 
-      {}
-        
-      /*
-       * mutable_binomial_heap_impl: range based constructor
-       * Input: 
-       * ForwardIterator first: Iterator to the first element of a container 
-       * ForwardIterator last: Iterator to the last element of a container
-       * Compare &cmp: comparison function predicate
-       * Item_Map: Lambda function for map
-       * Output:
-       * Instantiates a heap of elements with given comparison function
-       * and property map
-       * Return Value:
-       * None       
-       */
-      template<typename ForwardIterator>
-        mutable_binomial_heap_impl (ForwardIterator first, ForwardIterator last,
-                                    const Compare &cmp, const Item_Map& id) :
-                                    compare_{cmp}, id_{id}, top_{-1}, head_{-1}
+      template<typename Iter>
+        mutable_binomial_heap(Iter first, 
+                              Iter last,
+                              value_compare const& comp = value_compare{}) 
+          : compare_{comp}, top_{-1}, head_{-1}
         {
-          reserve(std::distance(first, last));
-          while(first != last) {
-            push(*first);
-            ++first;
-          }
+          while(first != last)
+            push(*first++);
         }
         
-      mutable_binomial_heap_impl (std::initializer_list<T> lst,
-                                  const Compare &cmp, const Item_Map& id) :
-                                  compare_{cmp}, id_{id}, top_{-1}, head_{-1}
+      /**
+       * @brief Initializer list constructor
+       */
+      mutable_binomial_heap(std::initializer_list<T> list,
+                            value_compare const& comp = value_compare{}) 
+        : compare_{comp}, top_{-1}, head_{-1}
       {
-        reserve(lst.size());
-        for (auto &x : lst) {
-          push (x);
-        }
-      }
-
-      mutable_binomial_heap_impl (std::initializer_list<T> lst, 
-                                  const Item_Map& id):
-                                  compare_{Compare()}, id_{id}, top_{-1}, head_{-1}
-      {
-        reserve(lst.size());
-        for (auto &x : lst) {
-          push (x);
-        }
+        for(auto const& x : list)
+          push(x);
       }
 
       /*
@@ -334,12 +298,8 @@ namespace origin
       void pop();
     };
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    typename mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::size_type 
-    mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::get_new_top()
+  template <class T, class Comp, class Map, class Alloc>
+    auto mutable_binomial_heap<T, Comp, Map, Alloc>::get_new_top() -> size_type
     {
       size_type top_index;
       size_type tmp;
@@ -362,11 +322,8 @@ namespace origin
     }
   
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::push(const value_type& d)
+  template <class T, class Comp, class Map, class Alloc>
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::push(const value_type& d)
     {
       binomial_heap_node obj;
       size_type index;
@@ -383,7 +340,7 @@ namespace origin
       
       index = data_.size() - 1;
       
-      id_(d) = index;
+      id_[d] = index;
       if (head_ == size_type(-1)) {
         /* New heap */
         head_ = index;
@@ -397,13 +354,10 @@ namespace origin
     }
   
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::update(const value_type& d)
+  template <class T, class Comp, class Map, class Alloc>
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::update(const value_type& d)
     {
-      size_type index = id_(d);
+      size_type index = id_[d];
       size_type parent = data_[index].parent;
       size_type temp;
       elements_[data_[index].item_index] = d;
@@ -413,13 +367,13 @@ namespace origin
         elements_[data_[index].item_index] = elements_[data_[parent].item_index];
         elements_[data_[parent].item_index] = d;
 
-        id_(elements_[data_[index].item_index]) = index;
+        id_[elements_[data_[index].item_index]] = index;
         
         index = parent;
         parent = data_[parent].parent;
       }
 
-      id_(d) = index;
+      id_[d] = index;
       
       if (!compare_(d, elements_[data_[top_].item_index])) {
         top_ = index;
@@ -427,11 +381,8 @@ namespace origin
     }
   
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::merge (size_type index)
+  template <class T, class Comp, class Map, class Alloc>
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::merge (size_type index)
     {
       size_type p = head_;
       size_type q = index;
@@ -458,11 +409,8 @@ namespace origin
     }
   
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::mutable_binomial_heap_union (size_type index)
+  template <class T, class Comp, class Map, class Alloc>
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::mutable_binomial_heap_union (size_type index)
     {
       /* Merge the root lists */
       merge(index);
@@ -502,11 +450,8 @@ namespace origin
     }
   
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
-    void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::pop()
+  template <class T, class Comp, class Map, class Alloc>
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::pop()
     {
       size_type new_head = size_type(-1);
       
@@ -549,7 +494,7 @@ namespace origin
       
   
       // where in data_ old last element is stored
-      size_type index = id_(elements_[elements_.size()-1]);
+      size_type index = id_[elements_[elements_.size()-1]];
   
       // copy the last element to location of old top element
       elements_[data_[temp].item_index] = elements_[elements_.size()-1];
@@ -569,12 +514,10 @@ namespace origin
       top_ = get_new_top();
   }
   
-  template <class T, 
-            class Compare,
-            class Item_Map,
-            class Alloc>
+  template <class T, class Comp, class Map, class Alloc>
     template<typename Char, typename Traits>
-      void mutable_binomial_heap_impl<T, Compare, Item_Map, Alloc>::print(std::basic_ostream<Char, Traits>& os)
+      void mutable_binomial_heap<T, Comp, Map, Alloc>::
+        print(std::basic_ostream<Char, Traits>& os)
       {
         if (head_ != size_type(-1)) {
           size_type i = head_;
@@ -586,251 +529,7 @@ namespace origin
         }
       }
   
-  
-  /*
-   * binomial_link: Links the specified nodes in the heap
-   * Input: 
-   * size_type y: element in the heap
-   * size_type z: element in the heap
-   * Output:
-   * links element y and z in the heap
-   * Return Value:
-   * None
-   */
-  void binomial_link (binomial_heap_node& node1, binomial_heap_node& node2, size_t index1, size_t index2)
-  {
-    node1.parent = index2;
-    node1.right_sibling = node2.child;
-    node2.child = index1;
-    node2.degree = node2.degree + 1;
-  }
 
-  /*
-   * Binomial Heap implementation used when an external map is provided
-   * by the user
-   */
-  template <class T, 
-            class Compare,
-            class Item_Map = default_t,
-            class Alloc = std::allocator<T>> 
-    class mutable_binomial_heap
-    {
-    public:
-      typedef T value_type;
-      typedef size_t size_type;
-      typedef Compare value_compare;
-     
-    protected:
-      typedef mutable_binomial_heap_impl<value_type, Compare, Item_Map, Alloc> search_impl;
-          
-    public:
-      mutable_binomial_heap() : impl() 
-      {}
-       
-      mutable_binomial_heap (const Compare& cmp, const Item_Map& id) : impl(cmp, id)
-      {}
-        
-      template<typename ForwardIterator>
-        mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
-                               const Compare& cmp, const Item_Map& id) :
-                                 impl (first, last, cmp, id)
-        {}
-
-      mutable_binomial_heap (std::initializer_list<T> lst, 
-                             const Compare &cmp, const Item_Map& id) :
-                               impl (lst, cmp, id)
-      {}
-
-      mutable_binomial_heap (std::initializer_list<T> lst, 
-                             const Item_Map& id):
-                               impl (lst, id)
-      {}
-                                  
-      void update(const value_type& d) 
-      { 
-        impl.update(d); 
-      }
-        
-      void push(const value_type& d)
-      { 
-        impl.push(d); 
-      }
-        
-      value_type& top()
-      {
-        return impl.top(); 
-      }
-        
-      const value_type& top() const
-      {
-        return impl.top();
-      }
-        
-      bool empty() const
-      {
-        return impl.empty(); 
-      }
-        
-      size_type size() const
-      {
-        return impl.size();
-      }
-          
-      value_compare value_comp() const
-      {
-        return impl.value_comp();
-      }
-        
-      void reserve(size_type n)
-      {
-        impl.reserve(n);
-      }
-          
-      size_type capacity() const
-      {
-        return impl.capacity();
-      }         
-
-      void pop()
-      { 
-        impl.pop();
-      }
-
-      template<typename Char, typename Traits>
-        void print(std::basic_ostream<Char, Traits>& os)
-        {
-          impl.print(os);
-        }
-
-    protected:
-      search_impl impl;
-    };
-
-  /*
-   * Binomial Heap Implementation in case of no external map
-   */
-  template <class T, 
-            class Compare>
-    class mutable_binomial_heap<T, Compare, default_t>
-    {
-
-    public:
-      typedef T value_type;
-      typedef size_t size_type;
-      typedef Compare value_compare;
-      
-    protected:
-      typedef typename std::unordered_map<value_type, size_type> internal_map;
-      struct item_map 
-      {
-        internal_map *imap;
-
-        public:
-          item_map (internal_map *map): imap(map) 
-          {}
-              
-          template<typename value_type>
-            size_type & operator() (const value_type& key)
-            {
-              return (*imap)[key];
-            }
-      };
-
-
-      typedef mutable_binomial_heap_impl<value_type, Compare, item_map, std::allocator<value_type>> search_impl;
-
-    public:
-      mutable_binomial_heap() : impl()
-      {}
-          
-      mutable_binomial_heap (const Compare& cmp) : id_{&map_}, impl (cmp, id_)
-      {}
-          
-      template<typename ForwardIterator>
-        mutable_binomial_heap (ForwardIterator first, ForwardIterator last,
-                               const Compare& cmp): id_{&map_},
-                                  impl (first, last, cmp, id_)
-        {}
-          
-      mutable_binomial_heap (std::initializer_list<T> lst, 
-                                  const Compare &cmp):id_{&map_},
-                                  impl (lst, cmp, id_)
-      {}
-
-      mutable_binomial_heap (std::initializer_list<T> lst):
-                             id_{&map_},
-                             impl (lst, id_)
-      {}
-        
-      /*
-       * The assumption is that heap never stores the actual value. It 
-       * contains reference to the value, and the reference remains 
-       * unchanged during update
-       */
-      void update(const value_type& d)
-      {
-        impl.update(d); 
-      }
-      
-      void push(const value_type& d)
-      {   
-        impl.push(d); 
-      }
-        
-      value_type& top()
-      {
-        return impl.top(); 
-      }
-        
-      const value_type& top() const
-      {
-        return impl.top();
-      }
-        
-      bool empty() const
-      {
-        return impl.empty(); 
-      }
-        
-      size_type size() const
-      {
-        return impl.size();
-      }
-          
-      value_compare value_comp() const
-      {
-        return impl.value_comp();
-      }
-
-      void reserve(size_type n)
-      {
-        impl.reserve(n);
-      }
-          
-      size_type capacity() const
-      {
-        return impl.capacity();
-      }         
-
-      void pop()
-      {   
-        const value_type top_element = impl.top();
-        impl.pop();
-        map_.erase(top_element);
-      }
-          
-      template<typename Char, typename Traits>
-        void print(std::basic_ostream<Char, Traits>& os) 
-        {
-          impl.print(os);
-        }
-              
-      protected:
-        internal_map map_;
-        item_map id_;
-        search_impl impl;
-
-    };
   
   /*
     * Non-Mutable Binomial Heap Implementation 
