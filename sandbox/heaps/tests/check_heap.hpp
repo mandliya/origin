@@ -10,8 +10,28 @@
 
 #include <cassert>
 #include <algorithm>
+#include <functional>
 #include <vector>
 #include <random>
+
+/**
+ * Indirectly compare two pointers using the given comparison operator.
+ */
+template<typename T, typename Comp = std::less<T>>
+  struct indirect_compare
+  {
+    indirect_compare(Comp c = Comp{})
+      : comp{c}
+    { }
+    
+    bool operator()(T const* p, T const* q) const
+    {
+      return comp(*p, *q);
+    }
+    
+    Comp comp;
+  };
+
 
 /**
  * Check the heap order on a copy of the given heap. This is done by comparing
@@ -39,16 +59,20 @@ template<typename Heap>
   }
 
 /**
- * Check the validity of the (non-mutable) Heap implementation.
+ * Check the validity of the (non-mutable) Priority_Queue. This just pushes a
+ * number of objects into the heap and verifies that the result will be sorted
+ * each time.
  */
 template<template<typename...> class Heap, typename Eng>
   void check_heap(Eng& eng)
   {
-    std::uniform_int_distribution<> dist{0, 100};
+    int const N = 100;
+
+    std::uniform_int_distribution<> dist{0, 1000};
     auto var = bind(dist, eng);
 
     Heap<int> h;
-    for(int i = 0; i < 100; ++i)
+    for(int i = 0; i < N; ++i)
       h.push(var());
     check_heap_order(h);
   }
@@ -56,51 +80,44 @@ template<template<typename...> class Heap, typename Eng>
 
 
 /**
- * Verify the behavior or a mutable heap. Here, the heap indirectly orders 
- * elements in a vector. The vector and heap are initialized, and then random 
- * elements are modified, and the heap updated.
+ * Check the validity of the Mutable_Priority_Queue. This constructs a heap
+ * over a domain of objects and then modifies the objects in the domain,
+ * updating the heap. The heap order is verified after each update.
  */
-template<template<typename...> class Heap, typename Gen, typename Engine>
-  void check_mutable_heap(Gen& var, Engine& eng)
+template<template<typename...> class Heap, typename Engine>
+  void check_mutable_heap(Engine& eng)
   {
-    typedef std::vector<int> Vector;
-    typedef Vector::iterator Iter;
-    typedef Vector::size_type Size;
+    typedef indirect_compare<int> Comp;
     
-    // The vector holds values to be modified and we will be comparing
-    // them indirectly.
-    Vector v(10);
-    auto cmp = [&v](Size m, Size n) { return v[m] < v[n]; };
-
-    // Generate an initial distribution of random data.
-    std::generate<Iter, Gen&>(v.begin(), v.end(), var);
-
-    // The mutable heap orders references to modifiable data by pointers. The
-    // heap order is determined indirectly.
-    typedef decltype(cmp) Comp;
-    Heap<size_t, Comp> h{cmp};
+    int const N = 100;
     
-    // Initialize the heap with references to the initialized data. Make sure
-    // that we're 
-    for(Size i = 0; i < v.size(); ++i)
-      h.push(i);
-    // check_heap_sorted(h);
-    assert(( is_heap(h.data().begin(), h.data().end(), cmp) ));
+    // Random variable picking indexes
+    std::uniform_int_distribution<size_t> index_dist{0, N - 1};
+    auto index = bind(index_dist, eng);
+    
+    // Random variable for generating values.
+    std::uniform_int_distribution<int> value_dist{0, 1000};
+    auto value = bind(value_dist, eng);
 
-    // Modify values and then check to make sure we're in sorted order.
-    std::uniform_int_distribution<std::size_t> indexes{0, v.size() - 1};
-    auto index = bind(indexes, eng);
-    for(int i = 0; i < 1000; ++i) {
-      // Randomly modify an element in the vector.
+    // Build a small domain of randomly generated objects.
+    std::vector<int> v(N);
+    std::generate(v.begin(), v.end(), value);
+    
+    // Construct a mutable heap to order that domain and populate it with
+    // values.
+    Heap<int*, Comp> h;
+    for(auto& p : v)
+      h.push(&p);
+    check_heap_order(h);
+    
+    // Change some values and validate the heap order.
+    for(int i = 0; i < 10; ++i) {
       size_t n = index();
-      v[n] = var();
+      int* p = &v[n];
+      *p = value();
       
-      // And then update the heap (and check the results).
-//       std::cout << "Ha: "; print(h.data()); std::cout << "\n";
-      h.update(n);
-//       std::cout << "Hb: "; print(h.data()); std::cout << "\n~~~~~~~~~\n";
-      assert(( is_heap(h.data().begin(), h.data().end(), cmp) ));
-//       check_heap_sorted(v, h);
+      h.update(p);
+      check_heap_order(h);
     }
   }
 

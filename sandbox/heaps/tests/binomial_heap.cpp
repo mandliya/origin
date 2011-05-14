@@ -15,5 +15,13 @@ using namespace origin;
 int main()
 {
   default_random_engine eng;
-  check_heap<binomial_heap>(eng);
+  
+  int const N = 100;
+  for(int i = 0; i < N; ++i)
+    check_heap<binomial_heap>(eng);
+
+  for(int i = 0; i < N; ++i) {
+    // check_heap<mutable_binomial_heap>(eng);
+    // check_mutable_heap<mutable_binomial_heap>(eng);
+  }
 }

@@ -18,6 +18,17 @@
 
 namespace origin
 {
+  // NOTE: A note on heap ordering. The heap property, say max-heap, states
+  // that the item on the top of the heap is greater than all other objects in
+  // the heap. Note that when the heap is a tree, the heap property can be
+  // described recursively; an element in the heap is greater than its children.
+  //
+  // In STL-style libraries, we tend to use less<T> as the default comparison,
+  // even though max-heaps are typically the default. This leads to a subtle
+  // rephrasing of the heap property. For a max heap, we say that an element in 
+  // the heap is /not less/ than its children.
+
+
   /**
    * A mutable binary heap is a binary heap that allows the values in the to
    * be modified by an external program. The heap is updated to adjust the
@@ -60,7 +71,7 @@ namespace origin
         : compare_{comp}
       { }
 
-      // FIXME: Generalize this operation for input iterators.
+      // FIXME: Optimize this operation for forward iterators. Reserve first.
       /**
        * @brief Range constructor
        * Initialize the heap with the elements in the range [first, last).
@@ -76,22 +87,14 @@ namespace origin
         mutable_binary_heap(Iter first,
                             Iter last,
                             value_compare const& comp = value_compare{}) 
-        : compare_{comp}
-      {
-        reserve(std::distance(first, last));
-        while(first != last) {
-          elements_.push_back(*first);
-          index_[*first] = elements_.size() - 1;
-          ++first;
+          : compare_{comp}
+        {
+          while(first != last)
+            push(*first++);
         }
-        size_type index = elements_.size() / 2;
-        while (index > 0){
-          index--;
-          heapify(index);
-        }
-      }
 
-      // FIXME: Implement me!
+      // FIXME: Implement me effeciently. See refactoring notes for the range
+      // constructor above.
       /**
        * @brief Initializer list constructor
        * Initialize the heap with the elements from the given initializer list.
@@ -101,7 +104,10 @@ namespace origin
        */
       mutable_binary_heap(std::initializer_list<T> list,
                           value_compare const& comp = value_compare{})
-      { }
+      {
+        for(value_type const& x : list)
+          push(x);
+      }
       //@}
 
 
@@ -209,13 +215,43 @@ namespace origin
       size_type index(value_type const& x) const
       {
         assert(( index_.find(x) != index_.end() ));
-        return index_[x];
+        return index_.find(x)->second;
       }
       
-      // Comparing the value of the mth element with the nth element.
-      bool compare(size_type m, size_type n) const
+      // Return true if n is the root index (0).
+      static bool is_root(size_type n)
+      {
+        return !n;
+      }
+      
+      // Return the parent index of n. The parent of 0 is 0.
+      static size_type parent(size_type n)
+      { 
+        return is_root(n) ? 0 : (n - 1) / 2; 
+      }
+      
+      // Return the left child index of n.
+      static size_type left(size_type n)
+      { 
+        return n * 2 + 1; 
+      }
+
+      // Return the right child index of n.
+      static size_type right(size_type n)
+      { 
+        return n * 2 + 2; 
+      }
+      
+      // Return true if the elements at m and n violate the heap order. 
+      bool less(size_type m, size_type n) const
       {
         return compare_(get(m), get(n));
+      }
+      
+      // Return true if the elements at m and n observe the heap order.
+      bool not_less(size_type m, size_type n) const
+      {
+        return !less(m, n);
       }
 
       // Swap two elements in the heap and exchange their indexes.
@@ -226,8 +262,8 @@ namespace origin
         index_[get(n)] = n;
       }
 
-      void up_heap(size_type n);
-      void down_heap(size_type n);
+      size_type up_heap(size_type n);
+      size_type down_heap(size_type n);
 
       // Recursively print the heap as a tree
       // FIXME: Write this as an out-of body function.
@@ -241,62 +277,43 @@ namespace origin
       map_type index_;
     };
 
-  // Bubble the object at the given index up the heap.
+  // Bubble the element at the index n up the heap. Return the new index after
+  // bubbling. If the heap is already valid, then up_heap(n) == n.
   template<typename T, typename Comp, typename Map, typename Alloc>
-    void mutable_binary_heap<T, Comp, Map, Alloc>::up_heap(size_type n)
+    auto mutable_binary_heap<T, Comp, Map, Alloc>::up_heap(size_type n) -> size_type
     {
-      while(n > 0) {
-        size_type p = (n - 1) / 2;
-        if(!compare(n, p)) {
+      while(!is_root(n)) {
+        // If the heap order is violated (p < n), swap and repeat.
+        size_type p = parent(n);
+        if(less(p, n)) {
           exchange(n, p);
           n = p;
         } else
           break;
       }
+      return n;
     }
   
-  // Bubble the object at the given index down the heap.
+  // Bubble the object at the given index down the heap. Return the new index 
+  // of the bubbled element. If the heap is alread valid then down_heap(n) == n.
   template<typename T, typename Comp, typename Map, typename Alloc>
-    void mutable_binary_heap<T, Comp, Map, Alloc>::down_heap(size_type n)
+    auto mutable_binary_heap<T, Comp, Map, Alloc>::down_heap(size_type n) -> size_type
     {
-      auto parent = [](size_t x) { return x == 0 ? 0 : (x - 1) / 2; }
-      auto left = [](size_t x) { return x * 2 + 1; }
-      
       size_t c = left(n);
-      // Elem Item    = Data[Current];
-      
       while(c < size()) {
-        // Find the right child to compare against
-        if(c < (size() - 1) && compare(c, c + 1))
+        // Find the greatest (not least) child to compare and swap.
+        if(c < (size() - 1) && less(c, c + 1))
           ++c;
         
-        if(compare(n, c)) {
+        // Swap if the heap order is violated (n < c).
+        if(less(n, c)) {
           exchange(n, c);
           n = c;
           c = left(c);
         } else
           break;
       }
-
-      // FIXME: What the fuck does this do?
-      Data[Current] = Item; 
-      /*
-      size_type sz = elements_.size();
-      size_type p = n;
- 
-      do {
-        exchange(n, p);
-        n = p;
-
-        size_type left = 2 * n + 1;
-        size_type right = 2 * n + 2;
-
-        if((left < sz) && compare(left, n))
-          p = left;
-        if((right < sz) && compare(right, p))
-          p = right;
-      } while(n != p);
-      */
+      return n;
     }
     
   template<typename T, typename Comp, typename Map, typename Alloc>
@@ -330,22 +347,12 @@ namespace origin
     {
       assert(( get(index(x)) == x ));
 
-      //update the element with the new value
+      // Try to adjust up the heap first. If the updated element is valid
+      // w.r.t it's parent, try to bubble down.
       size_type n = index(x);
-
-      // FIXME: This seems wrong. The heap should always observe the
-      // precondition above. The object at the index associated with the key
-      // x must be equal to x. Re-inserting the value should be a no-op.
-      get(n) = x;
-      size_type parent = (n - 1) / 2;
-
-      // FIXME: This entirely wrong.
-      if(n == 0)
-        return; 
-      else if(compare(n, parent))
-        up_heap(n);
-      else
+      if(up_heap(n) == n) {
         down_heap(n);
+      }
     }
 
 
