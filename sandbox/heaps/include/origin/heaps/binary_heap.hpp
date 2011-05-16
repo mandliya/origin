@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 #include <origin/utility/meta.hpp>
+#include <origin/heaps/index.hpp>
 
 namespace origin
 {
@@ -42,7 +43,7 @@ namespace origin
    */
   template<typename T, 
            typename Comp = std::less<T>, 
-           typename Map = default_t, 
+           typename Map = hash_index<T>, 
            typename Alloc = std::allocator<T>>
     class mutable_binary_heap
     {
@@ -53,11 +54,9 @@ namespace origin
       typedef typename Alloc::size_type size_type;
     private:
       typedef std::vector<T> container_type;
-      typedef std::unordered_map<value_type, size_t> map_type; //FIXME: Use traits class
+      typedef typename Map::template rebind<Alloc>::type index_type;
     public:
-      
 
-    public:
       /** @name Initialization */
       //@{
       /**
@@ -214,8 +213,8 @@ namespace origin
       // Return the index of the given value. The value must be in the heap.
       size_type index(value_type const& x) const
       {
-        assert(( index_.find(x) != index_.end() ));
-        return index_.find(x)->second;
+        assert(( index_.has(x) ));
+        return index_.get(x);
       }
       
       // Return true if n is the root index (0).
@@ -258,8 +257,8 @@ namespace origin
       void exchange(size_type m, size_type n)
       {
         std::swap(get(m), get(n));
-        index_[get(m)] = m;
-        index_[get(n)] = n;
+        index_.put(get(m), m);
+        index_.put(get(n), n);
       }
 
       size_type up_heap(size_type n);
@@ -274,7 +273,7 @@ namespace origin
     private:
       container_type elements_;
       value_compare compare_;
-      map_type index_;
+      index_type index_;
     };
 
   // Bubble the element at the index n up the heap. Return the new index after
@@ -322,7 +321,7 @@ namespace origin
       // Push element into the heap structure
       size_type n = elements_.size();
       elements_.push_back(x);
-      index_[x] = n;
+      index_.put(x, n);
       
       // Adjust the heap.
       up_heap(n);
@@ -332,8 +331,9 @@ namespace origin
   template<typename T, typename Comp, typename Map, typename Alloc>
     void mutable_binary_heap<T, Comp, Map, Alloc>::pop()
     {
-      //swap root with last element and delete old root
+      // Swap root with last element and erase the old root.
       exchange(0, elements_.size() - 1);
+      index_.erase(elements_.back());
       elements_.pop_back();
 
       // Preserve the heap invariant.

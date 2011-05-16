@@ -5,8 +5,8 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-origin_run_test(compile compile.cpp)
+# origin_run_test(compile compile.cpp)
 origin_run_test(binary_heap binary_heap.cpp)
-origin_run_test(binomial_heap binomial_heap.cpp)
-origin_run_test(fibonacci_heap fibonacci_heap.cpp)
-origin_run_test(pairing_heap pairing_heap.cpp)
+# origin_run_test(binomial_heap binomial_heap.cpp)
+# origin_run_test(fibonacci_heap fibonacci_heap.cpp)
+# origin_run_test(pairing_heap pairing_heap.cpp)
