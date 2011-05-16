@@ -79,15 +79,19 @@ namespace origin
     };
 
   /**
-   * The vector index maintains an assocation between a number (the key) and an 
-   * index. The numeric key values must be in the range [0, n) and preferrably
-   * dense (with no gaps). The mapped value -1u is used to gaps in the mapping.
+   * The vector index maintains an assocation between an unsigned integer (the 
+   * key) and an  index. The numeric key values must be in the range [0, n) and 
+   * preferrably dense (with no gaps). The mapped value -1u is used to gaps in 
+   * the mapping.
+   * 
+   * @tparam Key    An Unsigned_Int type, size_t by default.
+   * @tparam Alloc  An Allocator type
    */
-  template<typename Key, 
+  template<typename Key = std::size_t, 
            typename Alloc = std::allocator<Key>>
     class vector_index
     {
-      static_assert(std::is_integral<Key>::value, "Key must be integral");
+      static_assert(std::is_unsigned<Key>::value, "Key must be unsigned");
     public:
       typedef Key key_type;
       typedef std::size_t mapped_type;
@@ -98,7 +102,7 @@ namespace origin
       template<typename A>
         struct rebind
         {
-          typedef hash_index<Key, A> type;
+          typedef vector_index<Key, A> type;
         };
         
       /**
