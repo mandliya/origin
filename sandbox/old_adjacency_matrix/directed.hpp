@@ -217,47 +217,6 @@ namespace origin
   }
 
   template<typename V, typename E, typename A>
-<<<<<<< .mine
-  directed_adjacency_matrix<V,E,A>::directed_adjacency_matrix
-  (directed_adjacency_matrix&& c)
-    : vertices_(c.vertices_), edges_(c.edges_), num_edges_(c.num_edges_)
-  { }
-
-  template<typename V, typename E, typename A>
-  auto directed_adjacency_matrix<V,E,A>::operator=
-  (directed_adjacency_matrix&& c) -> directed_adjacency_matrix&
-  {
-    vertices_ = c.vertices_;
-    edges_ = c.edges_;
-    num_edges_ = c.num_edges_;
-    return *this;
-  }
-
-  template<typename V, typename E, typename A>
-  bool directed_adjacency_matrix<V,E,A>::equal
-  (directed_adjacency_matrix const& d) const
-  {
-    return num_edges_ == d.num_edges_ &&
-      vertices_ == d.vertices_ &&
-      edges_ == d.edges_;
-  }
-
-  template<typename V, typename E, typename A>
-  auto directed_adjacency_matrix<V,E,A>::get_allocator() const -> allocator_type
-  { return allocator_type{}; }
-
-  // Since the order of the graph is fixed, return size/capacity of verticies.
-  template<typename V, typename E, typename A>
-  constexpr auto directed_adjacency_matrix<V,E,A>::max_order() const -> size_type
-  { return vertices_.size(); }
-
-  template<typename V, typename E, typename A>
-  constexpr auto directed_adjacency_matrix<V,E,A>::max_size() const -> size_type
-  { return edges_.size(); }
-
-  template<typename V, typename E, typename A>
-=======
->>>>>>> .r129
   bool directed_adjacency_matrix<V,E,A>::null() const
   { return vertices_.empty(); }
 
