@@ -5,6 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
+#include <iostream>
+
 #include <origin/heaps/binomial_heap.hpp>
 
 #include "check_heap.hpp"
@@ -21,7 +23,7 @@ int main()
     check_heap<binomial_heap>(eng);
 
   for(int i = 0; i < N; ++i) {
-    check_heap<mutable_binomial_heap>(eng);
-    check_mutable_heap<mutable_binomial_heap>(eng);
+    // check_heap<mutable_binomial_heap>(eng);
+    // check_mutable_heap<mutable_binomial_heap>(eng);
   }
 }

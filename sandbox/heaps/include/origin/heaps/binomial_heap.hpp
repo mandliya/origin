@@ -8,18 +8,32 @@
 #ifndef ORIGIN_HEAPS_BINOMIAL_HEAP_HPP
 #define ORIGIN_HEAPS_BINOMIAL_HEAP_HPP
 
+#include <cassert>
 #include <vector>
-#include <iostream>
-#include <unordered_map>
-#include <memory>
-#include <origin/utility/meta.hpp>
+#include <functional>
 
 namespace origin
 {
+
+  // FIXME: This is not a typical binomial heap. It is not mergeable, so it's
+  // name needs to be changed. I'm thinking flat_binomial_heap or something
+  // like that.
+  
+  // FIXME: Is it possible to condense the non-mutable binomial heap operations 
+  // into a single data structure?
+
   /**
    * @internal
-   * The binomial heap node stores the non-dependent (template) link structure 
-   * for a node in a binomial heap. This includes..
+   *
+   * The binomial heap node defines the non-dependent link structure of a
+   * binomial tree stored in a Random Access Container. Each node contains
+   * a link to its parent node, it's child node, and its right subtree. The
+   * degree of a node determines the number of nodes in the subtree. The size
+   * of each subtree is 2^degree nodes.
+   *
+   * The heap node does not store its data object, either here, or in a derived
+   * class. Instead, the heap node refers to the data element in an external
+   * set of objects.
    */
   struct binomial_heap_node
   {
@@ -27,14 +41,25 @@ namespace origin
       typedef std::size_t size_type;
 
       binomial_heap_node()
-        : parent{-1}, child{-1}, right_sibling{-1}, degree{0} 
+        : index{-1}, parent{-1}, child{-1}, right{-1}, degree{0} 
       { }
       
-      size_type item_index;     // ???
-      size_type parent;         // Parent index
-      size_type child;          // First? child index
-      size_type right_sibling;  // Right sibling index
-      size_type degree;         // Number of children?
+      explicit binomial_heap_node(size_type ix)
+        : index{ix}, parent{-1}, child{-1}, right{-1}, degree{0}
+      { }
+      
+      // Unlink the node by resetting all of its indexes
+      void reset()
+      {
+        index = parent = child = right = -1;
+        degree = 0;
+      }
+      
+      size_type index;    // Refers to the stored data object
+      size_type parent;   // Index of the parent node
+      size_type child;    // Index of the child node
+      size_type right;    // Index of the right subtree
+      size_type degree;   // Total degree of the subtree
   };
 
   /** 
@@ -47,12 +72,399 @@ namespace origin
                      size_t index2)
   {
     node1.parent = index2;
-    node1.right_sibling = node2.child;
+    node1.right = node2.child;
     node2.child = index1;
     node2.degree = node2.degree + 1;
   }
 
+
+  /**
+   * A binomial heap...
+   *
+   * @tparam T
+   * @tparam Comp
+   * @tparam Alloc
+   */
+  template<typename T,
+           typename Comp = std::less<T>,
+           typename Alloc = std::allocator<T>>
+    class binomial_heap
+    {
+    public:
+      typedef Alloc allocator_type;
+      typedef typename allocator_type::size_type size_type;
+
+      typedef T const value_type;
+      typedef typename allocator_type::reference reference;
+      typedef typename allocator_type::const_reference const_reference;
+      
+      typedef Comp value_compare;
+    private:
+      typedef std::vector<T, Alloc> element_vector;
+      typedef std::vector<binomial_heap_node> node_vector;
+      typedef std::vector<size_type> index_vector;
+    public:
+
+      /** @name Initialization */
+      //@{
+      /**
+       * @brief Default constructor
+       */
+      binomial_heap(value_compare const& comp = value_compare{})
+        : compare_{comp}, top_{-1}, head_{-1} 
+      { }
+      
+      /**
+       * @brief Range constructor
+       */
+      template<typename ForwardIterator>
+        binomial_heap(ForwardIterator first, 
+                      ForwardIterator last,
+                      value_compare const& comp = value_compare{})
+          : compare_{comp}, top_{-1}, head_{-1}
+        {
+          reserve(std::distance(first, last));
+          while(first != last) {
+            push(*first);
+            ++first;
+          }
+        }
+      
+      /**
+       * @brief Initializer list constructor
+       */
+      binomial_heap(std::initializer_list<T> lst, 
+                    value_compare const& comp = value_compare{})
+        : compare_{comp}, top_{-1}, head_{-1}
+      {
+        reserve(lst.size());
+        for(auto &x : lst) {
+          push(x);
+        }
+      }
+      //@}
+
+
+      /** @name Properties */
+      //@{
+      bool empty() const
+      {
+        return elements_.size()==0;
+      }
+        
+      size_type size() const
+      {
+        return elements_.size();
+      }
+      
+      value_compare value_comp() const
+      {
+        return compare_;
+      }
+      
+      allocator_type allocator() const
+      {
+        return elements_.allocator();
+      }
+      //@}
+
+      /** @name Capacity */
+      //@{
+      size_type capacity() const
+      {
+        return elements_.capacity();
+      }
+
+      void reserve(size_type n)
+      {
+        reversemap_.reserve(n);
+        elements_.reserve(n);
+        forest_.reserve(n);
+      }
+      //@}
+        
+      /** @name Heap operations */
+      //@{
+      const_reference top() const
+      {
+        return get(top_);
+      }
+      
+      void push(const value_type& d); 
+        
+      void pop();
+      //@}
+
+    private:
+      // Return a "null" index.
+      static constexpr size_type null()
+      {
+        return -1;
+      }
+    
+      // Get the node at the given index in the forest vector. 
+      binomial_heap_node& node(size_type n)
+      {
+        return forest_[n];
+      }
+      
+      binomial_heap_node const& node(size_type n) const
+      {
+        return forest_[n];
+      }
+      
+      // Return (a reference to) the parent index indicated by the given node.
+      size_type& parent(size_type n)
+      {
+        return node(n).parent;
+      }
+      
+      size_type parent(size_type n) const
+      {
+        return node(n).parent;
+      }
+      
+      // Return (a reference to) the child index indicated by the given node.
+      size_type& child(size_type n)
+      {
+        return node(n).child;
+      }
+      
+      size_type child(size_type n) const
+      {
+        return node(n).child;
+      }
+      
+      // Return (a reference to) the right subtree index of the indicated node.
+      size_type& right(size_type n)
+      {
+        return node(n).right;
+      }
+
+      size_type right(size_type n) const
+      {
+        return node(n).right;
+      }
+      
+      // Return the degree of the indicated node.
+      size_type degree(size_type n) const
+      {
+        return node(n).degree;
+      }
+    
+      // Return the element corresponding to the indicated node.
+      const_reference get(size_type n) const
+      {
+        return elements_[node(n).index];
+      }
+      
+      // Link the indicated nodes
+      void link(size_type l, size_type r)
+      {
+        binomial_link(node(l), node(r), l, r);
+      }
+      
+      // Compare the objects referenced by the indicatd nodes. Note that heap 
+      // order is determined by !compare(x, y).
+      bool compare(size_type m, size_type n) const
+      {
+        return compare_(get(m), get(n));
+      }
+
+      size_type find_top();       
+
+      void forest_merge(size_type index);
+      void heap_merge(size_type index);
+
+    private:
+      element_vector elements_;   // Stores the heap elements
+      node_vector forest_;        // Stores tree nodes
+      index_vector reversemap_;   // ???
+        
+      Comp compare_;
+
+      size_type top_;     // The current top of the heap
+      size_type head_;    // The head of the root list.
+    };
   
+  // Find and cache the new top element in the heap.
+  template<typename T, typename Comp, typename Alloc>
+    auto binomial_heap<T, Comp, Alloc>::find_top() -> size_type
+    {
+      // If the tree is empty, then there can be no top.
+      if(empty())
+        return null();
+
+      // Find the subtree root that satisfies the heap property.
+      size_type t = head_;      // current top
+      size_type n = right(t);   // iterator
+      while (n != null()) {
+        if(!compare(n, t))
+          t = n;
+        n = right(n);
+      }
+      return t;
+    }
+
+  // Merge the root list of the indicated binomial tree with the maintained
+  // root list. This is a standard sorted merge based on the degree of the
+  // trees and completes in O(p + q) where p and q are the number of trees
+  // in each root list. Note that both pa and q are O(lg n) where n is the
+  // size() of the heap.
+  template<typename T, typename Comp, typename Alloc>
+    void binomial_heap<T, Comp, Alloc>::forest_merge(size_type index)
+    {
+      // Temporarily push a new heap node into the forest. This is used as a
+      // placeholder for computing the new root list head.
+      size_type current = forest_.size();
+      forest_.push_back(binomial_heap_node());
+
+      size_type p = head_;
+      size_type q = index;
+
+      // Perform the sorted merge.
+      while(p != null() || q != null()) {
+        if(q == null() || (p != null() && degree(p) < degree(q))) {
+          right(current) = p;
+          current = p;
+          p = right(p);
+        } else {
+          right(current) = q ;
+          current = q;
+          q = right(q);
+        }
+      }
+      
+      // Get the new head
+      head_ = forest_.back().right;
+      forest_.pop_back();
+    }
+
+  // Merge the binomial tree rooted at the given index into the maintained
+  // forest.
+  template<typename T, typename Comp, typename Alloc>
+    void binomial_heap<T, Comp, Alloc>::heap_merge(size_type index)
+    {
+      // Merge the root lists.
+      forest_merge(index);
+      if(right(head_) == null()) {
+        return;
+      }
+        
+      size_type x = head_;
+      size_type next_x = right(x);
+      size_type prev_x = null();
+      
+      // Iterate over the root list, trying to find the right place to insert
+      // the new tree.
+      while(next_x != null()) {
+        if((degree(x) != degree(next_x)) 
+           || (right(next_x) != null() && degree(right(next_x)) == degree(x))) 
+        {
+          prev_x = x;
+          x = next_x;
+        } else {
+          if(!compare(x, next_x)) {
+            right(x) = right(next_x);
+            link(next_x, x);
+          } else {
+            if(prev_x == null()) {
+              head_ = next_x;
+            } else {
+              right(prev_x) = next_x;
+            }
+
+            link(x, next_x);
+            x = next_x;
+          }
+        }
+        
+        next_x = right(x);
+      }
+    }
+
+  template<typename T, typename Comp, typename Alloc>
+    void binomial_heap<T, Comp, Alloc>::push(const value_type& d)
+    {
+      binomial_heap_node obj;
+
+      size_type last = elements_.size();
+      elements_.push_back(d);
+      forest_.emplace_back(last);
+      
+      reversemap_.push_back(last);
+
+      if(head_ == null()) {
+        // Initialize the new heap
+        top_ = head_ = last;
+      } else {
+        // Merge the singleton binomial heap with the maintained forest heap
+        // and maybe set the new top index.
+        heap_merge(last);
+        if(!compare(last, top_))
+          top_ = last;
+      }
+    }
+  
+  template<typename T, typename Comp, typename Alloc>
+    void binomial_heap<T, Comp, Alloc>::pop()
+    {
+      assert(( !empty() ));
+    
+      size_type new_head = null();
+      size_type temp = top_;
+  
+      // Reverse the list
+      // FIXME: What does this actually do?
+      if(child(top_) != null()) {
+        size_type tmp_head = child(top_);
+        size_type tmp_sibling = null();
+        while(tmp_head != null()) {
+          tmp_sibling = right(tmp_head);
+          parent(tmp_head) = null();
+          right(tmp_head) = new_head;
+          new_head = tmp_head;
+          tmp_head = tmp_sibling;
+        }
+      }
+      
+      if(right(head_) == null()) {
+        head_ = new_head;
+      } else {
+        if(head_ == top_) {
+          head_ = right(head_);
+        } else {
+          size_type tmp = head_;
+          while(right(tmp) != top_)
+            tmp = right(tmp);
+            
+          right(tmp) = right(top_);
+        }
+        
+        heap_merge(new_head);
+      }
+      
+      // Copy the last element to location of old top element
+      elements_[forest_[temp].index] = elements_.back();
+      
+      size_type index = reversemap_.back();
+      reversemap_[forest_[temp].index] = index;
+
+      // Point the index of the old element to correct location
+      node(index).index = node(temp).index;
+  
+      // Invalidate the node.
+      node(temp).reset();
+  
+      elements_.pop_back();
+      reversemap_.pop_back();
+
+      // Finally, compute the new top of the heap.
+      top_ = find_top();
+    }
+  
+#if 0
+
   /** 
    * The mutable binomial heap...
    *
@@ -74,39 +486,13 @@ namespace origin
       
       /* Random access container which holds the heap elements */
       std::vector<T, Alloc> elements_;
-      std::vector<binomial_heap_node> data_;
+      std::vector<binomial_heap_node> forest_;
         
       value_compare compare_;
       std::unordered_map<T, size_type> id_;     // Index map
       
       size_type top_;   // Index of the root element
       size_type head_;  // Index of the top element
-        
-      /*
-       * print_recur: Helper function for displaying the binomial heap
-       * Input:
-       * size_type x : Index of the element
-       * ostresm &os : Reference to the ouput stream
-       * Output:
-       * Prints the nodes for a particular binomial tree identified by x
-       * Return Value: None       
-       */
-      void print_recur(size_type x, std::ostream& os)
-      {
-        if (x != size_type (-1)) {
-          os << elements_[data_[x].item_index];
-          if (data_[x].degree > 0) {
-            os << "(";
-               size_type i = data_[x].child;
-              do {
-                print_recur (i, os);
-                os << " ";
-                i = data_[i].right_sibling;
-              } while (i != size_type(-1));
-              os << ")";
-          }
-        }
-      }
         
       /*
        * merge: Function to merge two binomial heaps
@@ -174,96 +560,13 @@ namespace origin
           push(x);
       }
 
-      /*
-       * print: Function for displaying the binomial heap
-       * Input:
-       * ostresm &os : Reference to the ouput stream
-       * Output:
-       * Outputs the binomial heap to the specified output stream
-       * Return Value:
-       * None       
-       * Note: This a helper function developed for unit testing
-       */
-      template<typename Char, typename Traits>
-        void print(std::basic_ostream<Char, Traits>& os);
-        
-        
-      /*
-       * Update: Updates the given element in the heap
-       * Input: 
-       * value_type &d: Reference to element which has to be updated
-       * Output:
-       * Updated heap
-       * Return Value:
-       * None       
-       * Precondition: Element d must already be updated in the map
-       */
-      void update(const value_type& d);
-        
-      /*
-       * push: Insets the given element in the heap
-       * Input: 
-       * value_type &d: Reference to element which has to be inserted
-       * Output:
-       * Heap with the new element inserted
-       * Return Value:
-       * None       
-       * Precondition: Element d must already be present in the map
-       */
-      void push(const value_type& d); 
-        
-        
-      /*
-       * top: Function to return the top element of the heap
-       * Input: 
-       * None
-       * Output:
-       * top element
-       * Return Value:
-       * value_type &: Reference to the top element is retured
-       */
-      value_type& top()
-      {
-        return elements_[data_[top_].item_index];
-      }
-      
-      /*
-       * top: Constant Function to return the const top element of the heap
-       * Input: 
-       * None
-       * Output:
-       * top element
-       * Return Value:
-       * value_type &: Reference to the top element is retured
-       */
-      const value_type& top() const
-      {
-        return elements_[data_[top_].item_index];
-      }
-        
-      /*
-       * empty: Function to check for empty heap
-       * Input: 
-       * None
-       * Output:
-       * State of the heap (empty/notempty)
-       * Return Value:
-       * bool : True if heap is empty, False otherwise
-       */
+      /** @name Properties */
+      //@{
       bool empty() const
       {
         return elements_.size()==0;
       }
         
-      /*
-       * size: Function to find the size of the heap
-       * Input: 
-       * None
-       * Output:
-       * Number of elements in the heap
-       * Return Value:
-       * size_type : Number of elements
-       */
       size_type size() const
       {
         return elements_.size();
@@ -273,29 +576,35 @@ namespace origin
       {
         return compare_;
       }
+      //@}
         
-
+      /** @name Capacity */
+      //@{
       void reserve(size_type n)
       {
         elements_.reserve(n);
-        data_.reserve(n);
+        forest_.reserve(n);
       }
         
       size_type capacity() const
       {
         return elements_.capacity();
       }
+      //@}
 
-      /*
-       * pop: Removes the top element from the heap
-       * Input: 
-       * None
-       * Output:
-       * binomial heap with a new top element
-       * Return Value:
-       * None
-       */
+      /** @name Heap operations */
+      //@{
+      const value_type& top() const
+      {
+        return elements_[forest_[top_].index];
+      }
+
+      void update(const value_type& d);
+        
+      void push(const value_type& d); 
+
       void pop();
+      //@}
     };
   
   template <class T, class Comp, class Map, class Alloc>
@@ -308,14 +617,14 @@ namespace origin
       }
       
       top_index = head_;
-      tmp = data_[top_index].right_sibling;
+      tmp = forest_[top_index].right;
       
       while (tmp != size_type(-1)) {
-        if (!compare_(elements_[data_[tmp].item_index], elements_[data_[top_index].item_index])) {
+        if (!compare_(elements_[forest_[tmp].index], elements_[forest_[top_index].index])) {
           top_index = tmp;
         }
         
-        tmp = data_[tmp].right_sibling;
+        tmp = forest_[tmp].right;
       }
       
       return top_index;
@@ -330,15 +639,15 @@ namespace origin
     
       elements_.push_back(d);
 
-      obj.item_index = elements_.size() - 1;
+      obj.index = elements_.size() - 1;
       obj.parent = size_type(-1);
-      obj.right_sibling = size_type(-1);
+      obj.right = size_type(-1);
       obj.child = size_type(-1);
       obj.degree = 0;
       
-      data_.push_back(obj);
+      forest_.push_back(obj);
       
-      index = data_.size() - 1;
+      index = forest_.size() - 1;
       
       id_[d] = index;
       if (head_ == size_type(-1)) {
@@ -348,7 +657,7 @@ namespace origin
       } else {
         /* Unite the 1 element heap with the existing heap */
         mutable_binomial_heap_union(index);
-        if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
+        if (!compare_(elements_[forest_[index].index], elements_[forest_[top_].index]))
             top_ = index;
       }
     }
@@ -358,94 +667,96 @@ namespace origin
     void mutable_binomial_heap<T, Comp, Map, Alloc>::update(const value_type& d)
     {
       size_type index = id_[d];
-      size_type parent = data_[index].parent;
+      size_type parent = forest_[index].parent;
       size_type temp;
-      elements_[data_[index].item_index] = d;
+      elements_[forest_[index].index] = d;
       
       while (parent != size_type(-1) && 
-            !compare_(d, elements_[data_[parent].item_index])) {
-        elements_[data_[index].item_index] = elements_[data_[parent].item_index];
-        elements_[data_[parent].item_index] = d;
+            !compare_(d, elements_[forest_[parent].index])) {
+        elements_[forest_[index].index] = elements_[forest_[parent].index];
+        elements_[forest_[parent].index] = d;
 
-        id_[elements_[data_[index].item_index]] = index;
+        id_[elements_[forest_[index].index]] = index;
         
         index = parent;
-        parent = data_[parent].parent;
+        parent = forest_[parent].parent;
       }
 
       id_[d] = index;
       
-      if (!compare_(d, elements_[data_[top_].item_index])) {
+      if (!compare_(d, elements_[forest_[top_].index])) {
         top_ = index;
       }
     }
   
   
+  // Mege the root lists of two subtrees
   template <class T, class Comp, class Map, class Alloc>
-    void mutable_binomial_heap<T, Comp, Map, Alloc>::merge (size_type index)
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::merge(size_type index)
     {
       size_type p = head_;
       size_type q = index;
       
-      size_type current = data_.size();
+      size_type current = forest_.size();
       size_type initial_size = -1;
-      data_.push_back(binomial_heap_node());
+      forest_.push_back(binomial_heap_node());
       
       while (p != initial_size || q != initial_size) {
         if (q == initial_size || 
-              (p != initial_size && data_[p].degree < data_[q].degree)) {
-          data_[current].right_sibling = p;
+              (p != initial_size && forest_[p].degree < forest_[q].degree)) {
+          forest_[current].right = p;
           current = p;
-          p = data_[p].right_sibling;
+          p = forest_[p].right;
         } else {
-          data_[current].right_sibling = q ;
+          forest_[current].right = q ;
           current = q;
-          q = data_[q].right_sibling;
+          q = forest_[q].right;
         }
       }
       
-      head_ = data_.back().right_sibling;
-      data_.pop_back();
+      head_ = forest_.back().right;
+      forest_.pop_back();
     }
   
   
+  // Merge two subtrees in the heap.
   template <class T, class Comp, class Map, class Alloc>
-    void mutable_binomial_heap<T, Comp, Map, Alloc>::mutable_binomial_heap_union (size_type index)
+    void mutable_binomial_heap<T, Comp, Map, Alloc>::mutable_binomial_heap_union(size_type index)
     {
       /* Merge the root lists */
       merge(index);
-      if (data_[head_].right_sibling == size_type(-1)) {
+      if (forest_[head_].right == size_type(-1)) {
         return;
       }
       
       size_type x = head_;
-      size_type next_x = data_[head_].right_sibling;
+      size_type next_x = forest_[head_].right;
       size_type prev_x = size_type(-1);
       
       while (next_x != size_type(-1)) {
-        if ((data_[x].degree != data_[next_x].degree) 
-              || (data_[next_x].right_sibling != size_type(-1) 
-                  && data_[data_[next_x].right_sibling].degree 
-                  == data_[x].degree)) {
+        if ((forest_[x].degree != forest_[next_x].degree) 
+              || (forest_[next_x].right != size_type(-1) 
+                  && forest_[forest_[next_x].right].degree 
+                  == forest_[x].degree)) {
             prev_x = x;
             x = next_x;
         } else {
-          if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
-            data_[x].right_sibling = data_[next_x].right_sibling;
-            binomial_link(data_[next_x], data_[x], next_x, x);
+          if (!compare_ (elements_[forest_[x].index], elements_[forest_[next_x].index])) {
+            forest_[x].right = forest_[next_x].right;
+            binomial_link(forest_[next_x], forest_[x], next_x, x);
           } else {
             if (prev_x == size_type (-1)) {
               head_ = next_x;
             } else {
-              data_[prev_x].right_sibling = next_x;
+              forest_[prev_x].right = next_x;
             }
             
-            binomial_link(data_[x], data_[next_x], x, next_x);
+            binomial_link(forest_[x], forest_[next_x], x, next_x);
             x = next_x;
           }
         }
         
-        next_x = data_[x].right_sibling;
+        next_x = forest_[x].right;
       }
     }
   
@@ -462,413 +773,59 @@ namespace origin
       size_type temp = top_;
   
       /* Reverse the list */
-      if (data_[top_].child != size_type(-1)) {
-        size_type tmp_head = data_[top_].child;
+      if (forest_[top_].child != size_type(-1)) {
+        size_type tmp_head = forest_[top_].child;
         size_type tmp_sibling;
         
         while (tmp_head != size_type(-1)) {
-          tmp_sibling = data_[tmp_head].right_sibling;
-          data_[tmp_head].parent = size_type(-1);
-          data_[tmp_head].right_sibling = new_head;
+          tmp_sibling = forest_[tmp_head].right;
+          forest_[tmp_head].parent = size_type(-1);
+          forest_[tmp_head].right = new_head;
           new_head = tmp_head;
           tmp_head = tmp_sibling;
         }
       }
       
-      if (data_[head_].right_sibling == size_type(-1)) {
+      if (forest_[head_].right == size_type(-1)) {
         head_ = new_head;
       } else {
         if (head_ == top_) {
-          head_ = data_[head_].right_sibling;
+          head_ = forest_[head_].right;
         } else {
           size_type tmp = head_;
-          while (data_[tmp].right_sibling != top_) {
-            tmp = data_[tmp].right_sibling;
+          while (forest_[tmp].right != top_) {
+            tmp = forest_[tmp].right;
           }
             
-          data_[tmp].right_sibling = data_[top_].right_sibling;
+          forest_[tmp].right = forest_[top_].right;
         }
         
         mutable_binomial_heap_union(new_head);
       }
       
   
-      // where in data_ old last element is stored
+      // where in forest_ old last element is stored
       size_type index = id_[elements_[elements_.size()-1]];
   
       // copy the last element to location of old top element
-      elements_[data_[temp].item_index] = elements_[elements_.size()-1];
+      elements_[forest_[temp].index] = elements_[elements_.size()-1];
   
-      //point the item_index of the old element to correct location
-      data_[index].item_index = data_[temp].item_index;
+      //point the index of the old element to correct location
+      forest_[index].index = forest_[temp].index;
   
       // Invalidating the entries of node
-      data_[temp].parent = -1;
-      data_[temp].child = -1;
-      data_[temp].right_sibling = -1;
-      data_[temp].degree = 0;
-      data_[temp].item_index = -1;
+      forest_[temp].parent = -1;
+      forest_[temp].child = -1;
+      forest_[temp].right = -1;
+      forest_[temp].degree = 0;
+      forest_[temp].index = -1;
   
       elements_.pop_back();
   
       top_ = get_new_top();
-  }
-  
-  template <class T, class Comp, class Map, class Alloc>
-    template<typename Char, typename Traits>
-      void mutable_binomial_heap<T, Comp, Map, Alloc>::
-        print(std::basic_ostream<Char, Traits>& os)
-      {
-        if (head_ != size_type(-1)) {
-          size_type i = head_;
-          do {
-            print_recur(i, os);
-            os << std::endl;
-            i = data_[i].right_sibling;
-          } while (i != size_type(-1));
-        }
-      }
-  
-
-  
-  /*
-    * Non-Mutable Binomial Heap Implementation 
-    */
-  /**
-   * A binomial heap...
-   */
-  template<typename T,
-           typename Comp = std::less<T>,
-           typename Alloc = std::allocator<T>>
-    class binomial_heap
-    {
-    public:
-      typedef T const value_type;
-      typedef size_t size_type;
-      typedef Comp value_compare;
-      
-      /** @name Initialization */
-      //@{
-      /**
-       * @brief Default constructor
-       */
-      //@{
-      binomial_heap(value_compare const& comp = value_compare{})
-        : compare_{comp}, top_{-1}, head_{-1} 
-      { }
-      
-      /**
-       * @brief Range constructor
-       */
-      template<typename ForwardIterator>
-      binomial_heap(ForwardIterator first, 
-                    ForwardIterator last,
-                    value_compare const& comp = value_compare{})
-        : compare_{comp}, top_{-1}, head_{-1}
-      {
-        reserve(std::distance(first, last));
-        while(first != last) {
-          push(*first);
-          ++first;
-        }
-      }
-      
-      binomial_heap(std::initializer_list<T> lst, 
-                    value_compare const& comp = value_compare{})
-        : compare_{comp}, top_{-1}, head_{-1}
-      {
-        reserve(lst.size());
-        for(auto &x : lst) {
-          push(x);
-        }
-      }
-      //@}
-
-      template<typename Char, typename Traits>
-        void print(std::basic_ostream<Char, Traits>& os);
-
-        
-      bool empty() const
-      {
-        return elements_.size()==0;
-      }
-        
-      size_type size() const
-      {
-        return elements_.size();
-      }
-      
-      value_compare value_comp() const
-      {
-        return compare_;
-      }
-
-      size_type capacity() const
-      {
-        return elements_.capacity();
-      }
-
-      void reserve(size_type n)
-      {
-        reversemap_.reserve(n);
-        elements_.reserve(n);
-        data_.reserve(n);
-      }
-        
-      /** @name Heap operations */
-      //@{
-      value_type const& top() const
-      {
-        return elements_[data_[top_].item_index];
-      }
-      
-      void push(const value_type& d); 
-        
-      void pop();
-      //@}
-
-    private:
-      std::vector<T, Alloc> elements_;
-      std::vector<binomial_heap_node> data_;
-      std::vector<size_type> reversemap_;
-        
-      Comp compare_;
-
-      size_type top_;
-      size_type head_;
-
-      template<typename Char, typename Traits>
-        void print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
-        {
-          if (x != size_type (-1)) {
-            os << elements_[data_[x].item_index];
-            if (data_[x].degree > 0) {
-              os << "(";
-              size_type i = data_[x].child;
-              do {
-                print_recur (i, os);
-                os << " ";
-                i = data_[i].right_sibling;
-              } while (i != size_type(-1));
-              os << ")";
-            }
-          }
-        }
-      
-
-      void merge (size_type index);
-      void binomial_heap_union (size_type index);
-      size_type get_new_top();       
-    };
-  
-  template<typename T, typename Comp, typename Alloc>
-    auto binomial_heap<T, Comp, Alloc>::get_new_top() -> size_type
-    {
-      size_type top_index;
-      size_type tmp;
-      if (head_ == size_type(-1)) {
-        return -1;
-      }
-      
-      top_index = head_;
-      tmp = data_[top_index].right_sibling;
-      
-      while (tmp != size_type(-1)) {
-        if(!compare_(elements_[data_[tmp].item_index], 
-                    elements_[data_[top_index].item_index])) 
-        {
-          top_index = tmp;
-        }
-        
-        tmp = data_[tmp].right_sibling;
-      }
-      
-      return top_index;
     }
   
-  
-  template<typename T, typename Comp, typename Alloc>
-    void binomial_heap<T, Comp, Alloc>::push(const value_type& d)
-    {
-      binomial_heap_node obj;
-      size_type index;
-    
-      elements_.push_back(d);
-  
-      obj.item_index = elements_.size() - 1;
-      obj.parent = size_type(-1);
-      obj.right_sibling = size_type(-1);
-      obj.child = size_type(-1);
-      obj.degree = 0;
-      
-      data_.push_back(obj);
-      
-      index = data_.size() - 1;
-
-      reversemap_.push_back(index);
-
-      if (head_ == size_type(-1)) {
-        /* New heap */
-        head_ = index;
-        top_ = head_;
-      } else {
-        /* Unite the 1 element heap with the existing heap */
-        binomial_heap_union(index);
-        if (!compare_(elements_[data_[index].item_index], elements_[data_[top_].item_index]))
-          top_ = index;
-      }
-    }
-  
-  
-  template<typename T, typename Comp, typename Alloc>
-    void binomial_heap<T, Comp, Alloc>::merge(size_type index)
-    {
-      size_type p = head_;
-      size_type q = index;
-      
-      size_type current = data_.size();
-      size_type initial_size = -1;
-      data_.push_back(binomial_heap_node());
-      
-      while (p != initial_size || q != initial_size) {
-        if (q == initial_size || 
-            (p != initial_size && data_[p].degree < data_[q].degree)) {
-          data_[current].right_sibling = p;
-          current = p;
-          p = data_[p].right_sibling;
-        } else {
-          data_[current].right_sibling = q ;
-          current = q;
-          q = data_[q].right_sibling;
-        }
-      }
-      
-      head_ = data_.back().right_sibling;
-      data_.pop_back();
-    }
-  
-  
-  template<typename T, typename Comp, typename Alloc>
-    void binomial_heap<T, Comp, Alloc>::binomial_heap_union(size_type index)
-    {
-      /* Merge the root lists */
-      merge(index);
-      if (data_[head_].right_sibling == size_type(-1)) {
-        return;
-      }
-        
-      size_type x = head_;
-      size_type next_x = data_[head_].right_sibling;
-      size_type prev_x = size_type(-1);
-      
-      while (next_x != size_type(-1)) {
-        if ((data_[x].degree != data_[next_x].degree) 
-              || (data_[next_x].right_sibling != size_type(-1) 
-              && data_[data_[next_x].right_sibling].degree 
-              == data_[x].degree)) {
-          prev_x = x;
-          x = next_x;
-        } else {
-          if (!compare_ (elements_[data_[x].item_index], elements_[data_[next_x].item_index])) {
-            data_[x].right_sibling = data_[next_x].right_sibling;
-            binomial_link(data_[next_x], data_[x], next_x, x);
-          } else {
-            if (prev_x == size_type (-1)) {
-              head_ = next_x;
-            } else {
-              data_[prev_x].right_sibling = next_x;
-            }
-             
-            binomial_link(data_[x], data_[next_x], x, next_x);
-            x = next_x;
-          }
-        }
-        
-        next_x = data_[x].right_sibling;
-      }
-    }
-  
-  
-  template<typename T, typename Comp, typename Alloc>
-    void binomial_heap<T, Comp, Alloc>::pop()
-    {
-      size_type new_head = size_type(-1);
-      
-      if (head_ == size_type(-1)) {
-        return;
-      }
-    
-      size_type temp = top_;
-  
-      /* Reverse the list */
-      if (data_[top_].child != size_type(-1)) {
-        size_type tmp_head = data_[top_].child;
-        size_type tmp_sibling;
-        
-        while (tmp_head != size_type(-1)) {
-          tmp_sibling = data_[tmp_head].right_sibling;
-          data_[tmp_head].parent = size_type(-1);
-          data_[tmp_head].right_sibling = new_head;
-          new_head = tmp_head;
-          tmp_head = tmp_sibling;
-        }
-      }
-      
-      if (data_[head_].right_sibling == size_type(-1)) {
-        head_ = new_head;
-      } else {
-        if (head_ == top_) {
-          head_ = data_[head_].right_sibling;
-        } else {
-          size_type tmp = head_;
-          while (data_[tmp].right_sibling != top_) {
-            tmp = data_[tmp].right_sibling;
-          }
-            
-          data_[tmp].right_sibling = data_[top_].right_sibling;
-        }
-        
-        binomial_heap_union(new_head);
-      }
-      
-  
-      size_type index = reversemap_.back();
-  
-      // copy the last element to location of old top element
-      elements_[data_[temp].item_index] = elements_[elements_.size()-1];
-  
-      reversemap_[data_[temp].item_index] = index;
-
-      //point the item_index of the old element to correct location
-      data_[index].item_index = data_[temp].item_index;
-  
-      // Invalidating the entries of node
-      data_[temp].parent = -1;
-      data_[temp].child = -1;
-      data_[temp].right_sibling = -1;
-      data_[temp].degree = 0;
-      data_[temp].item_index = -1;
-  
-      elements_.pop_back();
-  
-      reversemap_.pop_back();
-
-      top_ = get_new_top();
-    }
-  
-  template<typename T, typename Comp, typename Alloc>
-    template<typename Char, typename Traits>
-    void binomial_heap<T, Comp, Alloc>::print(std::basic_ostream<Char, Traits>& os)
-    {
-      if(head_ != size_type(-1)) {
-        size_type i = head_;
-        do {
-          print_recur(i, os);
-          os << std::endl;
-          i = data_[i].right_sibling;
-        } while(i != size_type(-1));
-      }
-    }
+#endif  
 
 
 } // namespace origin

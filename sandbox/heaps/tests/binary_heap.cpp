@@ -25,6 +25,6 @@ int main()
   for(int i = 0; i < N; ++i) {
     check_heap<mutable_binary_heap>(eng);
     check_mutable_heap<mutable_binary_heap>(eng);
-    check_dense_mutable_heap<mutable_binary_heap>(eng);
+    // check_dense_mutable_heap<mutable_binary_heap>(eng);
   }
 }

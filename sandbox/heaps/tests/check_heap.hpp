@@ -143,7 +143,7 @@ template<template<typename...> class Heap, typename Engine>
       check_heap_order(h);
     }
   }
-
+#if 0
 /**
  * Check the validity of the mutable Heap template using a dense index mapping
  * over the domain of objects. The testing strategy is practically identical
@@ -186,6 +186,6 @@ template<template<typename...> class Heap, typename Engine>
       check_heap_order(h);
     }
   }
-
+#endif
 
 #endif
