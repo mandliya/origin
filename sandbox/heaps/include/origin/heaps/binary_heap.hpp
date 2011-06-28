@@ -9,10 +9,7 @@
 #define ORIGIN_HEAPS_BINARY_HEAP_HPP
 
 #include <cassert>
-#include <iosfwd>
-#include <vector>
 #include <algorithm>
-#include <unordered_map>
 
 #include <origin/utility/meta.hpp>
 #include <origin/heaps/index.hpp>
@@ -67,7 +64,7 @@ namespace origin
        * @param comp  A value_compare function object
        */
       mutable_binary_heap(value_compare const& comp = value_compare{})
-        : compare_{comp}
+        : comp_{comp}
       { }
 
       // FIXME: Optimize this operation for forward iterators. Reserve first.
@@ -86,7 +83,7 @@ namespace origin
         mutable_binary_heap(Iter first,
                             Iter last,
                             value_compare const& comp = value_compare{}) 
-          : compare_{comp}
+          : comp_{comp}
         {
           while(first != last)
             push(*first++);
@@ -117,7 +114,7 @@ namespace origin
        */
       bool empty() const
       {
-        return elements_.empty();
+        return data_.empty();
       }
 
       /**
@@ -125,7 +122,7 @@ namespace origin
        */
       size_type size() const
       {
-        return elements_.size();
+        return data_.size();
       }
 
       /**
@@ -133,7 +130,7 @@ namespace origin
        */
       value_compare value_comp() const
       {
-        return compare_;
+        return comp_;
       }
 
       // FIXME: I think that this should probably go away.
@@ -142,7 +139,7 @@ namespace origin
        */
       container_type const& data() const
       {
-        return elements_;
+        return data_;
       }
       //@}
 
@@ -153,7 +150,7 @@ namespace origin
        */
       size_type capacity() const
       {
-          return elements_.capacity();
+          return data_.capacity();
       }
 
       /**
@@ -161,7 +158,7 @@ namespace origin
        */
       void reserve(size_type n)
       {
-          elements_.reserve(n);
+          data_.reserve(n);
       }
       //@}
 
@@ -172,7 +169,7 @@ namespace origin
        */
       value_type const& top() const
       {
-          return elements_[0];
+          return data_[0];
       }
 
       /**
@@ -201,13 +198,13 @@ namespace origin
       value_type& get(size_type n)
       {
         assert(( !empty() && n < size() ));
-        return elements_[n];
+        return data_[n];
       }
       
       value_type const& get(size_type n) const
       {
         assert(( !empty() && n < size() ));
-        return elements_[n];
+        return data_[n];
       }
       
       // Return the index of the given value. The value must be in the heap.
@@ -244,7 +241,7 @@ namespace origin
       // Return true if the elements at m and n violate the heap order. 
       bool less(size_type m, size_type n) const
       {
-        return compare_(get(m), get(n));
+        return comp_(get(m), get(n));
       }
       
       // Return true if the elements at m and n observe the heap order.
@@ -271,8 +268,8 @@ namespace origin
 
 
     private:
-      container_type elements_;
-      value_compare compare_;
+      container_type data_;
+      value_compare comp_;
       index_type index_;
     };
 
@@ -319,8 +316,8 @@ namespace origin
     void mutable_binary_heap<T, Comp, Map, Alloc>::push(value_type const& x)
     {
       // Push element into the heap structure
-      size_type n = elements_.size();
-      elements_.push_back(x);
+      size_type n = data_.size();
+      data_.push_back(x);
       index_.put(x, n);
       
       // Adjust the heap.
@@ -332,9 +329,9 @@ namespace origin
     void mutable_binary_heap<T, Comp, Map, Alloc>::pop()
     {
       // Swap root with last element and erase the old root.
-      exchange(0, elements_.size() - 1);
-      index_.erase(elements_.back());
-      elements_.pop_back();
+      exchange(0, data_.size() - 1);
+      index_.erase(data_.back());
+      data_.pop_back();
 
       // Preserve the heap invariant.
       if(!empty()) {
@@ -362,7 +359,7 @@ namespace origin
         void mutable_binary_heap<T, Comp, Map, Alloc>::
           print_recur(size_type x, std::basic_ostream<Char, Traits>& os)
         {
-          size_type sz = elements_.size();
+          size_type sz = data_.size();
 
           os << get(x);
           size_type i = 2 * x + 1;
@@ -386,7 +383,7 @@ namespace origin
       mutable_binary_heap<T, Comp, Map, Alloc>::
         print(std::basic_ostream<Char, Traits>& os)
       {
-        if(elements_.size() > 0)
+        if(data_.size() > 0)
             print_recur(0, os);
       }
 
@@ -418,7 +415,7 @@ namespace origin
        * @param comp  A value comparison Operation
        */
       binary_heap(value_compare const& comp = value_compare{})
-        : elements_{}, compare_{comp}
+        : data_{}, comp_{comp}
       { }
 
       // FIXME: This needs to be specialized for input and forwrad iterators.
@@ -436,9 +433,9 @@ namespace origin
         binary_heap(ForwardIterator first,
                     ForwardIterator last,
                     value_compare const& comp = value_compare{})
-          : elements_{first, last}, compare_{comp}
+          : data_{first, last}, comp_{comp}
         {
-          std::make_heap(elements_.begin(), elements_.end(), compare_);
+          std::make_heap(data_.begin(), data_.end(), comp_);
         }
 
       /**
@@ -450,9 +447,9 @@ namespace origin
        * @param comp  A Comp function object.
        */
       binary_heap(std::initializer_list<T> list, value_compare const& comp)
-        : elements_{list.begin(), list.end()}, compare_{comp}
+        : data_{list.begin(), list.end()}, comp_{comp}
         {
-          std::make_heap(elements_.begin(), elements_.end(), compare_);
+          std::make_heap(data_.begin(), data_.end(), comp_);
         }
 
       /** @name Properties */
@@ -462,7 +459,7 @@ namespace origin
        */
       bool empty() const
       {
-        return elements_.size() == 0;
+        return data_.size() == 0;
       }
 
       /**
@@ -470,7 +467,7 @@ namespace origin
        */
       size_type size() const
       {
-        return elements_.size();
+        return data_.size();
       }
 
       /**
@@ -478,13 +475,13 @@ namespace origin
        */
       value_compare value_comp() const
       {
-        return compare_;
+        return comp_;
       }
       
       
       container_type const& data() const
       {
-        return elements_;
+        return data_;
       }
       //@}
 
@@ -496,7 +493,7 @@ namespace origin
        */
       size_type capacity() const
       {
-        return elements_.capacity();
+        return data_.capacity();
       }
 
       // FIXME: What if n < size()? Do you truncate the heap? Is the heap still
@@ -506,7 +503,7 @@ namespace origin
        */
       void reserve(size_type n)
       {
-        elements_.reserve(n);
+        data_.reserve(n);
       }
       //@}
 
@@ -518,7 +515,7 @@ namespace origin
        */
       const value_type& top() const
       {
-          return elements_[0];
+          return data_[0];
       }
 
       /**
@@ -526,8 +523,8 @@ namespace origin
        */
       void push(value_type const& x)
       {
-        elements_.push_back(x);
-        std::push_heap(elements_.begin(), elements_.end(), compare_);
+        data_.push_back(x);
+        std::push_heap(data_.begin(), data_.end(), comp_);
       }
 
       /**
@@ -536,62 +533,17 @@ namespace origin
        */
       void pop()
       {
-        std::pop_heap(elements_.begin(), elements_.end(), compare_);
-        elements_.pop_back();
+        std::pop_heap(data_.begin(), data_.end(), comp_);
+        data_.pop_back();
       }
       //@}
 
-      // FIXME: Go away?
-      /**
-       * Write the contents of the heap to the given output stream.
-       */
-      template<typename Char, typename Traits>
-        void print(std::basic_ostream<Char, Traits>& os);
-
-    private:
-
-      // FIXME: Go away?
-      // Helper function for displaying the binary heap
-      template<typename Char, typename Traits>
-        void print_recur(size_type n, std::basic_ostream<Char, Traits>& os);
-
     private:
       // FIXME: Use EBO to remove the overhead of the value compare function.
-      container_type elements_;
-      value_compare compare_;
+      container_type data_;
+      value_compare comp_;
     };
 
-
-  template<typename T, typename Comp>
-    template<typename Char, typename Traits>
-      void binary_heap<T, Comp>::print(std::basic_ostream<Char, Traits>& os)
-      {
-        if(!empty()) {
-          print_recur(0, os);
-        }
-      }
-
-  template<typename T, typename Comp>
-    template<typename Char, typename Traits>
-      void binary_heap<T, Comp>::print_recur(size_type n,
-                                             std::basic_ostream<Char, Traits>& os)
-      {
-        os << elements_[n];
-        size_type i = 2 * n + 1;
-
-        size_type sz = elements_.size();
-        if(i < sz) {
-          os << "(";
-          print_recur(i, os);
-
-          os << " ";
-          i = i + 1;
-          if(i < sz) {
-            print_recur(i, os);
-          }
-          os << ")";
-        }
-      }
 
 } // namespace origin
 

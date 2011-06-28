@@ -14,6 +14,9 @@
 #include <vector>
 #include <random>
 
+#include <origin/functional.hpp>
+#include <origin/heaps/index.hpp>
+
 /**
  * Indirectly compare two pointers using the given comparison operator.
  */
@@ -64,21 +67,11 @@ template<typename T, typename Comp = std::less<T>>
 template<typename Heap>
   void check_heap_order(Heap h)
   {
-    // Empty heaps are valid.
-    if(h.empty())
-      return;
-    
-
-    // Compare each subsequent pair of elements popped from the heap. They
-    // must not violate the order property of the heap.
-    auto comp = h.value_comp();
-    auto x = h.top();
-    h.pop();
+    std::vector<typename Heap::value_type> v;
     while(!h.empty()) {
-      auto y = h.top();
+      v.push_back(h.top());
       h.pop();
-      assert(( !comp(x, y) ));
-      x = y;
+      assert(( is_sorted(v.begin(), v.end(), invert_order(h.value_comp())) ));
     }
   }
 
@@ -187,5 +180,6 @@ template<template<typename...> class Heap, typename Engine>
     }
   }
 #endif
+
 
 #endif

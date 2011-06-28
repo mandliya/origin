@@ -6,6 +6,7 @@
 // and conditions.
 
 #include <iostream>
+#include <iterator>
 
 #include <origin/heaps/binomial_heap.hpp>
 
@@ -14,16 +15,22 @@
 using namespace std;
 using namespace origin;
 
+
 int main()
 {
   default_random_engine eng;
   
-  int const N = 100;
-  for(int i = 0; i < N; ++i)
-    check_heap<binomial_heap>(eng);
+  binomial_tree<int> t0{0};
+  binomial_tree<int> t1{1};
+  assert(( t0.order() == 0 ));
+  t0.link(t1);
+  assert(( t0.order() == 1 ));
+  assert(( t1. empty() ));
+  
+  check_heap<binomial_heap>(eng);
 
-  for(int i = 0; i < N; ++i) {
+//   for(int i = 0; i < N; ++i) {
     // check_heap<mutable_binomial_heap>(eng);
     // check_mutable_heap<mutable_binomial_heap>(eng);
-  }
+//   }
 }
