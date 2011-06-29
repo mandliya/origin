@@ -71,7 +71,7 @@ template<typename Heap>
     while(!h.empty()) {
       v.push_back(h.top());
       h.pop();
-      assert(( is_sorted(v.begin(), v.end(), invert_order(h.value_comp())) ));
+      assert(( is_sorted(v.begin(), v.end(), origin::invert_order(h.value_comp())) ));
     }
   }
 

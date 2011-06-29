@@ -13,8 +13,27 @@
 
 namespace origin 
 {
-  // FIXME: Refactor into depenent/non-dependent types.
+  template<typename> struct binomial_tree_node;
+  template<typename> struct rooted_binomial_tree_node;
+
   /**
+   * This type trait return true if the given type is a kind of binomial tree 
+   * node, false otherwise.
+   */
+  template<typename T>
+    struct is_binomial_tree_node : std::false_type { };
+    
+  template<typename T>
+    struct is_binomial_tree_node<binomial_tree_node<T>> : std::true_type { };
+    
+  template<typename T>
+    struct is_binomial_tree_node<rooted_binomial_tree_node<T>> : std::true_type { };
+
+  
+  // FIXME: Refactor into dependent/non-dependent types.
+  /**
+   * @internal
+   * 
    * The binomial tree node is a node in a binomial tree. The order of a 
    * binomial tree is related to the number of nodes it contains such that
    * a binomial tree of order n contains 2^n nodes. Conceptually, a binomial
@@ -41,29 +60,26 @@ namespace origin
       typedef T value_type;
       typedef std::size_t size_type;
       
+      // Forwarding constructor. Links are nullptr-initialized. 
+      // NOTE: The only way to set the should be by calling link or unlink.
       template<typename... Args>
-        binomial_tree_node(binomial_tree_node* r, 
-                           binomial_tree_node* c,
-                           Args&&... args) 
-          : value(std::forward<Args>(args)...), right(r), child(c)
+        binomial_tree_node(Args&&... args) 
+          : value(std::forward<Args>(args)...), right{}, child{}
         { }
        
-      /**
-       * Return the order of this subtree. It is computed recursively.
-       */
+      // Return the order of this subtree. It is computed recursively.
       size_type order() const
       {
         return child ? 1 + child->order() : 0;
       }
        
-      /**
-       * Link this rooted node with the given rooted node such that this tree
-       * represented by this node becomes the root of the joined trees. The
-       * order of this node is increased by 1.
-       * 
-       * @pre this->is_root() && p->is_root() // unenforceable
-       * @pre this->order() == p->order()
-       */
+      // Link this rooted node with the given rooted node such that this tree
+      // represented by this node becomes the root of the joined trees. The
+      // order of this node is increased by 1.
+      // 
+      // Note that both nodes must be roots of binomial trees. However, we
+      // cannot enforce this precondition since we cannot adequately enforce
+      // the constraint.
       void link(binomial_tree_node* p)
       {
         assert(( order() == p->order() ));
@@ -74,10 +90,8 @@ namespace origin
         child = p;
       }
       
-      /**
-       * Detach this node from its child and sibling. Note that this operation 
-       * can corrupt a well-formed binomial tree.
-       */
+      // Detach this node from its child and sibling. Note that this operation 
+      // can corrupt a well-formed binomial tree.
       void unlink()
       {
         right = child = nullptr;
@@ -88,28 +102,101 @@ namespace origin
       binomial_tree_node* child;  // Left-most child node
     };
 
-  /**
-   * Clone the given binomial subtree.
-   * 
-   * @tparam Alloc  An allocator of he
-   */
+  // Clone the given subtree. Alloc must be an Allocator of the Node type.
   template<typename T, typename Alloc>
-    binomial_tree_node<T>* clone(binomial_tree_node<T> const* p, Alloc alloc) {
+    binomial_tree_node<T>* clone(binomial_tree_node<T> const* p, Alloc alloc) 
+    {
       if(!p) return nullptr;
 
       // FIXME: Actually use the allocator
       // FIXME: Make this non-recursive if we can do so efficiently.
-      return new binomial_tree_node<T>(clone(p->right, alloc), 
-                                       clone(p->child, alloc), 
-                                       p->value);
+      binomial_tree_node<T>* ret = new binomial_tree_node<T>{p->value};
+      ret->right = clone(p->right, alloc);
+      ret->child = clone(p->child, alloc);
+      return ret;
     }
-  
+
+
+  // FIXME: Is there a better name for this?
   /**
-   * Destroy and deallocate the memory used by the given node using the
-   * specified allocator.
+   * A rooted binomial tree node is a binomial tree node that keeps a link
+   * to its parent. We can use this information to determine if the node is
+   * a root or not.
    */
+  template<typename T>
+    struct rooted_binomial_tree_node
+    {
+      typedef T value_type;
+      typedef std::size_t size_type;
+
+      // Forwarding constructor. Links are nullptr-initialized.
+      // NOTE: The only way to set the should be by calling link or unlink.
+      template<typename... Args>
+        rooted_binomial_tree_node(Args&&... args) 
+          : value(std::forward<Args>(args)...), parent{}, right{}, child{}
+        { }
+
+      // Return true if the node is the root of a binomial tree.
+      bool is_root() const
+      {
+        return !parent;
+      }
+
+      // Return the order of tree
+      size_type order() const
+      {
+        return child ? 1 + child->order() : 0;
+      }
+
+      // Link this rooted node with the given rooted node such that this tree
+      // represented by this node becomes the root of the joined trees. The
+      // order of this node is increased by 1.
+      void link(rooted_binomial_tree_node* p)
+      {
+        assert(( is_root() && p->is_root() ));
+        assert(( order() == p->order() ));
+        
+        // Extend the set of children by attaching the given node to the left
+        // of the left-most child.
+        p->right = child;
+        child = p;
+        p->parent = this;
+      }
+      
+      // Detach this node from its child and sibling. Note that this operation 
+      // can corrupt a well-formed binomial tree.
+      void unlink()
+      {
+        parent = right = child = nullptr;
+      }
+      
+      value_type value;
+      rooted_binomial_tree_node* parent;  // Parent of this node or nullptr
+      rooted_binomial_tree_node* right;   // Right sibling of this node
+      rooted_binomial_tree_node* child;   // Left-most child node
+    };
+
+  // Clone the given subtree. Alloc must be an Allocator of the Node type.
   template<typename T, typename Alloc>
-    void destroy(binomial_tree_node<T>* p, Alloc alloc) 
+    rooted_binomial_tree_node<T>* 
+    clone(rooted_binomial_tree_node<T> const* p, Alloc alloc) 
+    {
+      if(!p) return nullptr;
+
+      // FIXME: Actually use the allocator
+      // FIXME: Make this non-recursive if we can do so efficiently.
+      rooted_binomial_tree_node<T>* ret = new rooted_binomial_tree_node<T>{p->value};
+      ret->right = clone(p->right, alloc);
+      ret->child = clone(p->child, alloc);
+      ret->child->parent = ret;
+      return ret;
+    }
+
+  // Destroy the given subtree. Alloc must be an Allocator of the Node type.
+  // This applies to both tree node types.
+  template<typename T, typename Alloc>
+    typename std::enable_if<is_binomial_tree_node<T>::value, void>::type
+    destroy(T* p, Alloc alloc) 
     {
       if(!p) return;
       // FIXME: Make this non-recursive if we can do so efficiently.
@@ -120,20 +207,32 @@ namespace origin
 
   // FIXME: Actually use the allocator in a meaningful way.
   /**
+   * @internal
+   * 
    * The binomial tree class wraps a rooted binomial tree node and provides
    * regularity for the entire tree structure, especially for initialization, 
    * copying, and destruction.
    * 
    * Note that the binomial tree does not provide a size operation because
    * it cannot be constructed in constant time.
+   * 
+   * The binomial tree node can be parameterized by any Binomial_tree_node
+   * type. There are currently two. The typical "forward" tree node and the
+   * "bidirectional" version.
+   * 
+   * @tparam T      A Regular type; the value type
+   * @tparam Node   A Binomial_tree_node containing T
+   * @tparam Alloc  An Allocator of T
    */
-  template<typename T, typename Alloc = std::allocator<T>>
+  template<typename T, 
+           typename Node = binomial_tree_node<T>, 
+           typename Alloc = std::allocator<T>>
     class binomial_tree
     {
     public:
       typedef Alloc allocator_type;
       typedef T value_type;
-      typedef binomial_tree_node<T> node_type;
+      typedef Node node_type;
       typedef typename allocator_type::size_type size_type;
     private:
       typedef typename Alloc::template rebind<node_type> node_allocator;
@@ -147,7 +246,7 @@ namespace origin
        */
       explicit binomial_tree(node_type* p)
         : root_{p}
-      { 
+      {
         p->right = nullptr;
       }
     public:
@@ -162,8 +261,10 @@ namespace origin
        * @brief Copy constructor
        */
       binomial_tree(binomial_tree const& x)
-        : root_{clone(x.root_, get_allocator())}
-      { }
+//         : root_{clone(x.root_, get_allocator())}
+      { 
+        root_ = clone(x.root_, get_allocator());
+      }
       
       binomial_tree& operator=(binomial_tree const& x)
       {
@@ -190,21 +291,16 @@ namespace origin
       
       // FIXME: Use the allocator
       /**
-       * @brief Singleton constructor
+       * @brief Singleton value constructor
        * Create a binomial tree containing a single value.
        */
       binomial_tree(value_type const& x)
-        : root_{}
-      {
-        root_ = new node_type{nullptr, nullptr, x};
-      }
+        : root_{new node_type{x}}
+      { }
       
       binomial_tree(value_type&& x)
-        : root_{}
-      {
-        // FIXME: Use the allocator
-        root_ = new node_type{nullptr, nullptr, std::move(x)};
-      }
+        : root_{new node_type{std::move(x)}}
+      { }
      
       // FIXME: How do we support a forwarding constructor in a class that
       // already overloads a number of constructors. We could use a dummy
