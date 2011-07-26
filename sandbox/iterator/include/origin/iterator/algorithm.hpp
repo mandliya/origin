@@ -762,11 +762,6 @@ namespace origin {
   //
   // NOTE: Reads may not be destructive, but we must not read twice (because
   // they could be).
-  //
-  // NOTE: The give iterator requirement is constrained over the result of 
-  // take() rather than the value type. In other words, if the output iterator 
-  // provides a give() that accepts the result of read(), the algorithm will
-  // still be valid (although no actual moving may occur).
   template<typename Iter, typename Out>
     requires(Move_iterator<Iter> && 
              Output_iterator<Out, Reference_type<Iter>>)
@@ -1927,7 +1922,7 @@ namespace origin {
           c = 2 * (c + 1); 
           if(get(f, c) < get(f, c - 1))
             --c;
-          give(f, h, take(f, c));
+          put(f, h, std::move(get(f, c)));
           h = c;
         }
         
@@ -1935,7 +1930,7 @@ namespace origin {
         // should terminate after the loop above. Obviously, fixe this.
         if((n & 1) == 0 && c == (n - 2) / 2) {
           c = 2 * (c + 1); 
-          give(f, h, take(f, c - 1));
+          put(f, h, std::move(get(f, c - 1)));
           h = c - 1;
         }
         // FIXME: What do I have to re-push the value?

@@ -59,7 +59,10 @@ namespace origin
       // (e.g., a proxy), or even the iterator itself.
       //
       // FIXME: Is it meaningful to introduce a requirement on an operation 
-      // that has incomplete semantics?
+      // that has incomplete semantics? No. The way that we fix this is by
+      // raising the semantics of Move_iterator into the Iterator concept. That
+      // is, every Iterator will have a value_type and support possibly 
+      // destructive reads.
       reference ref(Iter i);
     };
   
