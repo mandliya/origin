@@ -60,6 +60,55 @@ namespace origin {
         return __reorder_arguments<Func>{fn};
       }
 
+  // NOTE: Copy and move are data flow requirements in some algorithms. Many
+  // algorithms simply observe the value of the referenced object. Copying
+  // requires regularity.
+  
+  // Move the value referenced by src into the object referenced by dest.
+  //
+  // Iter1 is required to be a Move_iterator; get() may be destructive.
+  //
+  // Iter2 is required to be an Output_iterator taking an argument of Iter1's
+  // value_type.
+  template<typename Iter1, typename Iter2>
+    requires(Move_iterator<Iter1> && Output_iterator<Iter2, Value_type<Iter1>>)
+      void iter_move(Iter1 src, Iter2 dest)
+      {
+        put(dest, std::move(get(src)));
+      }
+
+  // Copy the value referenced by src into the object refrenced by dest.
+  //
+  // Iter1 is required to be an Input_iterator; get() must be regular. The
+  // value type of Iter1 is required to be Regular (copyable).
+  //
+  // Iter2 is required to be an Output_iterator taking an argument of Iter1's
+  // value type.
+  template<typename Iter1, typename Iter2>
+    requires(Input_iterator<Iter1> && 
+             Output_iterator<Iter2, Value_type<Iter1>> &&
+             Regular<Value_type<Iter>>)
+      void iter_copy(Iter1 src, Iter2 dest)
+      {
+        put(dest, get(src));
+      }
+
+  // Swap the values of the given iterators. Here, we require the value types
+  // to be the same, not simply Common or mutally move-assignable.
+  //
+  // Iter1 and Iter2 are required to be Mutable_iterators with the same value
+  // type.
+  template<typename Iter1, typename Iter2>
+    requires(Mutable_iterator<Iter1> && 
+             Mutable_iterator<Iter2> && 
+             Same<Value_type<Iter1>, Value_type<Iter2>>)
+      void iter_swap(Iter1 i, Iter2 j)
+      {
+        typedef typename value_type<Iter1>::type Value;
+        Value x = std::move(get(i));
+        put(i, std::move(get(j)));
+        put(j, std::move(x));
+      }
 
   // Iter is required to be an Move_iterator. Reading is allowed to be 
   // destructive.
@@ -681,7 +730,7 @@ namespace origin {
       Out copy(Iter f, Iter l, Out r)
       {
         while(f != l) {
-          put(r, get(f));
+          iter_copy(f, r);
           f = next(f);
           r = next(r);
         }
@@ -703,7 +752,7 @@ namespace origin {
       Out copy_n(Iter f, Size n, Out r)
       {
         while(n != Size{0}) {
-          put(r, get(f));
+          iter_copy(f, r);
           f = next(f);
           r = next(r);
           --n;
@@ -728,7 +777,7 @@ namespace origin {
       {
         while(f != l) {
           if(get(f))
-            put(r, get(f));
+            iter_copy(f,r);
           f = next(f);
           r = next(r);
         }
@@ -750,7 +799,7 @@ namespace origin {
       while(f != l) {
         l = prev(l);
         r = prev(r);
-        put(r, get(l));
+        iter_copy(l, r);
       }
       return r;
     }
@@ -768,7 +817,7 @@ namespace origin {
       Out move(Iter f, Iter l, Out r)
       {
         while(f != l) {
-          put(r, std::move(get(f)));
+          iter_move(f, r);
           f = next(f);
           r = next(r);
         }
@@ -784,27 +833,10 @@ namespace origin {
       while(f != l) {
         l = prev(l);
         r = prev(r);
-        put(r, std::move(get(l)));
+        iter_move(l, r);
       }
       return r;
     }
-
-  // Swap the values of the given iterators. Here, we require the value types
-  // to be the same, not simply Common or mutally move-assignable.
-  //
-  // Iter1 and Iter2 are required to be Mutable_iterators with the same value
-  // type.
-  template<typename Iter1, typename Iter2>
-    requires(Mutable_iterator<Iter1> && 
-             Mutable_iterator<Iter2> && 
-             Same<Value_type<Iter1>, Value_type<Iter2>>)
-      void iter_swap(Iter1 i, Iter2 j)
-      {
-        typedef typename value_type<Iter1>::type Value;
-        Value x = std::move(get(i));
-        put(i, std::move(get(j)));
-        put(j, std::move(x));
-      }
     
   // Iter1 and Iter2 are required to be Mutable_iterators with the same value
   // type: the same requirements as iter_swap.
@@ -860,7 +892,7 @@ namespace origin {
       Out transform(Iter1 f1, Iter1 l1, Iter2 f2, Out r, Op op)
       {
         while(f1 != l1) {
-          put(r, op(get(f1), get(f2)));
+          put(r, std::move(op(get(f1), get(f2))));
           f1 = next(f1);
           f2 = next(f2);
           r = next(r);
@@ -868,8 +900,16 @@ namespace origin {
         return r;
       }
 
+  // Iter is required to be a Mutable_iterator whose value type is the Same as
+  // T.
+  //
+  // T is required to be Regular.
+  //
+  // NOTE: Regularity implies Equality_comparability. The value is copied each
+  // time an object is replaced.
   template<typename Iter, typename T>
     requires(Mutable_iterator<Iter> && 
+             Regular<T> &&
              Same<Value_type<Iter>, T>)
       void replace(Iter f, Iter l, T const& old, T const& x)
       {
@@ -880,9 +920,17 @@ namespace origin {
         }
       }
 
+  // Iter is required to be a Mutable_iterator whose value type is required to
+  // be the Same as T.
+  //
+  // Pred is required to be a unary Predicate taking an argument of Iter's
+  // value type.
+  //
+  // T is required to be Regular.
   template<typename Iter, typename Pred, typename T>
     requires(Mutable_iterator<Iter> && 
              Predicate<Pred, Value_type<Iter>> &&
+             Regular<T> &&
              Same<Value_type<Iter>, T>)
       void replace_if(Iter f, Iter l, Pred p, T const& x) 
       {
@@ -896,6 +944,7 @@ namespace origin {
   template<typename Iter, typename Out, typename T>
     requires(Input_iterator<Iter> &&
              Output_iterator<Out, T> &&
+             Regular<T> &&
              Same<Value_type<Iter1, T>)
       Out replace_copy(Iter f, Iter l, Out r, T const& old, T const& x)
       {
@@ -911,6 +960,7 @@ namespace origin {
   template<typename Iter, typename Out, typename Pred, typename T>
     requires(Mutable_iterator<Iter> &&
              Predicate<Pred, Value_type<Iter>> &&
+             Regular<T> &&
              Same<Value_type<Iter>, T>)
       void replace_copy_if(Iter f, Iter l, Out r, Pred p, T const& x)
       {
@@ -926,7 +976,7 @@ namespace origin {
   // Iter is required to be a Forward_iterator and Mutable_iterator whose
   // value type is the same as T.
   template<typename Iter, typename T>
-    requires(Output_iterator<Iter, T>)
+    requires(Output_iterator<Iter, T> && Regular<T>)
       void fill(Iter f, Iter l, T const& x)
       {
         while(f != l) {
@@ -936,7 +986,7 @@ namespace origin {
       }
     
   template<typename Out, typename Size, typename T>
-    requires(Output_iterator<Iter, T> && Integer<Size>)
+    requires(Output_iterator<Iter, T> && Regular<T> && Integer<Size>)
       Out fill_n(Out f, Size n, T const& x) 
       {
         while(n != Size{0}) {
@@ -947,6 +997,8 @@ namespace origin {
         return f;
       }
   
+  // FIXME: I think the result type has to be Regular. Since we don't have a
+  // formal definition of Generator (yet), I'm not entirely sure.
   template<typename Iter, typename Gen>
     requires(Generator<Gen> && Output_iterator<Out, Result_type<Gen>>)
       void generate(Iter f, Iter l, Gen gen)
@@ -957,10 +1009,11 @@ namespace origin {
         }
       }
     
+  // SEE: Comments on generate() above.
   template<typename Out, typename Size, typename Gen>
     requires(Generator<Gen> && 
              Output_iterator<Out, Result_type<Gen>> &&
-             Integer<Size)
+             Integer<Size>)
       void generate(Out f, Size n, Gen gen)
       {
         while(n != Size{0}) {
@@ -990,7 +1043,7 @@ namespace origin {
         Iter r = f;
         while(f != l) {
           if(get(f) != x) {
-            put(r, std::move(get(f)));
+            iter_move(f, r);
             r = next(r);
           }
           f = next(f);
@@ -1009,7 +1062,7 @@ namespace origin {
         Iter r = f;
         while(f != l) {
           if(!p(get(f))) {
-            put(r, std::move(get(f)));
+            iter_move(f, r);
             r = next(r);
           }
           f = next(f);
@@ -1023,12 +1076,12 @@ namespace origin {
   template<typename Iter, typename Out, typename T>
     requires(Input_iterator<Iter> && 
              Output_iterator<Out, Value_type<Iter>> &&
-             Equality_comparable<Common_type<Value_type<Iter>, T>>)
+             Regular<Common_type<Value_type<Iter>, T>>)
       Out remove_copy(Iter f, Iter l, Out r, T const& x)
       {
         while(f != l) {
           if(get(f) != x) {
-            put(r, get(f));
+            iter_copy(f, r);
             r = next(r);
           }
           f = next(f);
@@ -1039,12 +1092,13 @@ namespace origin {
   template<typename Iter, typename Out, typename Pred>
     requires(Input_iterator<Iter> &&
              Output_iterator<Out, Value_type<Iter>> &&
-             Predicate<Pred, Value_type<Iter>>)
+             Predicate<Pred, Value_type<Iter>> &&
+             Regular<Value_type<Iter>>)
       Out remove_copy_if(Iter f, Iter l, Out r, Pred p)
       {
         while(f != l) {
           if(!p(get(f))) {
-            put(r, get(f));
+            iter_copy(f, r);
             r = next(r);
           }
           f = next(f);
@@ -1071,7 +1125,7 @@ namespace origin {
             // into the next element past f.
             if(!p(get(f), get(i))) {
               f = next(f);
-              put(f, std::move(get(i)));
+              iter_move(i, f);
             }
             i = next(i);
           }
@@ -1093,7 +1147,8 @@ namespace origin {
   template<typename Iter, typename Out, typename Pred>
     requires(Input_iterator<Iter> && 
              Output_iterator<Out, Value_type<Iter>> &&
-             Predicate<Pred, Value_type<Iter>, Value_type<Iter>>)
+             Predicate<Pred, Value_type<Iter>, Value_type<Iter>> &&
+             Regular<Value_type<Iter>>)
       Out unique_copy(Iter f, Iter l, Out r, Pred p)
       {
         // FIXME: Could refactor the put and increment steps. It's probably
@@ -1120,11 +1175,12 @@ namespace origin {
   template<typename Iter, typename Out>
     requires(Input_iterator<Iter> &&
              Output_iterator<Iter, Value_type<Iter>> &&
-             Equality_comparable<Value_type<Iter>>)
+             Equality_comparable<Value_type<Iter>> &&
+             Regular<Value_type<Iter>>)
       Out unique_copy(Iter f, Iter l, Out r)
       {
         typedef typename value_type<Iter>::type Value;
-        return unique_coy(f, l, r, std::equal_to<Value>{});
+        return unique_copy(f, l, r, std::equal_to<Value>{});
       }
     
   // FIXME: This can be specialized for random access iterators by using
@@ -1148,7 +1204,7 @@ namespace origin {
       {
         while(f != l) {
           l = prev(l);
-          put(r, get(l));
+          iter_copy(l, r);
           r = next(r);
         }
       }
