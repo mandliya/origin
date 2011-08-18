@@ -59,10 +59,8 @@ namespace origin
       // (e.g., a proxy), or even the iterator itself.
       //
       // FIXME: Is it meaningful to introduce a requirement on an operation 
-      // that has incomplete semantics? No. The way that we fix this is by
-      // raising the semantics of Move_iterator into the Iterator concept. That
-      // is, every Iterator will have a value_type and support possibly 
-      // destructive reads.
+      // that has incomplete semantics? This is kind of a partial requirement
+      // that says, "there's something under here".
       reference ref(Iter i);
     };
   
@@ -130,11 +128,9 @@ namespace origin
   // type (rvalue references imply movement) and assigns it to the referenced
   // object.
   //
-  // NOTE: Output iterators are never used without an explicitly associated
-  // value type. We don't need to (and shouldn't) try to deduce a default
-  // assignment for the associated type.
+  // NOTE: Output iterators do not have a value type.
   template<typename Iter, typename Value>
-    struct c_Output_iterator
+    struct c_Output_iterator : c_Iterator<Iter>
     {
       void put(Iter& i, Value x);
     };
@@ -241,6 +237,8 @@ namespace origin
       p += n;
     }
     
+  // This is an artifact of language limitations. We can't generally observe
+  // function arguments.
   template<typename T>
     inline std::ptrdiff_t zero(T const* p)
     {
@@ -253,7 +251,8 @@ namespace origin
       return q - p;
     }
 
-  // The ref operations return a reference to the referenced object.
+  // The ref operations return a reference to the referenced object. Note that
+  // get() is trivially satisfied by the default implementation.
   template<typename T>
     inline T& ref(T* p)
     {
@@ -266,8 +265,8 @@ namespace origin
       return *p;
     }
 
-  // FIXME: Can I consolidate with forwarding? It probably doesn't matter since
-  // this won't persist anyways.
+  // FIXME: These can go away if we replace all gets() with refs() and puts()
+  // with assignment to the referencef.
   template<typename T>
     inline void put(T* p, T&& x)
     {
