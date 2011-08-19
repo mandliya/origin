@@ -18,7 +18,7 @@ namespace origin
 
   // Copy the first n elements from [first, first + n) into [result, result + n).
   // Return first + n.
-  template<typename Iter first, typename Size, typename Out>
+  template<typename Iter, typename Size, typename Out>
     Iter initialize_reservoir(Iter first, Size n, Out result)
     {
       copy_n(first, n, result);
@@ -49,7 +49,7 @@ namespace origin
       typedef typename Dist::param_type Param;
       
       // Start by filling the reservoir and advancing first.
-      first = initalize_reservoir(first, n, out);
+      first = initialize_reservoir(first, n, out);
 
       // Sample the remaining values in [first + n, last) by selecting a random
       // number r in the range [0, k], and, if r < n, replace it. k increase

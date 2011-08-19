@@ -8,9 +8,11 @@
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 
+#include <origin/utility/typestr.hpp>
 #include <origin/random.hpp>
 #include <origin/geometry.hpp>
 
@@ -32,24 +34,70 @@ template<typename R>
   }
 
 
+// Return the euclidean distance between two numbers.
+template<typename T>
+  T euclidean_distance(T const& a, T const& b)
+  {
+    return abs(a - b);
+  }
+
+// Return the euclidean distance between two n-vectors
+template<typename T, typename Alloc>
+  double euclidean_distance(vector<T, Alloc> const& a, vector<T, Alloc> const& b)
+  {
+    assert(( a.size() == b.size() ));
+    double di = 0.0;
+    for(size_t i = 0; i < a.size(); ++i) {
+      di += (a[i] - b[i]) * (a[i] - b[i]);
+    }
+    return sqrt(di);
+  }
+  
+template<typename T>
+  struct euclidean_distance_of
+  {
+    double operator()(T const& a, T const& b) const
+    {
+      return euclidean_distance(a, b);
+    }
+  };
 
 int main()
 {
   minstd_rand rng;
   rng.seed(time(0));
 
-  // A sample vector.
-  vector<int> v = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+  typedef vector<double> Vector;
+  typedef vector<Vector> Data;
   
+  Data data;
+  
+  // FIXME: Is there not a more graceful way to accomplish this? Probably.
+  string line;
+  while(getline(cin, line)) {
+    Vector v;
+    stringstream str(line);
+    double value;
+    while(str >> value) {
+      v.push_back(value);
+    }
+    data.push_back(move(v));
+  }
+
+  typedef euclidean_distance_of<Vector> Dist;
+  Vector near(data.size());
+  nearest_neighbor_distances(data.begin(), data.end(), near.begin(), Dist{});
+  print(near);
+  
+  /*
   // Generate large numbers of increasing large samples
   constexpr size_t iters = 1000;
   for(size_t i = 2; i < v.size(); ++i) {
     for(size_t j = 0; j < iters; ++j) {
       vector<int> s(i);
       random_sample(v.begin(), v.end(), s.begin(), i, rng);
-      
       print(s);
     }
   }
-  
+  */
 }
