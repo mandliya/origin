@@ -13,6 +13,20 @@
 
 namespace origin
 {
+  // FIXME: Consider implementing Vitter's algorithms X, Y, and Z. Z is pretty
+  // complicated.
+
+  // Copy the first n elements from [first, first + n) into [result, result + n).
+  // Return first + n.
+  template<typename Iter first, typename Size, typename Out>
+    Iter initialize_reservoir(Iter first, Size n, Out result)
+    {
+      copy_n(first, n, result);
+      advance(first, n);
+      return first;
+    }
+
+
   // FIXME: Write a program to ensure that samples are actually uniform. 
   // Basically. Just generate a million samples and observe the distribution
   // frequency for each value.
@@ -34,8 +48,8 @@ namespace origin
       typedef std::uniform_int_distribution<Size> Dist;
       typedef typename Dist::param_type Param;
       
-      // Start by filling the reservoir 
-      copy_n(first, n, out);
+      // Start by filling the reservoir and advancing first.
+      first = initalize_reservoir(first, n, out);
 
       // Sample the remaining values in [first + n, last) by selecting a random
       // number r in the range [0, k], and, if r < n, replace it. k increase
@@ -43,7 +57,6 @@ namespace origin
       // random access iterators, k = i - first (assuming we increment i and
       // not first).
       Dist dist;
-      advance(first, n);
       Size k = n;
       while(first != last) {
         Size r = dist(gen, Param{0, k});
