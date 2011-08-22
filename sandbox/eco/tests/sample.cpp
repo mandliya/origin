@@ -32,7 +32,9 @@ template<typename R>
   {
     print(begin(r), end(r));
   }
-
+  
+// TODO: Build a library of distance functions for various kinds of 
+// abstractions: Numbers, Vectors, Tuples, others?
 
 // Return the euclidean distance between two numbers.
 template<typename T>
@@ -61,6 +63,8 @@ template<typename T>
       return euclidean_distance(a, b);
     }
   };
+  
+  
 
 int main()
 {
@@ -85,19 +89,32 @@ int main()
   }
 
   typedef euclidean_distance_of<Vector> Dist;
-  Vector near(data.size());
-  nearest_neighbor_distances(data.begin(), data.end(), near.begin(), Dist{});
-  print(near);
-  
-  /*
+
   // Generate large numbers of increasing large samples
-  constexpr size_t iters = 1000;
-  for(size_t i = 2; i < v.size(); ++i) {
+  constexpr size_t iters = 1;
+  for(size_t i = 3; i < data.size(); ++i) {
     for(size_t j = 0; j < iters; ++j) {
-      vector<int> s(i);
-      random_sample(v.begin(), v.end(), s.begin(), i, rng);
-      print(s);
+      // Choose a random sample of size i
+      Data sample(i);
+      random_sample(data.begin(), data.end(), sample.begin(), i, rng);
+
+      // Compute nearest neighbor distances for each element in the sample.
+      Vector nnd(i);
+      nearest_neighbor_distances(sample.begin(), sample.end(), nnd.begin(), Dist{});
+      // print(nnd);
+      
+      // FIXME: Do we compute summary statistics for each sample and then
+      // compute summary stats for all of those? Maybe it's just better to
+      // dump summary stats of NND for each sample and let the user figure
+      // out what to do with it.
+      
+      // Compute summary statistics on nnd.
+      auto mm = minmax_element(nnd.begin(), nnd.end());
+      double min = *mm.first;
+      double max = *mm.second;
+      cout << min << " " << max << "\n";
+      
+      // FIXME: Implement mean and stddev.
     }
   }
-  */
 }

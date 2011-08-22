@@ -21,8 +21,14 @@ namespace origin
   // (and probably farthest also), we're looking for an element that minimizes
   // or maximizes (extremizes) a property. We also generally have the case that
   // the oeration doesn't apply to an object with itself.
-  //
-  // How general can Distance be? Does it really need to be a metric?
+  
+  // A Metric is a binary function TxT->R that satisfies the following
+  // properties:
+  //  - symmetry:       d(x, y) <=> d(y, x)
+  //  - nonnegativity:  d(x, y) >= 0
+  //  - identity:       d(x, y) == 0 => x == y
+  //  - triange:        d(x, z) <= d(x, y) + d(y, z)
+
 
   // Return an iterator to the object that is nearest to the given value
   // by distance.
@@ -54,17 +60,20 @@ namespace origin
   template<typename Iter, typename Distance>
     Iter nearest(Iter first, Iter mid, Iter last, Distance dist)
     {
-      // pre: readable_bounded_range(fi
+      // pre: readable_bounded_range(first, last) and last - first > 1
       // pre: first <= mid < last
       // pre: metric(dist) --- symmetric, triangle, identity of indisc. nonneg
+      
+      // NOTE: This implementation avoids repeated comparisons of iterator
+      // positions in the loop. We go from last-first comparisons to 2.
       if(first == mid) {
         return nearest_to(next(first), last, *mid, dist);
       } else if(next(mid) == last) {
         return nearest_to(first, mid, *mid, dist);
       } else {
         Iter i = nearest_to(first, mid, *mid, dist);
-        Iter j = nearest_to(next(first), last, *mid, dist);
-        return std::min({i, j}, [](Iter a, Iter b) { return *a < *b; });
+        Iter j = nearest_to(next(mid), last, *mid, dist);
+        return std::min(i, j, [](Iter a, Iter b) { return *a < *b; });
       }
     }
 
@@ -86,10 +95,11 @@ namespace origin
     void nearest_neighbors(Iter first, Iter last, Out result, Distance dist)
     {
       // pre: distance(first, last) > 1
-      for(Iter i = first; i != last; ++i)
+      for(Iter i = first; i != last; ++i) {
         *result++ = nearest(first, i, last, dist);
+      }
     }
-  
+
   // ForwardIterator<Iter>
   // WeaklyIncrementable<Out>
   // Function<Distance, ValueType<Iter>, ValueType<Iter>>
@@ -101,6 +111,8 @@ namespace origin
       for(Iter i = first; i != last; ++i)
         *result++ = dist(*i, *nearest(first, i, last, dist));
     }
+    
+  // TODO: We can replace repeated calls to dist() with a distance matrix.
 
 } // namespace origin
 
