@@ -36,40 +36,11 @@ template<typename R>
 // TODO: Build a library of distance functions for various kinds of 
 // abstractions: Numbers, Vectors, Tuples, others?
 
-// Return the euclidean distance between two numbers.
-template<typename T>
-  T euclidean_distance(T const& a, T const& b)
-  {
-    return abs(a - b);
-  }
-
-// Return the euclidean distance between two n-vectors
-template<typename T, typename Alloc>
-  double euclidean_distance(vector<T, Alloc> const& a, vector<T, Alloc> const& b)
-  {
-    assert(( a.size() == b.size() ));
-    double di = 0.0;
-    for(size_t i = 0; i < a.size(); ++i) {
-      di += (a[i] - b[i]) * (a[i] - b[i]);
-    }
-    return sqrt(di);
-  }
-  
-template<typename T>
-  struct euclidean_distance_of
-  {
-    double operator()(T const& a, T const& b) const
-    {
-      return euclidean_distance(a, b);
-    }
-  };
-  
-  
 
 int main()
 {
   minstd_rand rng;
-  rng.seed(time(0));
+//   rng.seed(time(0));
 
   typedef vector<double> Vector;
   typedef vector<Vector> Data;
