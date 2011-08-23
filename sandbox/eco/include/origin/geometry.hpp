@@ -8,6 +8,8 @@
 #ifndef ORIGIN_GEOMETRY_HPP
 #define ORIGIN_GEOMETRY_HPP
 
+#include <cassert>
+
 #include <origin/math.hpp>
 
 namespace origin
@@ -46,7 +48,7 @@ namespace origin
       return root(power_distance<N>(first1, last1, first2));
     }
     
-  template<int N, typename T, typename T>
+  template<int N, typename T>
     typename T::value_type minkowski_distance(T const& a, T const& b)
     {
       assert(( a.size() == b.size() ));
@@ -67,7 +69,7 @@ namespace origin
     
   // Return the Manhattan distance the given vectors.
   template<typename T>
-    typename T::value_type manattan_distance(T const& a, T const& b)
+    typename T::value_type manhattan_distance(T const& a, T const& b)
     {
       assert(( a.size() == b.size() ));
       return manhattan_distance(a.begin(), a.end(), b.begin());

@@ -5,12 +5,14 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_GEOMETRY_HPP
-#define ORIGIN_GEOMETRY_HPP
+#ifndef ORIGIN_STATISTICS_HPP
+#define ORIGIN_STATISTICS_HPP
 
 #include <algorithm>
 #include <functional>
 #include <random>
+
+#include <origin/math.hpp>
 
 namespace origin
 {
@@ -32,31 +34,41 @@ namespace origin
     typename std::iterator_traits<Iter>::value_type
     arithmetic_mean(Iter first, Iter last) 
     {
-      typedef typename iterator_traits<Iter>::value_type Value;
-      typedef typename iterator_traits<Iter>::difference_type Distance;
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
 
       // NOTE: We shouldn't use accumulate(first, last) / distance(last - first)
       // since two loops is slower than one, and it prohibits the use of input
       // iterators. This applies for the geometric mean also.
       Distance n = 0;
       Value sum = 0;
-      for(first != last; ++first, ++n) {
+      while(first != last) {
         sum += *first;
+        ++first;
+        ++n;
       }
       return sum / n;
     }
 
   // Compute the geometric mean of the values in [first, last).
+  // NOTE: This can also be computed as the sum of logarithms of each element
+  // and then exponentiating the result.
+  // TODO: If the the range [first, last) denotes measures of a growth rate,
+  // we can compute the result in constant time as (an / a0) ^ (1/n) where 0 
+  // and n are the 0th and nth elements in [first, last). 
   template<typename Iter>
     typename std::iterator_traits<Iter>::value_type
     geometric_mean(Iter first, Iter last)
     {
-      typedef typename iterator_traits<Iter>::value_type Value;
-      typedef typename iterator_traits<Iter>::difference_type Distance;
+      // pre: for(Iter i : range(first, last)) *i >= 0;
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
       Distance n = 0;
       Value prod = 0;
-      for(first != last; ++first, ++n) {
-        sum *= *first;
+      while(first != last) {
+        prod *= *first;
+        ++first;
+        ++n;
       }
       return nth_root(prod);
     }
@@ -66,12 +78,14 @@ namespace origin
     typename std::iterator_traits<Iter>::value_type
     harmonic_mean(Iter first, Iter last)
     {
-      typedef typename iterator_traits<Iter>::value_type Value;
-      typedef typename iterator_traits<Iter>::difference_type Distance;
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
       Distance n = 0;
       Value sum = 0;
-      for(first != last; ++first, ++n) {
+      while(first != last) {
         sum += Value{1} / *first;
+        ++first;
+        --n;
       }
       return n / sum;
     }
@@ -82,40 +96,75 @@ namespace origin
     typename std::iterator_traits<Iter>::value_type
     quadratic_mean(Iter first, Iter last)
     {
-      typedef typename iterator_traits<Iter>::value_type Value;
-      typedef typename iterator_traits<Iter>::difference_type Distance;
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
 
       Distance n = 0;
       Value sum = 0;
-      for(first != last; ++first, ++n) {
+      while(first != last) {
         sum += *first * *first;
+        ++first;
+        --n;
       }
       return sqrt(sum / n);
     }
 
-  // TODO: Implement sample predictors for these measures.
-
-  // FIXME: Technically, this should be called the population variance. It's
-  // possible that this will collide with the name variance for random numbers.
+  // Compute the sum of squares. This is the sum of the difference between
+  // each element in the sample, population, or distribution and the mean.
+  // Return a pair containing the result and the number of elements in the
+  // data set.
   template<typename Iter, typename T>
-    T variance(Iter first, Iter last, T mean)
+    std::pair<T, typename std::iterator_traits<Iter>::difference_type>
+    sum_of_squares(Iter first, Iter last, T mean)
     {
-      typedef typename iterator_traits<Iter>::value_type Value;
-      typedef typename iterator_traits<Iter>::difference_type Distance;
-      typedef static_power_distance<2, Value> pow;
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
+      typedef static_power_distance<2, Value> Diff;
 
+      Diff diff;
       Distance n = 0;
       Value sum = 0;
-      for(first != last; ++first, ++n) {
-        sum += pow(*first, mean);
+      while(first != last) {
+        sum += diff(*first, mean);
+        ++first;
+        ++n;
       }
-      return sum / n;
+      return {sum, n};
     }
 
+  // TODO: Real population variance is defined over a probability distribution,
+  // It does not include a 1/n. More importantly, it doesn't generate a result,
+  // it generates a function. That is, given a 
+
+  // Compute the population variance
   template<typename Iter, typename T>
-    T standard_deviation(Iter first, Iter last, T mean)
+    T population_variance(Iter first, Iter last, T mean)
     {
-      return sqrt(variance(first, last, mean));
+      auto p = sum_of_squares(first, last, mean);
+      return p.first / p.second;
+    }
+
+  // Note that most spreadsheets and math programs define variance (or VAR)
+  // to be the sample variance.
+  template<typename Iter, typename T>
+    T sample_variance(Iter first, Iter last, T mean)
+    {
+      auto p = sum_of_squares(first, last, mean);
+      return p.first / (p.second - 1);
+    }
+
+  // Return the population standard deviation.
+  template<typename Iter, typename T>
+    T population_standard_deviation(Iter first, Iter last, T mean)
+    {
+      return std::sqrt(population_variance(first, last, mean));
+    }
+
+  // Return the sample standard deviation.
+  template<typename Iter, typename T>
+    T sample_standard_deviation(Iter first, Iter last, T mean)
+    {
+      return std::sqrt(sample_variance(first, last, mean));
     }
 
 } // namespace origin

@@ -5,7 +5,6 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -15,6 +14,7 @@
 #include <origin/utility/typestr.hpp>
 #include <origin/random.hpp>
 #include <origin/geometry.hpp>
+#include <origin/statistics.hpp>
 
 using namespace std;
 using namespace origin;
@@ -35,7 +35,6 @@ template<typename R>
   
 // TODO: Build a library of distance functions for various kinds of 
 // abstractions: Numbers, Vectors, Tuples, others?
-
 
 int main()
 {
@@ -62,7 +61,11 @@ int main()
   typedef euclidean_distance_of<Vector> Dist;
 
   // Generate large numbers of increasing large samples
-  constexpr size_t iters = 1;
+  // NOTE: We don't pick samples of size 1 (nnd won't work), size 2 (measures
+  // are symmetric), or size of the data set (only one way to sample the
+  // data set).
+  cout << "size min max mean sd\n";
+  constexpr size_t iters = 10;
   for(size_t i = 3; i < data.size(); ++i) {
     for(size_t j = 0; j < iters; ++j) {
       // Choose a random sample of size i
@@ -72,20 +75,14 @@ int main()
       // Compute nearest neighbor distances for each element in the sample.
       Vector nnd(i);
       nearest_neighbor_distances(sample.begin(), sample.end(), nnd.begin(), Dist{});
-      // print(nnd);
-      
-      // FIXME: Do we compute summary statistics for each sample and then
-      // compute summary stats for all of those? Maybe it's just better to
-      // dump summary stats of NND for each sample and let the user figure
-      // out what to do with it.
       
       // Compute summary statistics on nnd.
       auto mm = minmax_element(nnd.begin(), nnd.end());
       double min = *mm.first;
       double max = *mm.second;
-      cout << min << " " << max << "\n";
-      
-      // FIXME: Implement mean and stddev.
+      double mean = arithmetic_mean(nnd.begin(), nnd.end());
+      double sd = sample_standard_deviation(nnd.begin(), nnd.end(), mean);
+      cout << i << " " << min << " " << max << " " << mean << " " << sd << "\n";
     }
   }
 }
