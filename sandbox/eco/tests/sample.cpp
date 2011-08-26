@@ -12,6 +12,7 @@
 #include <algorithm>
 
 #include <origin/utility/typestr.hpp>
+#include <origin/matrix.hpp>
 #include <origin/random.hpp>
 #include <origin/geometry.hpp>
 #include <origin/statistics.hpp>
@@ -41,7 +42,7 @@ int main()
   minstd_rand rng;
 //   rng.seed(time(0));
 
-  typedef vector<double> Vector;
+  typedef matrix<double, 1> Vector;
   typedef vector<Vector> Data;
   
   Data data;
@@ -49,15 +50,19 @@ int main()
   // FIXME: Is there not a more graceful way to accomplish this? Probably.
   string line;
   while(getline(cin, line)) {
-    Vector v;
+    // Read the line of data.
+    vector<double> vec;
     stringstream str(line);
     double value;
     while(str >> value) {
-      v.push_back(value);
+      vec.push_back(value);
     }
+    
+    // Build the vector and put it in the data set.
+    Vector v(vec.begin(), vec.end());
     data.push_back(move(v));
   }
- 
+
   typedef euclidean_distance_of<Vector> Dist;
 
   // Generate large numbers of increasing large samples
@@ -65,7 +70,7 @@ int main()
   // are symmetric), or size of the data set (only one way to sample the
   // data set).
   cout << "size min max mean sd\n";
-  constexpr size_t iters = 10;
+  constexpr size_t iters = 1;
   for(size_t i = 3; i < data.size(); ++i) {
     for(size_t j = 0; j < iters; ++j) {
       // Choose a random sample of size i
@@ -73,9 +78,12 @@ int main()
       random_sample(data.begin(), data.end(), sample.begin(), i, rng);
 
       // Compute nearest neighbor distances for each element in the sample.
-      Vector nnd(i);
+      vector<double> nnd(i);
       nearest_neighbor_distances(sample.begin(), sample.end(), nnd.begin(), Dist{});
       
+      // Find the centroid
+      Vector c = centroid(sample.begin(), sample.end());
+
       // Compute summary statistics on nnd.
       auto mm = minmax_element(nnd.begin(), nnd.end());
       double min = *mm.first;

@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <origin/math.hpp>
+#include <origin/statistics.hpp>
 
 namespace origin
 {
@@ -179,7 +180,7 @@ namespace origin
       // pre: metric(dist) --- symmetric, triangle, identity of indisc. nonneg
       
       // NOTE: This implementation avoids repeated comparisons of iterator
-      // positions in the loop. We go from last-first comparisons to 2.
+      // positions in the loop. We go from last-first comparisons to 2.'
       if(first == mid) {
         return nearest_to(next(first), last, *mid, dist);
       } else if(next(mid) == last) {
@@ -187,7 +188,9 @@ namespace origin
       } else {
         Iter i = nearest_to(first, mid, *mid, dist);
         Iter j = nearest_to(next(mid), last, *mid, dist);
-        return std::min(i, j, [](Iter a, Iter b) { return *a < *b; });
+        return std::min(i, j, [&](Iter a, Iter b) { 
+          return dist(*a, *mid) < dist(*b, *mid); }
+        );
       }
     }
 
@@ -227,6 +230,31 @@ namespace origin
     }
     
   // TODO: We can replace repeated calls to dist() with a distance matrix.
+
+  // requires Vector<ValueType<Iter>>
+  template<typename Iter>
+    typename std::iterator_traits<Iter>::value_type
+    centroid(Iter first, Iter last)
+    {
+      // pre: for(Iter i : range(first + 1, last)) (*i).size() == (*first).size()
+      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::difference_type Distance;
+
+      // FIXME: This is identical to arithmetic mean except that we're
+      // explicitly operating on vectors instead of numbers and using scalar
+      // multiplication instead of field division. Its possible that the
+      // two algorithms could be unified, but we'd have to explicitly provide
+      // the initial vlaue.
+      Distance n = 0;
+      Value sum((*first).size(), 0);
+      while(first != last) {
+        sum += *first;
+        ++first;
+        ++n;
+      }
+      std::cout << typestr(sum) << " -- " << typestr(n) << "\n";
+      return sum / n;
+    }
 
 } // namespace origin
 
