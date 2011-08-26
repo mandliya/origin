@@ -57,7 +57,7 @@ int main()
     }
     data.push_back(move(v));
   }
-
+ 
   typedef euclidean_distance_of<Vector> Dist;
 
   // Generate large numbers of increasing large samples
