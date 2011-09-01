@@ -27,6 +27,7 @@ namespace origin
     public:
       typedef typename array_type::value_type value_type; // scalar type
       typedef typename array_type::reference reference;
+      typedef typename array_type::const_reference const_reference;
       typedef typename array_type::size_type size_type;
       
       typedef typename array_type::iterator iterator;
@@ -50,7 +51,20 @@ namespace origin
       { }
       
       size_type size() const { return data_.size(); }
+
+      bool operator==(matrix const& x) const { return data_ == x.data_; }
+      bool operator!=(matrix const& x) const { return data_ != x.data_; }
       
+      bool operator<(matrix const& x) const { return data_ < x.data_; }
+      bool operator>(matrix const& x) const { return data_ > x.data_; }
+      bool operator<=(matrix const& x) const { return data_ <= x.data_; }
+      bool operator>=(matrix const& x) const { return data_ >= x.data_; }
+
+      // Data access
+      reference       operator[](size_type n)       { return data_[n]; }
+      const_reference operator[](size_type n) const { return data_[n]; }
+      
+      // Iterators
       iterator begin() { return data_.begin(); }
       iterator end()   { return data_.end(); }
       const_iterator begin() const { return data_.begin(); }

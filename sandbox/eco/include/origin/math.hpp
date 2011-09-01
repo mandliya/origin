@@ -12,17 +12,92 @@
 
 namespace origin
 {
-  // Return the nth root of the number a. From basic logarithm identities:
-  // a^(1/n) = exp(llog( a^(1/n)) = exp(log(a)/n).
+  // Accumulate the result of applying a binary operation to each of the 
+  // elements in the given ranges.
+  //
+  // requires InputIterator<Iter1> && InputIterator<Iter2>
+  //       && Same<T, ValueType<Iter1>, ValueType<Iter2>>
+  //       && AdditiveSemigroup<T>
+  //       && BinaryOperation<Op, T>
+  template<typename Iter1, typename Iter2, typename T, typename Op>
+    T accumulate(Iter1 first1, Iter1 last1, Iter2 first2, T value, Op op)
+    {
+      // pre: readable_bounded_range(first1, last1)
+      // pre: readable_weak_range(first2, last1 - first1);
+      while(first1 != last1) {
+        value = value + op(*first1, *first2);
+        ++first1;
+        ++first2;
+      }
+      return value;
+    }
+
+  // Accumulate the weighted result of applying a binary operation to each of 
+  // the elements in the given ranges. Weighting values are given in the weak
+  // range [|first3, last1 - first1|).
+  template<typename Iter1, typename Iter2, typename Iter3, typename T, typename Op>
+    T weighted_accumulate(Iter1 first1, Iter1 last1, Iter2 first2, Iter3 first3, T value, Op op)
+    {
+      // pre: readable_bounded_range(first1, last1)
+      // pre: readable_weak_range(first2, last1 - first1);
+      // pre: readable_weak_range(first3, last1 - first1);
+      while(first1 != last1) {
+        value = value + *first3 * op(*first1, *first2);
+        ++first1;
+        ++first2;
+        ++first3;
+      }
+      return value;
+    }
+
+  // Return x^N.
+  template<int N, typename T>
+    struct static_power
+    {
+      static_assert(N >= 0, "invalid exponent");
+      T operator()(T const& x)
+      {
+        return pow(x, N);
+      }
+    };
+
+  template<typename T>
+    struct static_power<0, T>
+    {
+      T operator()(T const& x)
+      {
+        return T{1};
+      }
+    };
+
+  template<typename T>
+    struct static_power<1, T>
+    {
+      T operator()(T const& x)
+      {
+        return x;
+      }
+    };
+
+  template<typename T>
+    struct static_power<2, T>
+    {
+      T operator()(T const& x)
+      {
+        return x * x;
+      }
+    };
+
+
+  // Return x^(1/n). 
+  // From logarithm identities: a^(1/n) = exp(log( a^(1/n)) = exp(log(a)/n).
   template<typename T>
     T nth_root(T a, T n)
     {
       exp(log(a) / n);
     };
 
-  // Statically dispatch the static nth root to optimal algorithms. Whem N == 1,
-  // this must returns a. When N == 2, it returns sqrt(a), etc.
-  // requires: a >= 0 && N > 0
+  // Return x^(1/N).
   template<int N, typename T>
     struct static_nth_root
     {

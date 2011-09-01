@@ -9,122 +9,239 @@
 #define ORIGIN_GEOMETRY_HPP
 
 #include <cassert>
+#include <cstdlib>
+#include <numeric>
 
 #include <origin/math.hpp>
 #include <origin/statistics.hpp>
 
 namespace origin
 {
-  // Compute the distance, raised to the Nth power between each pair of 
-  // iterators the given ranges. The exponent is given as an explicit template
-  // argument.
-  template<int N, typename Iter1, typename Iter2>
-    typename std::iterator_traits<Iter1>::value_type
-    power_distance(Iter1 first1, Iter1 last1, Iter2 first2)
+  // Return (x + y)^n
+  template<int N, typename T>
+    struct static_power_sum
     {
-      typedef typename std::iterator_traits<Iter1>::value_type Value;
-      typedef static_power_distance<N, Value> Dist;
-
-      Dist dist;
-      Value sum = 0;
-      while(first1 != last1) {
-        sum = sum + dist(*first1, *first2);
-        ++first1;
-        ++first2;
+      T operator()(T const& x, T const& y) const
+      {
+        static_power<N, T> power;
+        return power(x + y);
       }
-      return sum;
-    }
-    
+    };
+  
+  template<typename T>
+    struct static_power_sum<0, T>
+    {
+      T operator()(T const& x, T const& y) const { return T{1}; }
+    };
+
+  template<typename T>
+    struct static_power_sum<1, T>
+    {
+      T operator()(T const& x, T const& y) const { return x + y; }
+    };
+
+
+  // Return (x - y)^n
+  template<int N, typename T>
+    struct static_power_difference
+    {
+      T operator()(T const& x, T const& y) const
+      {
+        static_power<N, T> power;
+        return power(x - y);
+      }
+    };
+
+  template<typename T>
+    struct static_power_difference<0, T>
+    {
+      T operator()(T const& x, T const& y) const { return T{1}; }
+    };
+
+  template<typename T>
+    struct static_power_difference<1, T>
+    {
+      T operator()(T const& x, T const& y) const { return x - y; }
+    };
+
+
+  // Returns |x - y|^n. 
+  template<int N, typename T>
+    struct static_absolute_power_difference
+    { 
+      T operator()(T const& a, T const& b) const
+      {
+        static_power<N, T> power;
+        return power(std::abs(a - b));
+      }
+    };
+
+  template<typename T>
+    struct static_absolute_power_difference<0, T>
+    {
+      T operator()(T const& a, T const& b) const { return T{1}; }
+    };
+
+  template<typename T>
+    struct static_absolute_power_difference<1, T>
+    {
+      T operator()(T const& a, T const& b) const { return abs(a - b); }
+    };
+
   // Compute the Minkowski distance of order N on the vectors given by the
-  // ranges in [first1, last1), and [first2, first2 + (last1 - first1)). The
-  // order N is given as an explicit template argument.
+  // ranges in [first1, last1), and the weak range [first2, last1 - first1).
+  //
+  // requires N > 0 && InputIterator<Iter1> && InputIterator<Iter2>
+  //       && Same<T, ValueType<Iter1>, ValueType<Iter2>>
+  //       && Field<T>
+  //
+  // FIXME: Field<T> might be too strong. What are the actual requirements
+  // imposed by the nth_root algorithm?
   template<int N, typename Iter1, typename Iter2>
-    typename std::iterator_traits<Iter1>::value_type
+    inline typename std::iterator_traits<Iter1>::value_type
     minkowski_distance(Iter1 first1, Iter1 last1, Iter2 first2)
     {
+      // pre: readable_bounded_range(first1, last1)
+      // pre: readable_weak_range(frist2, last1 - first1)
       typedef typename std::iterator_traits<Iter1>::value_type Value;
-      typedef static_nth_root<N, Value> Root;
-      
-      Root root;
-      return root(power_distance<N>(first1, last1, first2));
+
+      static_power_difference<N, Value> diff;
+      static_nth_root<N, Value> root;
+      return root(accumulate(first1, last1, first2, Value{0}, diff));
     }
-    
-  template<int N, typename T>
-    typename T::value_type minkowski_distance(T const& a, T const& b)
+
+  // requires Vector<Vec>
+  template<int N, typename Vec>
+    inline typename Vec::value_type 
+    minkowski_distance(Vec const& a, Vec const& b)
     {
+      // pre: a.size() == b.size()
       assert(( a.size() == b.size() ));
-      return minkowski_distance(a.begin(), a.end(), b.begin());
+
+      return operator()(a.begin(), a.end(), b.begin());
     }
-    
-  // FIXME: Write the non-static minkowski distance, allowing the order to
-  // vary.
+
+  // Compute the weighted Minkowski distance, where weights are given in the
+  // weak range [|first3, last1 - first1|).
+  template<int N, typename Iter1, typename Iter2, typename Iter3>
+    inline typename std::iterator_traits<Iter1>::value_type
+    weighted_minkowski_distance(Iter1 first1, Iter1 last1, Iter2 first2, Iter3 first3)
+    {
+      // pre: readable_bounded_range(first1, last1)
+      // pre: readable_weak_range(frist2, last1 - first1)
+      // pre: readable_weak_range(frist3, last1 - first1)
+      typedef typename std::iterator_traits<Iter1>::value_type Value;
+
+      static_absolute_power_difference<N, Value> diff;
+      static_nth_root<N, Value> root;
+      return root(weighted_accumulate(first1, last1, first2, first3, Value{0}, diff));
+    }
+
+  // Compute the weighted Minkowski distance on the two vectors.  Weights are
+  // given in the 3rd vector argument.
+  template<int N, typename Vec>
+    inline typename Vec::value_type 
+    weighted_minkowski_distance(Vec const& a, Vec const& b, Vec const& w)
+    {
+      // pre: a.size() == b.size() && b.size() == w.size()
+      assert(( a.size() == b.size() ));
+      assert(( b.size() == w.size() ));
+
+      return weighted_minkowski_distance(a.begin(), a.end(), b.begin(), w.begin());
+    }
 
 
   // Compute the Manhattan distance between the given vectors.
   template<typename Iter1, typename Iter2>
-    typename std::iterator_traits<Iter1>::value_type
-    static manhattan_distance(Iter1 first1, Iter1 last1, Iter2 first2)
+    inline typename std::iterator_traits<Iter1>::value_type
+    manhattan_distance(Iter1 first1, Iter1 last1, Iter2 first2)
     {
       return minkowski_distance<1>(first1, last1, first2);
     }
     
   // Return the Manhattan distance the given vectors.
-  template<typename T>
-    typename T::value_type manhattan_distance(T const& a, T const& b)
+  template<typename Vec>
+    inline typename Vec::value_type 
+    manhattan_distance(Vec const& a, Vec const& b)
     {
       assert(( a.size() == b.size() ));
       return manhattan_distance(a.begin(), a.end(), b.begin());
     }
+
+  // Return the weighted Manhattan distance of the given ranges. Weights are
+  // given in the weak range [|first3, last1 - first1|).
+  template<typename Iter1, typename Iter2, typename Iter3>
+    inline typename std::iterator_traits<Iter1>::value_type
+    weighted_manhattan_distance(Iter1 first1, Iter1 last1, Iter2 first2, Iter3 first3)
+    {
+      return weighted_minkowski_distance<1>(first1, last1, first2, first3);
+    }
     
+  // Return the weighted Manhattan distance of the given ranges. Weights are
+  // given in the vector w.
+  template<typename Vec>
+    inline typename Vec::value_type
+    weighted_manhattan_distance(Vec const& a, Vec const& b, Vec const& w)
+    {
+      assert(( a.size() == b.size() ));
+      assert(( b.sise() == w.size() ));
+      return weighted_manhattan_distance(a.begin(), b.begin(), w.begin());
+    }
     
   // Return the Euclidean distance between the given vectors.
   template<typename Iter1, typename Iter2>
-    typename std::iterator_traits<Iter1>::value_type
+    inline typename std::iterator_traits<Iter1>::value_type
     euclidean_distance(Iter1 first1, Iter1 last1, Iter2 first2)
     {
       return minkowski_distance<2>(first1, last1, first2);
     }
 
   // Return the euclidean distance between the two vectors.
-  template<typename T>
-    typename T::value_type euclidean_distance(T const& a, T const& b)
+  template<typename Vec>
+    inline typename Vec::value_type 
+    euclidean_distance(Vec const& a, Vec const& b)
     {
       assert(( a.size() == b.size() ));
       return euclidean_distance(a.begin(), a.end(), b.begin());
     }
-  
-  // Function wrappers for distance functions.
-  template<typename T>
-    struct minkowski_distance_of
-    {
-      auto operator()(T const& a, T const& b) const
-        -> decltype(minkowski_distance(a, b))
-      {
-        return minkowski_distance(a, b);
-      }
-    };
 
-  template<typename T>
-    struct manhattan_distance_of
+  // Return the weighted Euclidean distance of the given ranges. Weights are
+  // given in the weak range [|first3, last1 - first1|).
+  template<typename Iter1, typename Iter2, typename Iter3>
+    inline typename std::iterator_traits<Iter1>::value_type
+    weighted_euclidean_distance(Iter1 first1, Iter1 last1, Iter2 first2, Iter3 first3)
     {
-      auto operator()(T const& a, T const& b) const
-        -> decltype(manhattan_distance(a, b))
-      {
-        return manhattan_distance(a, b);
-      }
-    };
+      return weighted_minkowski_distance<2>(first1, last1, first2, first3);
+    }
+    
+  // Return the weighted Euclidean distance of the given ranges. Weights are
+  // given in the vector w.
+  template<typename Vec>
+    inline typename Vec::value_type
+    weighted_euclidean_distance(Vec const& a, Vec const& b, Vec const& w)
+    {
+      assert(( a.size() == b.size() ));
+      assert(( b.size() == w.size() ));
+      return weighted_euclidean_distance(a.begin(), a.end(), b.begin(), w.begin());
+    }
 
-  template<typename T>
-    struct euclidean_distance_of
+  // FIXME: The algorithm maximizes the an operation on two sequences of
+  // values. What is the most general form of this algorithm. Nearest neighbor
+  // does something similar.
+  template<typename Iter1, typename Iter2>
+    typename std::iterator_traits<Iter1>::value_type
+    chebyshev_distance(Iter1 first1, Iter1 last1, Iter2 first2)
     {
-      auto operator()(T const& a, T const& b) const
-        -> decltype(euclidean_distance(a, b))
-      {
-        return euclidean_distance(a, b);
+      typedef typename std::iterator_traits<Iter1>::value_type Value;
+      Value dist = std::abs(*first1++, *first2++);
+      while(first1 != last1) {
+        dist = std::max(std::abs(*first1 - *first2), dist);
+        ++first1;
+        ++first2;
       }
-    };
-  
-  
+      return dist;
+    }
+
   // TODO: Implement farthest neighbor.
   // TODO: Implement k-nearest neightbors.
 
@@ -181,8 +298,9 @@ namespace origin
       
       // NOTE: This implementation avoids repeated comparisons of iterator
       // positions in the loop. We go from last-first comparisons to 2.'
-      if(first == mid) {
-        return nearest_to(next(first), last, *mid, dist);
+      if(mid == first) {
+        Iter i = nearest_to(next(first), last, *mid, dist);
+        return i;
       } else if(next(mid) == last) {
         return nearest_to(first, mid, *mid, dist);
       } else {
@@ -228,32 +346,65 @@ namespace origin
       for(Iter i = first; i != last; ++i)
         *result++ = dist(*i, *nearest(first, i, last, dist));
     }
-    
-  // TODO: We can replace repeated calls to dist() with a distance matrix.
 
-  // requires Vector<ValueType<Iter>>
+  // TODO: Consider replacing repeated calls to dist() with a distance matrix.
+  
+  // Compute the distance from each vector in the range [first, last) to point,
+  // writing the value to result. Distance is computed using the dist function.
+  //
+  // FIXME: Replace Value with ValueType<Iter>
+  //
+  // requires InputIterator<Iter>
+  //       && DistanceMetric<Distance, ValueType<Iter>>
+  //       && Writable<Out, ResultType<Distance>>
+  //       && Same<ValueType<Iter>, Value> 
+  template<typename Iter, typename Value, typename Out, typename Distance>
+    void distance_to(Iter first, Iter last, Value const& point, Out result, Distance dist)
+    {
+      while(first != last) {
+        *result = dist(*first, point);
+        ++first;
+        ++result;
+      }
+    }
+
+  // Return a vector that represents the centroid of the given sequence of
+  // points. The centroid is computed as the "arithmetic mean" of the points,
+  // if arithmetic mean were generalized to vector spaces.
+  //
+  // Note that the algorithm only requires vectors, not vector spaces. The
+  // vectors referenced by the given iterators are not required to provide any
+  // mathematical operators.
+  //
+  // requires Iterator<Iter>
+  //      &&  Vector<ValueType<Iter>>
   template<typename Iter>
     typename std::iterator_traits<Iter>::value_type
     centroid(Iter first, Iter last)
     {
       // pre: for(Iter i : range(first + 1, last)) (*i).size() == (*first).size()
-      typedef typename std::iterator_traits<Iter>::value_type Value;
+      typedef typename std::iterator_traits<Iter>::value_type Vector;
       typedef typename std::iterator_traits<Iter>::difference_type Distance;
+      typedef typename Vector::value_type Value;
 
-      // FIXME: This is identical to arithmetic mean except that we're
-      // explicitly operating on vectors instead of numbers and using scalar
-      // multiplication instead of field division. Its possible that the
-      // two algorithms could be unified, but we'd have to explicitly provide
-      // the initial vlaue.
+      Distance m = first->size();
+      Vector result(m, 0);
+
+      // Add each coefficient into the result.
       Distance n = 0;
-      Value sum((*first).size(), 0);
       while(first != last) {
-        sum += *first;
+        // FIXME: Is there not a more graceful way to write this?
+        // result += *i if we required a VectorSpace<ValueType<Iter>>
+        // Should we require VectorSpace instead of Vector?
+        for(Distance i = 0; i < m; ++i)
+          result[i] += (*first)[i];
         ++first;
         ++n;
       }
-      std::cout << typestr(sum) << " -- " << typestr(n) << "\n";
-      return sum / n;
+      
+      // Divide each coefficient by the number of elements.
+      std::for_each(result.begin(), result.end(), [n](Value& x) { x /= n; });
+      return result;
     }
 
 } // namespace origin

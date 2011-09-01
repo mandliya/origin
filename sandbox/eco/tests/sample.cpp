@@ -69,7 +69,7 @@ int main()
   // NOTE: We don't pick samples of size 1 (nnd won't work), size 2 (measures
   // are symmetric), or size of the data set (only one way to sample the
   // data set).
-  cout << "size min max mean sd\n";
+  cout << "size nn_min nn_max nn_mean nn_sd c_min c_max c_mean c_sd\n";
   constexpr size_t iters = 1;
   for(size_t i = 3; i < data.size(); ++i) {
     for(size_t j = 0; j < iters; ++j) {
@@ -77,20 +77,31 @@ int main()
       Data sample(i);
       random_sample(data.begin(), data.end(), sample.begin(), i, rng);
 
-      // Compute nearest neighbor distances for each element in the sample.
+      // Compute nearest neighbor distances for each element in the sample,
+      // and observe summary.
       vector<double> nnd(i);
       nearest_neighbor_distances(sample.begin(), sample.end(), nnd.begin(), Dist{});
-      
-      // Find the centroid
-      Vector c = centroid(sample.begin(), sample.end());
+      auto nn_mm = minmax_element(nnd.begin(), nnd.end());
+      double nn_min = *nn_mm.first;
+      double nn_max = *nn_mm.second;
+      double nn_mean = arithmetic_mean(nnd.begin(), nnd.end());
+      double nn_sd = sample_standard_deviation(nnd.begin(), nnd.end(), nn_mean);
 
-      // Compute summary statistics on nnd.
-      auto mm = minmax_element(nnd.begin(), nnd.end());
-      double min = *mm.first;
-      double max = *mm.second;
-      double mean = arithmetic_mean(nnd.begin(), nnd.end());
-      double sd = sample_standard_deviation(nnd.begin(), nnd.end(), mean);
-      cout << i << " " << min << " " << max << " " << mean << " " << sd << "\n";
+      // Compute distance to center for each element in the sample and observe
+      // summary statistics.
+      vector<double> cd(i);
+      Vector c = centroid(sample.begin(), sample.end());
+      distance_to(sample.begin(), sample.end(), c, cd.begin(), Dist{});
+      double c_mm = minmax_element(cd.begin(), cd.end());
+      double c_min = *c_mm.first;
+      double c_max = *c_mm.second;
+      double c_mean = arithmetic_man(cd.begin(), cd.end());
+      double c_sd = sample_standard_deviation(cd.begin(), cd.end(), c_mean);
+
+      cout << i << " " 
+           << nn_min << " " << nn_max << " " << nn_mean << " " << nn_sd 
+           << c_min << " " << c_max << " " << c_mean << " " << c_sd 
+           << "\n";
     }
   }
 }
