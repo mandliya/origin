@@ -22,7 +22,6 @@
 
 #include <boost/lexical_cast.hpp>
 
-
 using namespace std;
 using namespace origin;
 
@@ -53,14 +52,17 @@ int main(int argc, char **argv)
   Data data;
   read_matrix(std::cin, data);
   
-  // Read weighting vector if given. Otherwise, the weighting will be all 1's.
+  // Read weighting vector if given. Otherwise, use a vector of 1's for the
+  // weights.
   Vector w;
   if(!wfile.empty()) {
     ifstream win(wfile);
     read_vector(win, w);
+  } else {
+    w = move(Vector(data[0].size(), 1));
   }
 
-  // The weighted distance function.
+  // Weight function
   auto dist = [&w](Vector const& a, Vector const& b) -> double {
     return weighted_euclidean_distance(a, b, w);
   };

@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <vector>
 #include <algorithm>
@@ -33,14 +34,16 @@ int main(int argc, char **argv)
   typedef vector<Vector> Data;
   
   // Parse some command line options.
+  string wfile;
   bool replace = true;
   size_t iters = 10;
   for(int i = 1; i < argc; ++i) {
     if(argv[i] == string{"-samples"}) {
-      ++i;
-      iters = boost::lexical_cast<size_t>(argv[i]);
-    }
-    else {
+      iters = boost::lexical_cast<size_t>(argv[++i]);
+    } 
+    else if(argv[i] == string{"-weight"}) {
+      wfile = argv[++i];
+    } else {
       cerr << "command line usage error\n";
     }
   }
@@ -48,13 +51,23 @@ int main(int argc, char **argv)
   Data data;
   read_matrix(std::cin, data);
 
+  // Read weighting vector if given. Otherwise, use a vector of 1's for the
+  // weights.
+  Vector w;
+  if(!wfile.empty()) {
+    ifstream win(wfile);
+    read_vector(win, w);
+  } else {
+    w = move(Vector(data[0].size(), 1));
+  }
+
+  // Weight function
+  auto dist = [&w](Vector const& a, Vector const& b) -> double {
+    return weighted_euclidean_distance(a, b, w);
+  };
+
   cout << "size min max mean sd\n";
   cout.precision(4);
-
-  // Capture the euclidean distance.
-  auto dist = [](Vector const& a, Vector const& b) {
-    return euclidean_distance(a, b);
-  };
 
   // Generate large numbers of increasing large samples
   // NOTE: Don't pick samples of size < 3. For values < 3, stddev is 0 (or

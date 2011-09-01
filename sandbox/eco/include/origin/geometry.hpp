@@ -283,9 +283,6 @@ namespace origin
       return near;
     }
 
-  // TODO: This algorithm implements a general looping strategy for all 
-  // combinations.
-
   // Find the nearest object in the range [first, last) to the object referred
   // to by mid. That object is not compared to itself.
   // ForwardIterator<Iter>
@@ -297,7 +294,8 @@ namespace origin
       // pre: metric(dist) --- symmetric, triangle, identity of indisc. nonneg
       
       // NOTE: This implementation avoids repeated comparisons of iterator
-      // positions in the loop. We go from last-first comparisons to 2.'
+      // positions in the loop. We go from last-first comparisons per iteration
+      // to 2.
       if(mid == first) {
         Iter i = nearest_to(next(first), last, *mid, dist);
         return i;
@@ -311,8 +309,6 @@ namespace origin
         );
       }
     }
-
-  // Write the sequence of nearest neighbors 
 
   // FIXME: This can be inefficient because we're computing distances
   // redundantly. We could pre-compute a distance matrix and then use that
@@ -352,12 +348,12 @@ namespace origin
   // Compute the distance from each vector in the range [first, last) to point,
   // writing the value to result. Distance is computed using the dist function.
   //
-  // FIXME: Replace Value with ValueType<Iter>
-  //
   // requires InputIterator<Iter>
   //       && DistanceMetric<Distance, ValueType<Iter>>
   //       && Writable<Out, ResultType<Distance>>
   //       && Same<ValueType<Iter>, Value> 
+  //
+  // FIXME: Replace Value with ValueType<Iter>
   template<typename Iter, typename Value, typename Out, typename Distance>
     void distance_to(Iter first, Iter last, Value const& point, Out result, Distance dist)
     {
@@ -387,17 +383,14 @@ namespace origin
       typedef typename std::iterator_traits<Iter>::difference_type Distance;
       typedef typename Vector::value_type Value;
 
+      // FIXME: Should have size(*first).
       Distance m = first->size();
       Vector result(m, 0);
 
       // Add each coefficient into the result.
       Distance n = 0;
       while(first != last) {
-        // FIXME: Is there not a more graceful way to write this?
-        // result += *i if we required a VectorSpace<ValueType<Iter>>
-        // Should we require VectorSpace instead of Vector?
-        for(Distance i = 0; i < m; ++i)
-          result[i] += (*first)[i];
+        accumulate_each(begin(*first), end(*first), begin(result));
         ++first;
         ++n;
       }

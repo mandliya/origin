@@ -50,6 +50,19 @@ namespace origin
       return value;
     }
 
+  // Accumulate each value in the range [first, last) into those in the weak
+  // range [|result, last - first|).
+  template<typename Iter, typename Out>
+    void accumulate_each(Iter first, Iter last, Out result)
+    {
+      while(first != last) {
+        *result = *result + *first;
+        ++first;
+        ++result;
+      }
+    }
+
+
   // Return x^N.
   template<int N, typename T>
     struct static_power
