@@ -5,9 +5,8 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-# origin_executable(sample sample.cpp)
-# origin_executable(uniform uniform.cpp)
+cmake_minimum_required(VERSION 2.8)
 
-origin_executable(nearest nearest.cpp)
-origin_executable(centroid centroid.cpp)
-origin_executable(csv csv.cpp)
+include_directories(include ~/Code/boost/boost-1.47)
+
+add_subdirectory(tests)

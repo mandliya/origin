@@ -5,9 +5,4 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-# origin_executable(sample sample.cpp)
-# origin_executable(uniform uniform.cpp)
-
-origin_executable(nearest nearest.cpp)
-origin_executable(centroid centroid.cpp)
-origin_executable(csv csv.cpp)
+add_executable(csv csv.cpp)
