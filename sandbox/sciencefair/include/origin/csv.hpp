@@ -39,8 +39,10 @@ namespace origin
     }
   };
 
-  // The CSV Row class defines a row of textual CSV data.
-  template<typename T = std::string>
+  // The CSV Row class defines a row of textual CSV data. The row is 
+  // parameterized over an underlying string representation with the intent
+  // to support wide character strings.
+  template<typename Str = std::string>
     class csv_row
     {
     public:
@@ -49,46 +51,46 @@ namespace origin
       std::size_t size() const { return data.size(); }
 
       // Return the nth tuple.
-      T&       operator[](std::size_t n)       { return data[n]; }
-      T const& operator[](std::size_t n) const { return data[n]; }
+      Str&       operator[](std::size_t n)       { return data[n]; }
+      Str const& operator[](std::size_t n) const { return data[n]; }
 
       // IO helpers
+      // requires Same<Char, Str::value_type>
       template<typename Char, typename Traits>
-        void read(std::basic_istream<Char, Traits>& is);
+        void read(std::basic_istream<Char, Traits>& is, Char sep);
 
       template<typename Char, typename Traits>
-        void write(std::basic_ostream<Char, Traits>& is);
+        void write(std::basic_ostream<Char, Traits>& is, Char sep);
 
     private:
-        void read(std::string const& line, std::size_t& n);
+        void read(Str const& line, std::size_t& n, typename Str::value_type sep);
 
     private:
-      std::vector<T> data;  // Parsed elements
+      std::vector<Str> data;  // Parsed elements
       std::size_t row;      // The row index
     };
 
-  template<typename T>
+  template<typename Str>
     template<typename Char, typename Traits>
-      void csv_row<T>::read(std::basic_istream<Char, Traits>& is)
+      void csv_row<Str>::read(std::basic_istream<Char, Traits>& is, Char sep)
       {
         ++row;
-        std::string line;
+        Str line;
         std::getline(is, line);
 
         std::size_t n = 0;
         while(n < line.size()) {
-          read(line, n);
+          read(line, n, sep);
         }
       }
 
   // Read the current field from the given line. The field starts at position
   // n. After updating, the data will contain the read field, and n will be
   // the start of the next field (or past the end).
-  template<typename T>
-    void csv_row<T>::read(std::string const& line, std::size_t& n)
+  template<typename Str>
+    void csv_row<Str>::read(Str const& line, std::size_t& n, typename Str::value_type sep)
     {
       assert(( n < line.size() ));
-
       if(line[n] == '"') {
         // Find the enclosing quote and get the text in between.
         std::size_t p = line.find_first_of('"', n + 1);
@@ -97,15 +99,15 @@ namespace origin
         data.push_back(line.substr(n + 1, p - n - 1));
         boost::trim(data.back());
 
-        // Find ',' after the closing quote.
-        p = line.find_first_of(',', p + 1);
+        // Find the first separator after the closing quote.
+        p = line.find_first_of(sep, p + 1);
         if(p == line.npos)
           p = line.size();
         n = p + 1;
       } else {
-        // Otherwise, just scan for the next ',' and cache the characters
+        // Otherwise, just scan for the next separator and cache the characters
         // in between. If there is no next comma, then we're at the end
-        std::size_t p = line.find_first_of(',', n + 1);
+        std::size_t p = line.find_first_of(sep, n + 1);
         if(p == line.npos)
           p = line.size();
         data.push_back(line.substr(n, p - n));
@@ -114,11 +116,28 @@ namespace origin
       }
     }
 
-  template<typename Char, typename Traits, typename T>
-    inline std::basic_istream<Char, Traits>&
-    operator>>(std::basic_istream<Char, Traits>& is, csv_row<T>& row)
+  // An input helper.
+  template<typename Str>
+    struct csv_input
     {
-      row.read(is);
+      csv_input(csv_row<Str>& row)
+        : row(row)
+      { }
+      
+      csv_row<Str>& row;
+    };
+  
+  template<typename Str>
+    csv_input<Str> csv(csv_row<Str>& row)
+    {
+      return csv_input<Str>(row);
+    }
+
+  template<typename Char, typename Traits, typename Str>
+    inline std::basic_istream<Char, Traits>&
+    operator>>(std::basic_istream<Char, Traits>& is, csv_input<Str>& row)
+    {
+      row.read(is, ',');
       return is;
     }
 
