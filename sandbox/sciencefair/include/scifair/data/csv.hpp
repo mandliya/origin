@@ -46,7 +46,6 @@ namespace origin
     class csv_row
     {
     public:
-
       bool empty() const { return data.size(); }
       std::size_t size() const { return data.size(); }
 
@@ -63,24 +62,43 @@ namespace origin
         void write(std::basic_ostream<Char, Traits>& is, Char sep);
 
     private:
-        void read(Str const& line, std::size_t& n, typename Str::value_type sep);
+      // A helper function for reading each line.
+      void read(Str const& line, std::size_t& n, typename Str::value_type sep);
 
     private:
       std::vector<Str> data;  // Parsed elements
-      std::size_t row;      // The row index
+      std::size_t row;        // The row index
     };
 
+  // Read a row from the given input stream using the specified separator.
   template<typename Str>
     template<typename Char, typename Traits>
       void csv_row<Str>::read(std::basic_istream<Char, Traits>& is, Char sep)
       {
+        // Reset the previous row data and increment the line number.
+        data.clear();
         ++row;
+        
         Str line;
         std::getline(is, line);
-
         std::size_t n = 0;
         while(n < line.size()) {
           read(line, n, sep);
+        }
+      }
+      
+  // Write the parsed data to the output stream in (compact) CSV format. No
+  // whitespace is emitted between fields.
+  //
+  // TODO: Handle the case where the string has quoted text.
+  template<typename Str>
+    template<typename Char, typename Traits>
+      void csv_row<Str>::write(std::basic_ostream<Char, Traits>& os, Char sep)
+      {
+        for(auto i = data.begin(); i != data.end(); ++i) {
+          os << *i;
+          if(next(i) != data.end())
+            os << sep;
         }
       }
 
@@ -103,7 +121,8 @@ namespace origin
         p = line.find_first_of(sep, p + 1);
         if(p == line.npos)
           p = line.size();
-        n = p + 1;
+        else
+          n = p + 1;
       } else {
         // Otherwise, just scan for the next separator and cache the characters
         // in between. If there is no next comma, then we're at the end
@@ -112,32 +131,52 @@ namespace origin
           p = line.size();
         data.push_back(line.substr(n, p - n));
         boost::trim(data.back());
-        n = p + 1;
+        if(p != line.npos)
+          n = p + 1;
       }
     }
 
-  // An input helper.
-  template<typename Str>
-    struct csv_input
+  // A formatted input helper. Row must be a [const] csv_row<Str>. 
+  template<typename Row, typename Char>
+    struct separated_io
     {
-      csv_input(csv_row<Str>& row)
-        : row(row)
+      separated_io(Row& row, Char sep)
+        : row(row), sep(sep)
       { }
       
-      csv_row<Str>& row;
+      Row& row;
+      Char sep;
     };
   
-  template<typename Str>
-    csv_input<Str> csv(csv_row<Str>& row)
+  // An input manipulator for reading CSV data.
+  template<typename Str, typename Char = typename Str::value_type>
+    inline separated_io<csv_row<Str>, Char> 
+    separated(csv_row<Str>& row, Char sep = ',')
     {
-      return csv_input<Str>(row);
+      return {row, sep};
+    }
+    
+  template<typename Str, typename Char = typename Str::value_type>
+    inline separated_io<csv_row<Str> const, Char> 
+    separated(csv_row<Str> const& row, Char sep = ',')
+    {
+      return {row, sep};
     }
 
-  template<typename Char, typename Traits, typename Str>
-    inline std::basic_istream<Char, Traits>&
-    operator>>(std::basic_istream<Char, Traits>& is, csv_input<Str>& row)
+  // Formatted I/O operatoins for CSV rows.
+  template<typename Char, typename Traits, typename Row>
+    inline std::basic_ostream<Char, Traits>&
+    operator<<(std::basic_ostream<Char, Traits>& os, separated_io<Row, Char> io)
     {
-      row.read(is, ',');
+      io.row.write(os, io.sep);
+      return os;
+    }
+
+  template<typename Char, typename Traits, typename Row>
+    inline std::basic_istream<Char, Traits>&
+    operator>>(std::basic_istream<Char, Traits>& is, separated_io<Row, Char> io)
+    {
+      io.row.read(is, io.sep);
       return is;
     }
 

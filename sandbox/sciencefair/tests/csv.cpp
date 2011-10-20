@@ -7,16 +7,15 @@
 
 #include <iostream>
 
-#include <origin/csv.hpp>
+#include <scifair/data/csv.hpp>
 
 using namespace std;
 using namespace origin;
 
-
 int main()
 {
   csv_row<> r;
-  while(cin >> r) {
+  while(cin >> csv(r)) {
     for(size_t i = 0; i < r.size(); ++i)
       cout << r[i] << ' ';
     cout << "\n";
