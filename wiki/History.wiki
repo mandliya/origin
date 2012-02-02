@@ -4,14 +4,6 @@ Origin was started at Kent State University by Andrew Sutton as part of a projec
 
 The name "Origin" was actually a name that Andrew proposed as the name of the KDE development libraries when KDE 4.0 was first being developed and released and had several new components with neat names (e.g., Plasma, Phonon, etc.). The word "origin" means (roughly) "a beginning", and is a synonym for "source" (as in code). KDE didn't want the name, so Andrew kept it.
 
-Andrew recruited several undergraduates who were interested in learning advanced C++ programming, and started expanding the scope of Origin. Students worked on C++0x projects including graph data structures, memory layout, trees, hashing and binning, template metaprogramming, concept checking and emulation. Michael Lopez is still working on the Origin.Graph library.
+Andrew recruited several undergraduates who were interested in learning advanced C++ programming, and started expanding the scope of Origin. Students worked on C++0x projects including graph data structures, memory layout, trees, hashing and binning, template metaprogramming, concept checking and emulation. Michael Lopez, now a PhD student at Texas A&M, is still working on the Origin Graph library.
 
-The original work on Origin is still hosted at Kent State University, [http://calder.sdml.cs.kent.edu/trac/origin here].
-
-In 2010, Andrew moved to Texas A&M where he became a postdoctoral researcher with Bjarne Stroustrup. While there, he developed a new mission for Origin. First, he wanted to demonstrate that generic and generative programming techniques can be used to create software that is both high-quality and more importantly readily (re)usable and comprehensible. In other words, C++ programs can be both sufficiently abstract (promoting ease of use) and "close to the metal" (resulting in good performance). 
-
-A second (and extremely long-term) goal of Origin is as a software framework to build free and open source scientific software, especially for scientists working in under-funded fields (esp. wildlife biology and ecology). The proprietary software currently supporting this work is typically _very_ expensive, and can make it difficult to employ scientists to conduct studies. In essence, non-free software negatively impacts the ability to do science. 
-
-The latter goal is not specific to Origin, but remains at the heart of the mission. Origin aims to provide high-quality, usable software libraries to support the construction scientific applications.
-
-In January of 2011, he moved the hosting of Origin form Kent State to Google, making it available under the MIT License. 
+In 2010, Andrew moved to Texas A&M where he accepted a position as a postdoctoral researcher with Bjarne Stroustrup, where Origin has become a central part of his research. In particular, he used C++11 to help experiment with different designs for concepts for the STL. His longterm goal for Origin is to provide generic libraries for numeric and scientific computing.
