@@ -1,0 +1,54 @@
+#summary Reactive Event Library
+
+An event library provides a facility processing system and application events.
+Traditional event libraries provides reactive systems for networking or timing
+events. Other systems provide events corresponding to input devices or connected
+sensors.
+
+== Proposal ==
+Design an extensible event library that can propagate events from a variety
+of sources, including the application. The kinds of events handled by the 
+library could include:
+
+	* Timers
+ 	* Operating system
+ 		* Network
+ 		* File system
+ 		* Signals?
+ 	* Input devices
+ 		* Keyboard
+ 		* Mouse
+ 		* Touch
+	* Sensors
+		* Accelerometer
+		* Proximity
+		* Light
+		* Moisture
+		* Gyroscope
+		* etc...
+ 
+The particular data associated with each event should be specific to the 
+device.
+
+The event system should be "pluggable", meaning that a programmer should
+configure the sets of events being received by the application.
+
+Ease of use is a must. Subclassing event handlers is not necessarily the best
+design for a reactive event handling system.
+
+== Considerations ==
+Should the library have a single reactor or allow multiple reactors? What are
+the thread safety considerations of this style of program?
+
+Almost every event will have its own design considerations. For example, what
+is the best way to indicate a pressed key? Using letters may not be appropriate
+if a different keyboard layout is in use. What kind of information should be
+associated with timer events? What kinds of file system events should be 
+supported?
+
+== Links ==
+
+ACE Reactor
+libevent
+SDML 
+cppnetlib
