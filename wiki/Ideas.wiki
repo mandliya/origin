@@ -5,6 +5,6 @@ tried to break them down by areas.
 
 == Data structures ==
 
-[Ideas/PrefixTree] -- a generic prefix tree.
+[Ideas_PrefixTree] -- a generic prefix tree.
 
 
