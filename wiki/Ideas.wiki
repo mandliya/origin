@@ -24,6 +24,11 @@ This list is a work in progress.
  * [Ideas_Lsi Latent semantic indexing]
  * [Ideas_Lda Latent Dirichlet allocation]
 
-== Miscellaneous ==
+== Data analysis ==
 
  * [Ideas_Fca Formal concept analysis]
+
+== System libraries ==
+
+ * [Ideas_Reactor Reactor framework]
+

@@ -1,14 +1,11 @@
-#summary Reactive Event Library
+#summary Reactor framework
 
-An event library provides a facility processing system and application events.
-Traditional event libraries provides reactive systems for networking or timing
-events. Other systems provide events corresponding to input devices or connected
-sensors.
+A reactor is a design pattern for synchronous event handling, that allows
+event handlers to be associated with sets of events.
 
 == Proposal ==
-Design an extensible event library that can propagate events from a variety
-of sources, including the application. The kinds of events handled by the 
-library could include:
+Design an general purposee reactor framework that can be used with a wide 
+variety of event sources, such as:
 
 	* Timers
  	* Operating system
@@ -37,6 +34,10 @@ Ease of use is a must. Subclassing event handlers is not necessarily the best
 design for a reactive event handling system.
 
 == Considerations ==
+Can a single reactor be designed to accommodate all of these devices in a
+single framework? Do we need different reactors to handle events from different
+sources?
+
 Should the library have a single reactor or allow multiple reactors? What are
 the thread safety considerations of this style of program?
 

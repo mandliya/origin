@@ -1,4 +1,4 @@
-#summary Prefix Trees
+#summary Prefix tree
 
 A prefix tree or [http://en.wikipedia.org/wiki/Trie trie] is an ordered tree
 data structure that stores keys having a sequential structure (typically
