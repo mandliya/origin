@@ -1,10 +1,29 @@
 #summary Project ideas
 
-The following is a list of project ideas for modern C++ libraries. I have
-tried to break them down by areas.
+The following is a list of project ideas for Origin C++ libraries. The goal
+of these pages is to provide some initial requirements for C++ library 
+projects. My goal is to enumerate basic requirements for each project and
+document some design and implementation considerations that I feel are
+important.
+
+This list is a work in progress.
 
 == Data structures ==
 
-[Ideas_PrefixTree] -- a generic prefix tree.
+ * [Ideas_PrefixTree Prefix tree]
+ * [Ideas_SuffixTree Suffix tree]
+ * [Ideas_SuffixArray Suffix array]
 
+== Linear algebra ==
 
+ * [Ideas_BasicLinearAlgebraSystem Basic linear algebra system]
+ * [Ideas_MatrixDecomposition Matrix decompositions]
+
+== Vector space models ==
+
+ * [Ideas_Lsi Latent semantic indexing]
+ * [Ideas_Lda Latent Dirichlet allocation]
+
+== Miscellaneous ==
+
+ * [Ideas_Fca Formal concept analysis]
