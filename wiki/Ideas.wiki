@@ -16,7 +16,7 @@ This list is a work in progress.
 
 == Linear algebra ==
 
- * [Ideas_BasicLinearAlgebraSystem Basic linear algebra system]
+ * [Ideas_Blas Basic linear algebra system]
  * [Ideas_MatrixDecomposition Matrix decompositions]
 
 == Vector space models ==
