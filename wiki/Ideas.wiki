@@ -1,0 +1,10 @@
+#summary Project ideas
+
+The following is a list of project ideas for modern C++ libraries. I have
+tried to break them down by areas.
+
+== Data structures ==
+
+[Ideas/PrefixTree] -- a generic prefix tree.
+
+
