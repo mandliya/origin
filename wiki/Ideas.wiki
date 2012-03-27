@@ -16,8 +16,8 @@ This list is a work in progress.
 
 == Numeric types ==
 
- * [Ideas_Integers Arbitrary precision integer]
- * [Ideas_Reals Arbitrary precision floating point]
+ * [Ideas_Integer Arbitrary precision integer]
+ * [Ideas_Real Arbitrary precision floating point]
  * [Ideas_Rational Fractions and rational numbers]
 
 == Linear algebra ==
@@ -37,4 +37,3 @@ This list is a work in progress.
 == System libraries ==
 
  * [Ideas_Reactor Reactor framework]
-
