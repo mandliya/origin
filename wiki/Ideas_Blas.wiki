@@ -31,5 +31,6 @@ Extend the library for arbitrary-dimensions (e.g., 3 and 4 dimensional matrices)
 
 
 == Links ==
+GNU Scientific Library (This contains a BLAS library) [http://www.gnu.org/software/gsl/manual/html_node/index.html]
 
-FIXME: Write links to BLAS specifications.
+Level 1 Interface specifications from GNU [http://www.gnu.org/software/gsl/manual/html_node/Level-1-GSL-BLAS-Interface.html Interface Specifications]
