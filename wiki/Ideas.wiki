@@ -14,6 +14,12 @@ This list is a work in progress.
  * [Ideas_SuffixTree Suffix tree]
  * [Ideas_SuffixArray Suffix array]
 
+== Numeric types ==
+
+ * [Ideas_Integers Arbitrary precision integer]
+ * [Ideas_Reals Arbitrary precision floating point]
+ * [Ideas_Rational Fractions and rational numbers]
+
 == Linear algebra ==
 
  * [Ideas_Blas Basic linear algebra system]
