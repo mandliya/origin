@@ -11,32 +11,24 @@ few of the popular ones:
  * MTL
  * Boost.uBlas
 
-Why does Origin need one? Because Origin wants an easy to use, reasonably
-efficient, C++11-based linear algebra library that uses new language features
-(in particular move semantics), and integrates closely with other Origin
-facilities such as concept checking and ranges.
+Why does Origin need one? Because Origin wants an easy to use, reasonably efficient, C++11-based linear algebra library that uses new language features (in particular move semantics), and integrates closely with other Origin facilities such as concept checking and ranges.
 
 == Project ==
 
 Design a basic linear algebra library.
 
-The library should support dynamically allocated vectors and matrices that
-support the basic operations of linear algebra: scalar multiplication, 
-matrix addition, and matrix multiplication. It should support algorithms
-covering BLAS requirements levels 1, 2, and 3.
+The library should support dynamically allocated vectors and matrices that support the basic operations of linear algebra: scalar multiplication, matrix addition, and matrix multiplication. It should support algorithms covering BLAS requirements levels 1, 2, and 3.
 
 == Considerations ==
 
-The design should cleanly separate the underlying data representation from
-its numerical aspects.
+The design should cleanly separate the underlying data representation from its numerical aspects.
 
 == Extensions ==
 
 Extend and optimize the library for fixed-size matrices.
 
-Extend the library for arbitrary-dimensions (e.g., 3 and 4 dimensional
-matrices). It's not clear (to me) what mathematical operations should be
-supported for such structures.
+Extend the library for arbitrary-dimensions (e.g., 3 and 4 dimensional matrices). It's not clear (to me) what mathematical operations should be supported for such structures.
+
 
 == Links ==
 
