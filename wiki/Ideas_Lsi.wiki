@@ -16,7 +16,9 @@ List of things to which careful consideration should be paid to.
 
 
 ==Links==
-Nice Description of LSI [http://c2.com/cgi/wiki?LatentSemanticIndexing Description Of LSI]
+Nice Description of LSI [http://c2.com/cgi/wiki?LatentSemanticIndexing Description of LSI]
+
+Wikipedia description of LSI [http://en.wikipedia.org/wiki/Latent_semantic_indexing Wikipedia LSI]
 
 ==Nice To Have==
 Here are a list of different thing which would be nice to have within the library:
