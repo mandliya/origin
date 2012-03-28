@@ -1,4 +1,25 @@
 =Latent Semantic Indexing=
 
-==Basic Project Desc==
-==
+==Description==
+
+
+==Project==
+
+
+===Parts==
+
+
+===Project Layout==
+
+
+==Considerations==
+
+
+==Extensions==
+
+
+==Links==
+
+
+==Nice To Have==
+
