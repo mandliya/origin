@@ -24,7 +24,9 @@ accepts integer arguments.
 == Extensions ==
 
 Consider large fixed-width integers whose precision is determined by a
-template argument (e.g., `integer<128>`).
+template argument (e.g., `integer<128>`). These could be implemented in terms
+of the internals of an arbitrary precision integer, or this could be a separate
+project.
 
 == Links ==
 

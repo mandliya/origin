@@ -18,6 +18,7 @@ This list is a work in progress.
 
  * [Ideas_Integer Arbitrary precision integer]
  * [Ideas_Real Arbitrary precision floating point]
+ * [Ideas_Fixed Fixed point numbers]
  * [Ideas_Rational Fractions and rational numbers]
 
 == Linear algebra ==
