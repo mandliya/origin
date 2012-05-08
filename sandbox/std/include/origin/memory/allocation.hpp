@@ -11,6 +11,8 @@
 #include <cstddef>
 #include <new>
 
+#include <origin/memory/pointer.hpp>
+
 namespace origin
 {
   // Pointer (concept)
@@ -21,6 +23,22 @@ namespace origin
   // A void pointer is a kind of generic pointer to which all types of pointers
   // can be implicitly converted. In main memory, this is called void*. A
   // garbage-collected pointer might be called gc_ptr<void>.
+
+
+
+  // Void pointer type (alias)
+  // The void pointer type alias names the result of Alloc's allocate method.
+  // Alloc must be an allocator type.
+  template <typename Alloc>
+    using Void_pointer_type = decltype(std::declval<Alloc>().allocate(0));
+
+
+
+  // Pointer type (alias)
+  // The pointer type alias yields a pointer to an object of type T that 
+  // would be allocated by Alloc.
+  template <typename T, typename Alloc>
+    using Pointer_type = Rebind_pointer<Void_pointer_type<Alloc>, T>;
 
 
 
@@ -77,7 +95,8 @@ namespace origin
   };
 
   // Equality comparable
-  // For all allocator-derived types, equality comparability 
+  // For all allocator-derived types, equality comparability is implemented
+  // in terms of the allocator::equal method.
   bool operator==(const allocator& a, const allocator& b) 
   { 
     return a.equal(b);
@@ -108,9 +127,17 @@ namespace origin
     {
     }
 
+    // Every instance of an auto allocator is distinct from every other. No
+    // two are the same.
+    virtual bool equal(const auto_allocator& x) const
+    {
+      return false;
+    }
+
   private:
     char buf[N];
   };
+
 
 } // namespace origin
 

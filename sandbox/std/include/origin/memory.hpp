@@ -9,6 +9,7 @@
 #define ORIGIN_MEMORY_HPP
 
 #include <utility>
+#include <iostream>
 
 #include <origin/memory/allocation.hpp>
 
@@ -19,15 +20,17 @@ namespace origin
   // the given allocator. Note that the allocated memory is uninitialized. Its 
   // use is as follows:
   //
-  //    X *ptr = allocate<X>(3);
+  //    X *ptr = allocate<X>(alloc, 3);
   //
-  // Which returns a pointer to 3 objects.
+  // Which returns a pointer to 3 objects of type X. This operation is
+  // primarily provided as helper for untyped allocators.
   //
-  // TODO: Are there any requirements on T?
+  // FIXME: What are the requirements on T? It cannot be void.
   template <typename T, typename Alloc>
-    T *allocate(Alloc& alloc, std::size_t n = 1)
+    inline Pointer_type<T, Alloc> allocate(Alloc& alloc, std::size_t n = 1)
     {
-      return reinterpret_cast<T*>(alloc.allocate(n * sizeof(T)));
+      using Ptr = Pointer_type<T, Alloc>;
+      return static_ptr_cast<Ptr>(alloc.allocate(n * sizeof(T)));
     }
 
 
@@ -37,9 +40,10 @@ namespace origin
   // p must have been previously allocated using a corresponding allocate
   // operation on the same alloc object.
   //
-  // TODO: Are there any type requirements on T?
-  template <typename Alloc, typename T>
-    void deallocate(Alloc& alloc, T *p, std::size_t n = 1)
+  // FIXME: Write the type requirements for this algorithm. Here, Alloc must
+  // be an Allocator and Ptr must be in the family of allocated pointer types.
+  template <typename Alloc, typename Ptr>
+    void deallocate(Alloc& alloc, Ptr p, std::size_t n = 1)
     {
       alloc.deallocate(p, n);
     }
