@@ -24,8 +24,8 @@ namespace origin
   // Which returns a pointer to 3 objects.
   //
   // TODO: Are there any requirements on T?
-  template <typename T>
-    T *allocate(Allocator& alloc, std::size_t n = 1)
+  template <typename T, typename Alloc>
+    T *allocate(Alloc& alloc, std::size_t n = 1)
     {
       return reinterpret_cast<T*>(alloc.allocate(n * sizeof(T)));
     }
@@ -38,10 +38,10 @@ namespace origin
   // operation on the same alloc object.
   //
   // TODO: Are there any type requirements on T?
-  template <typename T>
-    void deallocate(Allocator& alloc, T *p)
+  template <typename Alloc, typename T>
+    void deallocate(Alloc& alloc, T *p, std::size_t n = 1)
     {
-      alloc.deallocate(p);
+      alloc.deallocate(p, n);
     }
 
 

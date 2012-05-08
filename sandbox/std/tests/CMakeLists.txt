@@ -8,5 +8,8 @@
 origin_executable(test_build build.cpp)
 target_link_libraries(test_build origin)
 
-origin_executable(test_dynarray dynarray.cpp)
-target_link_libraries(test_dynarray origin)
+origin_executable(test_allocator allocator.cpp)
+target_link_libraries(test_allocator origin)
+
+# origin_executable(test_dynarray dynarray.cpp)
+# target_link_libraries(test_dynarray origin)

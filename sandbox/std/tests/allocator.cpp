@@ -11,4 +11,12 @@
 
 using namespace origin;
 
-int main() { }
+int main() 
+{
+  allocator alloc;
+  int *a = allocate<int>(alloc, 10);
+  for(int i = 0; i < 10; ++i)
+    std::cout << a[i] << ' ';
+  std::cout << '\n';
+  deallocate(alloc, a, 10);
+}
