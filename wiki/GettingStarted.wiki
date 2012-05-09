@@ -7,10 +7,7 @@ This page describes how to get started with the Origin C++0x libraries.
 == Programs and Libraries ==
 The Origin C++0x Libraries have two prerequisites:
 
- * [http://www.cmake.org/ CMake] -- Origin uses CMake as the build system
- * [http://www.boost.org/ Boost] -- Origin _may_ rely on one or more Boost C++ libraries.
-
-Note that the dependence on Boost is typically for convenience of users. Chances are, if you're trying to use Origin, then Boost will have some libraries that you will also find interesting. Best just to have it installed.
+ * [http://www.cmake.org/ CMake] -- Origin uses CMake as the build system.
 
 == Compilers ==
 You also need a compiler that implements the following C++0x features:
@@ -61,9 +58,8 @@ Origin uses CMake as the build system and relies on a number environment variabl
 || `CXX` || Absolute path to the SVN-built g++ executable ||
 || `LD_LIBRARY_PATH` || Paths to the library's for GMP, MPFR, MPC, etc. ||
 || `ORIGIN_ROOT` || The path to the top-level Origin directory ||
-|| `BOOST_ROOT` || The path to the top-level Boost directory ||
 
-Note that `LD_LIBRARY_PATH` may be `DYLIB_LIBRARY_PATH` on Mac OS X. Also, `BOOST_ROOT` only needs to be defined if Boost is not installed on a system include path.
+Note that `LD_LIBRARY_PATH` may be `DYLIB_LIBRARY_PATH` on Mac OS X.
 
 Note that you could also set `PATH` to include the binaries to the custom-built GCC. This would replace the `CXX` variable.
 
