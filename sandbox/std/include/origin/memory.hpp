@@ -15,60 +15,91 @@
 
 namespace origin
 {
-  // Allocate
-  // The allocate operation allocates n objects of the specified type using
-  // the given allocator. Note that the allocated memory is uninitialized. Its 
-  // use is as follows:
-  //
-  //    X *ptr = allocate<X>(alloc, 3);
-  //
-  // Which returns a pointer to 3 objects of type X. This operation is
-  // primarily provided as helper for untyped allocators.
-  //
-  // FIXME: What are the requirements on T? It cannot be void.
-  template <typename T, typename Alloc>
-    inline Pointer_type<T, Alloc> allocate(Alloc& alloc, std::size_t n = 1)
-    {
-      using Ptr = Pointer_type<T, Alloc>;
-      return static_ptr_cast<Ptr>(alloc.allocate(n * sizeof(T)));
-    }
-
-
-
-  // Deallocate
-  // The deallocate operation deallocate the memory pointed to by p. The value
-  // p must have been previously allocated using a corresponding allocate
-  // operation on the same alloc object.
-  //
-  // FIXME: Write the type requirements for this algorithm. Here, Alloc must
-  // be an Allocator and Ptr must be in the family of allocated pointer types.
-  template <typename Alloc, typename Ptr>
-    void deallocate(Alloc& alloc, Ptr p, std::size_t n = 1)
-    {
-      alloc.deallocate(p, n);
-    }
+  // Initialization and destruction
+  // The construct(alloc, x, args...) and destroy(alloc, x) algorithms in this
+  // module take an allocator argument so that they may be overloaded for
+  // specific allocator types. For basic allocators, no overloads should be
+  // required.
 
 
 
   // Construct
   // Initialize the allocated object pointed to by p using the given arguments,
-  // which are forwarded to an appropriate constructor.
-  template <typename T, typename... Args>
-    void construct(T& p, Args&&... args)
+  // which are forwarded to an appropriate constructor. This operation may be
+  // overloaded for custom allocators or types.
+  //
+  // Template parameters:
+  //    Alloc   - An Allocator type
+  //    T       - The type of object being initialized
+  //    Args... - The types of arguments forwarded to T's constructor
+  //
+  // Parameters:
+  //    alloc   - An allocator object; unused in this definition
+  //    x       - A reference to an uninitialized object being constructed
+  //    args... - Arguments forwarded to T's constructor
+  //
+  // Note: The address of x is taken using operator &. Any type overloading that
+  // operator to do something other than return the address cannot be
+  // initialized using this operation. The preferred alternative is to overload
+  // this operation specifically for that type.
+  template <typename Alloc, typename T, typename... Args>
+    void construct(Alloc& alloc, T& x, Args&&... args)
     {
       // static_assert(Constructible<T, Args...>(), "");
-      new (addressof(p)) T(std::forward<Args>(args)...);
+      new (&x) T(std::forward<Args>(args)...);
     }
 
 
 
   // Destroy
-  // Uninitialize the object pointed to by p, but do not deallocate its memory.
-  template <typename T>
-    void destroy(T& p)
+  // Destroy the object referred to by x, but do not deallocate its memory.
+  // This operation may be overloaded for custom allocators or types.
+  //
+  // Template parameters:
+  //    Alloc   - An Allocator type
+  //    T       - The type of object being destroyed
+  //
+  // Parameters:
+  //    alloc   - An allocator object; unused in this definition
+  //    x       - A reference to an initialized object being destroyed
+  template <typename Alloc, typename T>
+    void destroy(Alloc& alloc, T& x)
     {
       // static_assert(Destructible<T>(), "");
-      p.~T();
+      x.~T();
+    }
+
+
+
+  // NOTE: The following algorithms are not intended to be overloaded by library
+  // users.
+
+
+
+  // Destroy
+  // Destroy the objects in the range [first, last). Note that this does not
+  // deallocate memory.
+  template <typename Alloc, typename I>
+    void destroy(Alloc& alloc, I first, I last)
+    {
+      // static_assert(Input_iterator<I>(), "");
+      // assert(is_bounded_range(first, last));
+      while (first != last) {
+        destroy(alloc, *first);
+        ++first;
+      }
+    }
+
+
+
+  // Uninitialized copy step
+  // Construct *result with the value of *iter, and increment both iterators.
+  template <typename Alloc, typename I, typename O>
+    inline void uninitialized_copy_step(Alloc& alloc, I& iter, O& result)
+    {
+      construct(alloc, *result, *iter);
+      ++iter;
+      ++result;
     }
 
 
@@ -81,14 +112,58 @@ namespace origin
   //
   // FIXME: This algorithm does not work on iterators whose result types are
   // not references. This should be reflected in the type requirements.
-  template <typename I, typename O>
-    O uninitialized_copy(I first, I last, O result)
+  template <typename Alloc, typename I, typename O>
+    O uninitialized_copy(Alloc& alloc, I first, I last, O result)
     {
       // static_assert(Copy<I, O>(), "");
-      while (first != last) {
-        construct(*result, *first);
-        ++first;
-        ++result;
+      while (first != last)
+        uninitialized_copy_step(alloc, first, result);
+      return result;
+    }
+
+
+  // Uninitialized copy n.
+  // FIXME: This needs to return pair<I, O>.
+  //
+  // FIXME: Optimize for memmovable types.
+  template <typename Alloc, typename I, typename O>
+    O uninitialized_copy_n(Alloc& alloc, I first, std::size_t n, O result)
+    {
+      while(n != 0) {
+        uninitialized_copy_step(alloc, first, result);
+        --n;
+      }
+      return result;
+    }
+
+
+
+  // Uninitialized move
+  //
+  // FIXME: Document these algorithms...
+
+  template <typename Alloc, typename I, typename O>
+    inline void uninitialized_move_step(Alloc& alloc, I& iter, O& result)
+    {
+      construct(alloc, *result, std::move(*iter));
+      ++iter;
+      ++result;
+    }
+
+  template <typename Alloc, typename I, typename O>
+    O uninitialized_move(Alloc& alloc, I first, I last, O result)
+    {
+      while (first != last)
+        uninitialized_move_step(alloc, first, result);
+      return result;
+    }
+
+  template <typename Alloc, typename I, typename O>
+    O uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
+    {
+      while (n != 0) {
+        uninitialized_move_step(alloc, first, result);
+        --n;
       }
       return result;
     }
@@ -96,20 +171,37 @@ namespace origin
 
 
   // Uninitialized fill
-  // Initialize each unitialized object in [first, last) with the specified
-  // value.
+  // Initialize each object in [first, last) with the specified value.
   //
-  // FIXME: Optimize for the case where we can use memset.
+  // FIXME: Optimize where we can use memset.
   // 
   // FIXME: This algorithm does not work on iterators whose result types are
   // not references. This should be reflected in the type requirements.
-  template <typename I, typename T>
-    void uninitialized_fill(I first, I last, const T& value)
+  template <typename Alloc, typename I, typename T>
+    void uninitialized_fill(Alloc& alloc, I first, I last, const T& value)
     {
       while (first != last) {
-        construct(*first, value);
+        construct(alloc, *first, value);
         ++first;
       }
+    }
+
+
+
+  // Uninitialized fill n
+  // Initialize each object in the range [first, first + n) with a copy of
+  // value.
+  //
+  // FIXME: Optimize where we can use memset.
+  template <typename Alloc, typename I, typename T>
+    I uninitialized_fill_n(Alloc& alloc, I first, std::size_t n, const T& value)
+    {
+      while (n != 0) {
+        construct(alloc, *first, value);
+        ++first;
+        --n;
+      }
+      return first;
     }
 }
 

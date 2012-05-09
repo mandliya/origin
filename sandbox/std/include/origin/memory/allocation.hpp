@@ -15,22 +15,11 @@
 
 namespace origin
 {
-  // Pointer (concept)
-  // A pointer encapsulates the location of an object in memory. Note that
-  // memory does not need to be in-process; it could easily be in secondary
-  // storage, or it could be remote.
-  //
-  // A void pointer is a kind of generic pointer to which all types of pointers
-  // can be implicitly converted. In main memory, this is called void*. A
-  // garbage-collected pointer might be called gc_ptr<void>.
-
-
-
-  // Void pointer type (alias)
-  // The void pointer type alias names the result of Alloc's allocate method.
-  // Alloc must be an allocator type.
+  // Pointer type (alias)
+  // The pointer type alias refers to the result of Alloc's allocate method,
+  // which is a Void pointer of some pointer family.
   template <typename Alloc>
-    using Void_pointer_type = decltype(std::declval<Alloc>().allocate(0));
+    using Pointer_type = decltype(std::declval<Alloc>().allocate(0));
 
 
 
@@ -38,7 +27,7 @@ namespace origin
   // The pointer type alias yields a pointer to an object of type T that 
   // would be allocated by Alloc.
   template <typename T, typename Alloc>
-    using Pointer_type = Rebind_pointer<Void_pointer_type<Alloc>, T>;
+    using Pointer_to = Rebind_pointer<Pointer_type<Alloc>, T>;
 
 
 
@@ -53,6 +42,62 @@ namespace origin
   // Pointers are that can transfer values into and out of main memory. A
   // garbage collecting allocator returns Pointers that trace their 
   // reachability.
+  //
+  // A Basic allocator is one that that allocates naked C++ pointers. Most
+  // allocators are (should be?) basic allocators.
+  //
+  // FIXME: Actually implement this concept. What are the actual requirements?
+  // It must support a.allocate() and a.deallocate() and the result of 
+  // allocate() must be a Void_pointer.
+  template <typename Alloc>
+    constexpr bool Allocator()
+    {
+      return true;
+    }
+
+
+
+  // Allocate
+  // The allocate operation allocates n objects of the specified type using
+  // the given allocator. Note that the allocated memory is uninitialized. Its 
+  // use is as follows:
+  //
+  //    X *ptr = allocate<X>(alloc, 3);
+  //
+  // Which returns a pointer to 3 objects of type X, assuming that alloc is an
+  // memory allocator. This operation is primarily provided as helper for untyped
+  // allocators.
+  //
+  // Template parameters:
+  //    T -- A non-void type; this argument must be given explicitly.
+  //    Alloc -- An Allocator
+  //
+  // Parameters:
+  //    alloc -- an object of Allocator type
+  //    n -- the number of objects of type T to be allocated.
+  template <typename T, typename Alloc>
+    inline Pointer_to<T, Alloc> allocate(Alloc& alloc, std::size_t n = 1)
+    {
+      static_assert(!Void<T>(), "");
+      using Ptr = Pointer_to<T, Alloc>;
+      return static_ptr_cast<Ptr>(alloc.allocate(n * sizeof(T)));
+    }
+
+
+
+  // Deallocate
+  // The deallocate operation deallocate the memory pointed to by p. The value
+  // p must have been previously allocated using a corresponding allocate
+  // operation on the same alloc object.
+  //
+  // FIXME: Write the type requirements for this algorithm. Here, Alloc must
+  // be an Allocator and Ptr must be in the family of allocated pointer types.
+  template <typename Alloc, typename Ptr>
+    void deallocate(Alloc& alloc, Ptr p, std::size_t n = 1)
+    {
+      static_assert(Same_pointer_family<Ptr, Pointer_type<Alloc>>(), "");
+      alloc.deallocate(p, n);
+    }
 
 
 
@@ -63,11 +108,13 @@ namespace origin
   //
   // TODO: Should we also support placement allocation through this interface?
   //
-  // TODO: Consider whether or not its worthwhile to support mechanisms for
-  // copy and swap propagation that the standard uses, but in a more graceful
-  // way (if possible). The mechanism is defined in [23.2.1/7-8]. A good 
-  // default position seems to be that allocators should not be copied and
-  // only swapped if they compare equal.
+  // TODO: Should there be a separate protocol for the allocation of arrays? It
+  // is conceivable that an allocator may want to do separate book-keeping for
+  // arrays than single objects. Other kinds of allocators may also return
+  // different pointer types when allocating arrays vs. allocating objects.
+  //
+  // TODO: Should this be non-copyable? Clearly, I am not using the standard's
+  // allocator design; does copying even make sense?
   class allocator
   {
   public:
@@ -94,18 +141,26 @@ namespace origin
     virtual bool equal(const allocator& x) const { return true; }
   };
 
-  // Equality comparable
+
+
+  // Equality_comparable<allocator>
   // For all allocator-derived types, equality comparability is implemented
   // in terms of the allocator::equal method.
-  bool operator==(const allocator& a, const allocator& b) 
+  inline bool operator==(const allocator& a, const allocator& b) 
   { 
     return a.equal(b);
   }
 
-  bool operator!=(const allocator& a, const allocator& b)
+  inline bool operator!=(const allocator& a, const allocator& b)
   {
     return !a.equal(b);
   }
+
+
+
+  // Default allocator
+  // Returns a reference to the global default allocator.
+  allocator& default_allocator();
 
 
 

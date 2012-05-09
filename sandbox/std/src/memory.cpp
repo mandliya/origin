@@ -6,3 +6,27 @@
 // and conditions.
 
 #include <origin/memory.hpp>
+
+
+// Memory initializer
+// The memory initializer class is responsible for the initialaization of
+// global memory resources such as the default allocator.
+class memory_initializer
+{
+public:
+    origin::allocator alloc;
+};
+
+// Globally initialized memory object.
+memory_initializer memory_init;
+
+
+
+namespace origin
+{
+  allocator& default_allocator()
+  {
+    return memory_init.alloc;
+  }
+}
+

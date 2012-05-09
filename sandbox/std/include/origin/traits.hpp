@@ -97,6 +97,13 @@ namespace origin
 
 
 
+  // Same (constraint)
+  // Returns true if T and U are the same types.
+  template <typename T, typename U>
+    constexpr bool Same() { return std::is_same<T, U>::value; }
+
+
+
   // Infrastructure for finding the common type of the T and U.
   //
   // NOTE: This supercedes the std implementation of common type, which is
@@ -330,18 +337,35 @@ namespace origin
   
 
     
-  // Pointers
+  // C++ Pointers
+  // These traits are specific to C++ object and function pointer types, not
+  // the broader pointer abstraction established in the memory module. This
+  // trait does not describe pointers-to-members.
     
-  // Returns true if T is a pointer.
+
+
+  // C++ pointer (constraint)
+  // Returns true if T is a C++ pointer type of the form T*.
   template <typename T>
-    constexpr bool Pointer() { return std::is_pointer<T>::value; }
+    constexpr bool Cxx_pointer() { return std::is_pointer<T>::value; }
     
+
+
+  // Add pointer (alias)
+  // The add pointer alias names a type that is a pointer-to-T iff T can be
+  // pointed to (C++ cannot form pointers to references).
   template <typename T>
-    using Add_pointer = typename std::add_pointer<T>::type;
+    using Add_cxx_pointer = typename std::add_pointer<T>::type;
     
+
+
+  // Remove pointer (alias)
+  // If T is a pointer-to-U type, then the remove alias type names the type U,
+  // otherwise, the alias names T.
   template <typename T>
-    using Remove_pointer = typename std::remove_pointer<T>::type;
-    
+    using Remove_cxx_pointer = typename std::remove_pointer<T>::type;
+
+
   
   // References
     
