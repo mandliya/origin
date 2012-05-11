@@ -25,23 +25,16 @@
 // is deleted. Every now and then it will be 'vacuumed'. At that time, the data
 // will be made contiguous.
 
-// FIXME: add edges
+// Clarification of terms: The adjacency vector is a vector based implementation
+// of a adjacency list. The list that holds the neighboring vertices is called
+// the vertex list and the sublists are called the neighbor list.
+
+// FIXME: consider scrapping the base impl in favor of two separate types
 
 // Curerntly, this is a vertex cumulable graph base.
 
 // Is there a deeper data structure here? 2 dimensional vector? Can it be
 // extended to n-dimensions?
-
-
-/*  interface checklist
-
-inititalizers
-in_edge
-
-
-
-*/
-
 
 namespace origin
 {
@@ -209,7 +202,8 @@ namespace origin
       vertex_iterator begin_, end_;
     };
 
-
+    // This is essentially the undirected vertex
+    // Does not currently support multigraph
     class adjacency_vector_base
     {
     public:
@@ -217,7 +211,6 @@ namespace origin
       // Type definitions
 
       using vertex = vertex_handle<std::size_t>;
-      //using vertex_value_type = V;
       using edge = undirected_edge_handle<std::size_t>;
 
       using vertex_vector = std::vector<vertex>;
@@ -245,20 +238,79 @@ namespace origin
       bool null() const { return vertex_vector_.empty(); }
       size_type order() const { return vertex_vector_.size(); }
 
-      size_type out_degree(vertex v) const;
+      size_type adjacent_size(vertex v) const;
 
-      // Unsafe
-      bool connected(vertex v, vertex u) {
-        /*if (v.value < order()) {
-          if (some_equal(vertex_vector_[v.value()], u))
-            return true
-          else if (u.value < order())
-            return some_equal(vertex_vector_[u.value()], v);
-        }*/
-        //return false;
+      bool predecessor(vertex v, vertex u) {
         return some_equal(vertex_vector_[v.value()], u)
             || some_equal(vertex_vector_[u.value()], v);
       }
+
+      // Graph structure modifiers
+      vertex add_vertex();
+      void remove_vertex(vertex v);  // deletes an entry from the vertex
+      edge add_edge(vertex v, vertex u);
+      void erase_edge(edge e);
+      void remove_edges(vertex u, vertex v);
+
+      // Helper functions for derived classes
+      void increment_edge_count() { ++edge_count_; }
+      void decrement_edge_count() { --edge_count_; }
+
+      vertex_range vertices() const
+        { return vertex_range(vertex_iterator(0),vertex_iterator(order())); }
+      out_edge_range out_edges(vertex v) const
+        { return vertex_vector_[v.value()]; }
+
+
+    private:
+      size_type edge_count_;
+      std::vector<vertex_vector> vertex_vector_;
+    };
+
+    // Thin wrapper over vector<vector<T>> tailored for adj vector
+    /*class vertex_vector_vector_base
+    {
+    public:
+
+      // Type definitions
+
+      using vertex = vertex_handle<std::size_t>;
+      using edge = undirected_edge_handle<std::size_t>;
+
+      using vertex_vector = std::vector<vertex>;
+
+      using vertex_range = vertex_range_impl;
+      using edge_range = int;
+      using out_edge_range = vertex_vector;
+
+      using size_type = vertex_vector::size_type;
+
+
+
+      // Initializers
+      vertex_vector_vector_base(size_type n = 0) : main_vector_(n) { }
+
+
+
+      // Graph metrics
+      bool empty()      const { return size_type{0} == edge_count_; }
+      size_type size()  const { return edge_count_; }
+      bool null()       const { return vertex_vector_.empty(); }
+      size_type order() const { return vertex_vector_.size(); }
+
+      size_type subvector_size(vertex v) const;
+
+      bool contains(vertex v, vertex u) {
+        return some_equal(vertex_vector_[v.value()], u)
+            || some_equal(vertex_vector_[u.value()], v);
+      }
+
+      // Graph structure modifiers
+      vertex add_subvector();
+      void remove_subvector(vertex v);  // deletes a vector from the list
+      edge subvector_push(vertex v, vertex u); // Adds u to v
+      void subvector_erase(edge e);
+      void subvector_erase_all(vertex u, vertex v); // erases occurances of v in u
 
       // Data accessors
 
@@ -268,16 +320,10 @@ namespace origin
         { return vertex_vector_[v.value()]; }
 
 
-
-      // Graph structure modifiers
-      vertex add_vertex();
-      void remove_vertex(vertex v);
-      edge add_edge(vertex v, vertex u);
-
     private:
       size_type edge_count_;
-      std::vector<vertex_vector> vertex_vector_;
-    };
+      std::vector<vertex_vector> main_vector_;
+    };*/
 
     auto adjacency_vector_base::add_vertex() -> vertex
     {
@@ -289,12 +335,6 @@ namespace origin
     {
       // remove entry in the main vector
       vertex_vector_.erase(vertex_vector_.begin() + v.value);
-      // remove all instances from sub-vectors
-      for(auto & vec : vertex_vector_) {
-        for(auto j : vec) {
-          ???
-        }
-      }
     }
 
     auto adjacency_vector_base::add_edge(vertex v, vertex u) -> edge
@@ -313,3 +353,13 @@ namespace origin
 
 
 #endif // ORIGIN_GRAPH_ADJACECNY_VECTOR_IMPL_HPP
+
+
+
+
+
+class adj_vec_base
+{
+public:
+
+};
