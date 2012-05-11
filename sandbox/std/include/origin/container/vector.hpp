@@ -8,152 +8,30 @@
 #ifndef ORIGIN_CONTAINER_VECTOR_HPP
 #define ORIGIN_CONTAINER_VECTOR_HPP
 
-#include <origin/memory.hpp>
+#include <origin/container/impl/vector_base.hpp>
 
 namespace origin
 {
-  // Vector base
-  // The vector base implements the basic allocation logic for a dynamic array.
-  // Note that the vector base is non-copyable. This is class represents a
-  // resource: a block of allocated memory.
-  template <typename T>
-    class vector_base
-    {
-    public:
-      // Default constructible
-      // Initialize the vector base with its default state; its first and
-      // last pointers set to nullptr, and its size() is 0.
-      vector_base() noexcept
-        : alloc(default_allocator())
-        , first {nullptr}, last {nullptr}, limit {nullptr}
-      { }
-
-
-      // Default with allocator
-      // Default construct this object, using alloc as the allocator for
-      // memory allocation and deallocation.
-      explicit vector_base(allocator& a)
-        : alloc(a), first {nullptr}, last {nullptr}, limit {nullptr}
-      { }
-
-
-
-      // Move constructible
-      // Transfer the state of x into this vector base, and reset the state
-      // of x to its default. Note that the vector base is not move-assignable.
-      vector_base(vector_base&& x)
-        : alloc(x.alloc), first {x.first}, last {x.last}, limit {x.limit}
-      { 
-        x.first = x.last = x.limit = nullptr;
-      }
-
-      vector_base& operator=(vector_base&&) = delete;
-
-
-
-      // Copy constructible
-      // A vector base is non-copyable. In order to copy a vector, allocate a
-      // a new block of memory and then copy the values in the derived class.
-      vector_base(const vector_base&) = delete;
-      vector_base& operator=(const vector_base&) = delete;
-
-
-
-      // Size construction
-      // Initialize the vector base by allocating exactly n objects.
-      vector_base(std::size_t n)
-        : alloc(default_allocator())
-        , first {allocate(n)}, last {first}, limit {first + n}
-      { }
-
-      // Size with allocator
-      vector_base(std::size_t n, allocator& a)
-        : alloc(a), first {allocate(n)}, last {first}, limit{first + n}
-      { }
-
-
-
-      // Destructible
-      ~vector_base()
-      {
-        deallocate(first, capacity());
-      }
-
-
-      // Allocate and deallocate
-
-      // Allocate n objects, returning a pointer to the first.
-      T *allocate(std::size_t n)
-      {
-        return origin::allocate<T>(alloc, n);
-      }
-
-      // Deallocate n objects pointed to by p.
-      void deallocate(T* p, std::size_t n)
-      {
-        origin::deallocate(alloc, p, n);
-      }
-
-
-
-      // Observers
-
-      // Returns true if there are no initialized values in the allocated block
-      // of memory.
-      bool empty() const { return first == last; }
-
-      // Returns true when every allocated object is initialized.
-      bool full() const { return last == limit; }
-
-      // Returns the number of initialized valies in the allocated block of
-      // memory.
-      std::size_t size() const { return last - first; }
-
-      // Returns the total number of allocated objects in the block of memory.
-      std::size_t capacity() const { return limit - first; }
-
-
-
-      // Mutators
-      void swap(vector_base& x)
-      {
-        assert(alloc == x.alloc);
-        std::swap(first, x.first);
-        std::swap(last, x.last);
-        std::swap(limit, x.limit);
-      }
-
-    public:
-      allocator& alloc;
-      T *first;
-      T *last;
-      T *limit;
-    };
-
-
-
-
   // Vector
   // A vector is a dynamically allocated and efficiently extendable array of
   // objects.
   //
   // FIXME: Finish documentation.
   template <typename T>
-    class vector : private vector_base<T>
+    class vector
     {
-      using Base = vector_base<T>;
-
-      // Return a reference to the vector base.
-      Base&       base()       { return *this; }
-      const Base& base() const { return *this; }
+      vector_base<T> base;
 
     public:
+      using iterator       = T*;
+      using const_iterator = const T*;
+
       // Default constructible
-      vector() : Base() { }
-      vector(allocator& alloc) : Base(alloc) { }
+      vector() noexcept : base() { }
+      vector(allocator& alloc) noexcept : base(alloc) { }
 
       // Move semantics
-      vector(vector&& x);
+      vector(vector&& x) noexcept;
       vector(vector&& x, allocator& alloc);
       vector& operator=(vector&& x);
 
@@ -171,29 +49,32 @@ namespace origin
       vector(std::initializer_list<T> list, allocator& alloc);
       vector& operator=(std::initializer_list<T>& list);
 
-      // Destructible.
+      // Destructible
       ~vector() { clear(); }
 
 
+
       // Observers
-      allocator&       get_allocator()       { return this->alloc; }
-      const allocator& get_allocator() const { return this->alloc; }
+      allocator&       get_allocator()       { return base.alloc; }
+      const allocator& get_allocator() const { return base.alloc; }
 
-      bool empty() const { return Base::empty(); }
-      std::size_t size() const { return Base::size(); }
-      std::size_t capacity() const { return Base::capacity(); }
-
+      bool empty() const { return base.empty(); }
+      bool full() const { return base.full(); }
+      std::size_t size() const { return base.size(); }
+      std::size_t capacity() const { return base.capacity(); }
+      std::size_t residual() const { return base.residual(); }
 
 
       // Data access
-      T&       operator[](std::size_t n)       { return *(this->first + n); }
-      const T& operator[](std::size_t n) const { return *(this->first + n); }
+      T&       operator[](std::size_t n)       { return *(base.first + n); }
+      const T& operator[](std::size_t n) const { return *(base.first + n); }
 
-      T&       front()       { *this->first; }
-      const T& front() const { *this->first; }
+      T&       front()       { *base.first; }
+      const T& front() const { *base.first; }
 
-      T&       back()       { return *(this->last - 1); }
-      const T& back() const { return *(this->last - 1); }
+      T&       back()       { return *(base.last - 1); }
+      const T& back() const { return *(base.last - 1); }
+
 
 
       // Capacity
@@ -201,10 +82,19 @@ namespace origin
       void reserve(std::size_t n);
       void resize(std::size_t n, const T& value = {});
 
+
+
       // Modifiers
       void push_back(T&& value);
       void push_back(const T& value);
       void pop_back();
+
+      iterator insert(const_iterator pos, T&& value);
+      iterator insert(const_iterator pos, const T& value);
+      iterator insert(const_iterator pos, std::size_t n, const T& value);
+
+      iterator erase(const_iterator pos);
+      iterator erase(const_iterator first, const_iterator last);
 
       void clear();
       vector& swap(vector& tmp);
@@ -212,20 +102,21 @@ namespace origin
 
 
       // Iterators
-      T *begin() { return this->first; }
-      T *end()   { return this->last; }
+      iterator begin() { return base.first; }
+      iterator end()   { return base.last; }
 
-      const T* begin() const { return this->first; }
-      const T* end() const   { return this->last; }
+      const_iterator begin() const { return base.first; }
+      const_iterator end() const   { return base.last; }
+
+      const_iterator cbegin() const { return base.first; }
+      const_iterator cend() const   { return base.last; }
     };
 
 
-  template <typename T> struct vector_util;
-
 
   template <typename T>
-    vector<T>::vector(vector&& x) 
-      : Base(std::move(x)) 
+    vector<T>::vector(vector&& x) noexcept
+      : base(std::move(x.base)) 
     { }
 
   // If an alternative allocator is given for the move, then we must allocate
@@ -234,11 +125,11 @@ namespace origin
   // responsible for the creation of x's pointers.
   template <typename T>
     vector<T>::vector(vector&& x, allocator& alloc)
-      : Base(alloc, x.size())
+      : base(alloc, x.size())
     {
-      vector_util<T>::move_init(*this, x.begin(), x.size(), begin());
+      vector_util::move_init(base, x.base);
     }
-    
+
   template <typename T>  
     auto vector<T>::operator=(vector&& x) -> vector&
     { 
@@ -248,51 +139,51 @@ namespace origin
 
   template <typename T>
     vector<T>::vector(const vector& x)
-      : Base(x.size())
+      : base(x.size())
     { 
-      vector_util<T>::copy_init(*this, x.begin(), x.size(), begin());
+      vector_util::copy_init(base, x.base);;
     }
 
   template <typename T>
     vector<T>::vector(const vector& x, allocator& alloc)
-      : Base(alloc, x.size())
+      : base(alloc, x.size())
     {
-      vector_util<T>::copy_init(*this, x.begin(), x.size(), begin());
+      vector_util::copy_init(base, x.base);;
     }
 
   template <typename T>
     auto vector<T>::operator=(const vector& x) -> vector&
-    { 
+    {
       vector tmp {x};
       return swap(tmp);
     }
 
   template <typename T>
     inline vector<T>::vector(std::size_t n, const T& value)
-      : Base(n)
+      : base(n)
     {
-      vector_util<T>::fill_init(*this, n, value);
+      vector_util::fill_init(base, n, value);
     }
 
   template <typename T>
     inline vector<T>::vector(std::size_t n, const T& value, allocator& alloc)
-      : Base(alloc, n)
+      : base(alloc, n)
     {
-      vector_util<T>::fill_init(*this, n, value);
+      vector_util::fill_init(base, n, value);
     }
 
   template <typename T>
     vector<T>::vector(std::initializer_list<T> list)
-      : Base(list.size())
+      : base(list.size())
     {
-      vector_util<T>::copy_init(*this, list.begin(), list.size(), begin());
+      vector_util::copy_init(base, list.begin(), list.size());
     }
 
   template <typename T>
     vector<T>::vector(std::initializer_list<T> list, allocator& alloc)
-      : Base(alloc, list.size())
+      : base(alloc, list.size())
     {
-      vector_util<T>::copy_init(*this, list.begin(), list.size(), begin());
+      vector_util::copy_init(base, list.begin(), list.size());
     }
 
   template <typename T>
@@ -302,45 +193,138 @@ namespace origin
       return swap(tmp);
     }
 
-
   template <typename T>
     void vector<T>::push_back(T&& value)
     {
-      vector_util<T>::maybe_grow(*this);
-      construct(this->alloc, *this->last, std::move(value));
-      ++this->last;
+      if (full()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_init(tmp, base);
+        vector_util::insert_at_end(tmp, std::move(value));
+        base.swap(tmp);
+      } else {
+        insert_at_end(base, std::move(value));
     }
+  }
 
-  // FIXME: Consider refactoring this into the util class.
   template <typename T>
     void vector<T>::push_back(const T& value)
     {
-      vector_util<T>::maybe_grow(*this);
-      construct(this->alloc, *this->last, value);
-      ++this->last;
+      if (full()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_init(tmp, base);
+        vector_util::insert_at_end(tmp, value);
+        base.swap(tmp);
+      } else {
+        vector_util::insert_at_end(base, value);
+      }
     }
 
-  // FIXME: Consider refactoring to the util class.
   template <typename T>
     void vector<T>::pop_back()
     {
       assert(!empty());
-      --this->last;
-      destroy(this->alloc, *this->last);
+      vector_util::erase_at_end(base, 1);
     }
+
+  template <typename T>
+    auto vector<T>::insert(const_iterator pos, const T& value) -> iterator
+    {
+      std::size_t n = pos - base.first;
+      if (full()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_to_end(tmp, base.first, pos);
+        vector_util::insert_at_end(tmp, value);
+        vector_util::move_to_end(tmp, pos, base.last).
+        base.swap(tmp);
+      } else {
+        if (pos == end()) {
+          vector_util::insert_at_end(base, value);
+        } else {
+          vector_util::shift_right(base, pos, 1);
+          vector_util::insert_at(base, base.first + n, value);
+        }
+      }
+      return base.first + n;
+    }
+
+  template <typename T>
+    auto vector<T>::insert(const_iterator pos, T&& value) -> iterator
+    {
+      std::size_t n = pos - base.first;
+      if (full()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_to_end(tmp, base.first, pos);
+        vector_util::insert_at_end(tmp, std::move(value));
+        vector_util::move_to_end(tmp, pos, base.last);
+        base.swap(tmp);
+      } else {
+        if (pos == end()) {
+          vector_util::insert_at_end(base, std::move(value));
+        } else {
+          vector_util::shift_right(base, pos, 1);
+          vector_util::insert_at(base, base.first + n, std::move(value));
+        }
+      }
+      return base.first + n;
+    }
+
+  template <typename T>
+    auto vector<T>::insert(const_iterator pos, std::size_t n, const T& value) 
+      -> iterator
+    {
+      std::size_t m = pos - base.first;
+      if (size() + n >= capacity()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_to_end(tmp, base.first, pos);
+        vector_util::fill_at_end(tmp, n, value);
+        vector_util::move_to_end(tmp, pos, base.last);
+        base.swap(tmp);
+      } else {
+        if (pos == end()) {
+          vector_util::fill_at_end(base, n, value);
+        } else {
+          vector_util::shift_right(base, pos, n);
+          vector_util::fill_at(base, base.first + m, n, value);
+        }
+      }
+      return base.first + m;
+    }
+
+
+  template <typename T>
+    auto vector<T>::erase(const_iterator pos) -> iterator
+    {
+      assert(pos >= base.first && pos < base.last);
+      std::size_t n = pos - base.first;
+      vector_util::shift_left(base, base.first + n, 1);
+      return base.first + n;
+    }
+
+  template <typename T>
+    auto vector<T>::erase(const_iterator first, const_iterator last) -> iterator
+    {
+      assert(first >= base.first && last <= base.last);
+      std::size_t n = first - base.first;
+      vector_util::shift_left(base, base.first + n, last - first);
+      return base.first + n;
+    }
+
 
   // Reserve only enough capacity required to store the initialized values
   // of the vector.
   //
-  // NOTE: The standard claims that the corresponding shrink_to_fit method
-  // is a non-binding request, meaning that we don't have to implement this,
-  // or we can reserve more memory than just the size.
+  // Note that the standard claims that the corresponding shrink_to_fit method
+  // is a non-binding request [23.3.6.3/9], meaning that we don't have to
+  // implement this, or we can reserve more memory than just the size. However,
+  // the implementation is easy enough.
   template <typename T>
     void vector<T>::reserve()
     {
-      if (capacity() == size())
-        return;
-      vector_util<T>::shrink(*this, size());
+      if (capacity() != size()) {
+        vector_base<T> tmp(size(), base.alloc);
+        vector_util::move_init(tmp, base);
+        base.swap(tmp);
+      }
     }
 
   // Reserve n objects of memory. Note that if n is less than the current 
@@ -348,29 +332,29 @@ namespace origin
   template <typename T>
     void vector<T>::reserve(std::size_t n)
     {
-      if (n > capacity())
-        vector_util<T>::grow(*this, n);
+      if (n > capacity()) {
+        vector_base<T> tmp(n, base.alloc);
+        vector_util::move_init(tmp, base);
+        base.swap(tmp);
+      }
     }
 
-  // FIXME: Refactor into the util class?
+  // FIXME: Thiis can be made much, much simpler by writing it in terms of
+  // insert.
   template <typename T>
     void vector<T>::resize(std::size_t n, const T& value)
     {
       if (n > size()) {
-        // If more capacity is needed, ensure that we have it.
-        if (n > capacity())
-          reserve(n);
-
-        // FIXME: We can't separate the reserve and fill calls. If an exception
-        // thrown here, then we've lost the strong exception guarantee, which
-        // is actually pretty easy to achieve. We have to move and fill inside
-        // a single try block.
-        this->last = 
-          uninitialized_fill_n(this->alloc, this->last, n - size(), value);
-
+        if (n > capacity()) {
+          vector_base<T> tmp(n, base.alloc);
+          vector_util::move_init(tmp, base);
+          vector_util::fill_at_end(tmp, n - size(), value);
+          base.swap(tmp);
+        } else {
+          vector_util::fill_at_end(base, n - size(), value);
+        }
       } else if (n < size()) {
-        destroy(this->alloc, this->first + n, this->last);
-        this->last = this->first + n;
+        vector_util::erase_at_end(base, size() - n);
       }
     }
 
@@ -379,160 +363,20 @@ namespace origin
   template <typename T>
     void vector<T>::clear()
     {
-      vector_util<T>::clear(*this);
+      vector_util::erase_all(base);
     }
 
 
   // Two vectors may only be swapped when they have the same allocator (i.e.,
   // the allocators must compare equal).
   template <typename T>
-    auto vector<T>::swap(vector& tmp) -> vector&
+    auto vector<T>::swap(vector& x) -> vector&
     {
-      Base::swap(tmp.base());
+      base.swap(x.base);
       return *this;
     }
 
 
-
-
-
-
-  // Vector (utility)
-  // The vector util class implements common algorithms for the vector and
-  // vector base classes. The purpose of this class is to encapsulate the
-  // actual logic used by the data structure, hopefully allowing us to reuse
-  // aspects of it in other data structures.
-  template <typename T>
-    struct vector_util
-    {
-      // Fill the [base.first, base.first + n) elements with a copy of value.
-      //
-      // TODO: optimize for noexcept copies?
-      static void 
-      fill_init(vector_base<T>& base, std::size_t n, const T& value)
-      {
-        try {
-          base.last = uninitialized_fill_n(base.alloc, base.first, n, value);
-        } catch (...) {
-          base.deallocate(base.first, n);
-          throw;
-        }
-      }
-
-
-
-      // FIXME: If move T is not nothrow-movable, then we can't actually move;
-      // we have to copy values. In fact, this holds for *every* move operation
-      // in the utility class.
-      static void
-      move_init(vector_base<T>& base, const T* first, std::size_t n, T* result)
-      {
-        try {
-          base.last = uninitialized_move_n(base.alloc, first, n, result);
-        } catch (...) {
-          base.deallocate(base.first, n);
-          throw;
-        }
-      }
-
-
-
-      // Copy the values in [first, first + n) into the uninitialized
-      // objects of [result, result + n).
-      //
-      // TODO: Optimize for no-except copies?
-      static void 
-      copy_init(vector_base<T>& base, const T* first, std::size_t n, T* result)
-      {
-        try {
-          base.last = uninitialized_copy_n(base.alloc, first, n, result);
-        } catch (...) {
-          base.deallocate(base.first, n);
-          throw;
-        }
-      }
-
-
-      // Grow the capacity of the vector base to n elements.
-      static void grow(vector_base<T>& base, std::size_t n)
-      {
-        T* first = base.allocate(n);
-        T* last = first;
-        T* limit = first + n;
-
-        // Move data into the newly allocated memory.
-        try {
-          last = uninitialized_move(base.alloc, base.first, base.last, first);
-        } catch(...) {
-          base.deallocate(first, n);
-          throw;
-        }
-
-        // Release the previously used memory block and point to the new
-        // block.
-        base.deallocate(base.first, base.capacity());
-        base.first = first;
-        base.last = last;
-        base.limit = limit;
-      }
-
-
-      // If the vector is full, the reserve additional space. The first
-      // reallocation reserves 4 bytes; all subsequent allocations reserve
-      // double the previous capacity.
-      //
-      // FIXME: Make these values (4, 2) depend on vector_base<T>?.
-      static void maybe_grow(vector_base<T>& base)
-      {
-        if (base.full()) {
-          std::size_t n = base.capacity() == 0 ? 4 : 2 * base.capacity();
-          grow(base, n);
-        }
-      }
-
-
-      // Reduce the size of the vector base to n elements. If n < size(),
-      // only n elements are reserved. The remaining size() - n are destroyed.
-      static void shrink(vector_base<T>&  base, std::size_t n)
-      {
-        T* first = base.allocate(n);
-        T* last = first;
-        T* limit = first + n;
-
-        // We may need to destroy some data.
-        // NOTE: This must not throw! Do I need to do something special to
-        // guarantee that?
-        if (n < base.size()) {
-          destroy(base.alloc, base.first + n, base.last);
-        }
-
-        // Move values from the old memory segment into the new one. Note that
-        // we may not be moving n elements if base.size() is smaller.
-        // FIXME: Use min() if we can do so without inducing a dependency.
-        std::size_t sz = n < base.size() ? n : base.size();
-        try {
-          last = uninitialized_move_n(base.alloc, base.first, sz, first);
-        } catch (...) {
-          base.deallocate(first, n);
-          throw;
-        }
-
-        // Deallocate old block of memory and reset the vector base.
-        base.deallocate(base.first, base.capacity());
-        base.first = first;
-        base.last = last;
-        base.limit = limit;
-      }
-
-
-
-      // Erase all of the initialized elements in the vector base.
-      static void clear(vector_base<T>& base)
-      {
-        destroy(base.alloc, base.first, base.last);
-        base.last = base.first;
-      }
-    };
 
 
 

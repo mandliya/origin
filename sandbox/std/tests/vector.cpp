@@ -8,11 +8,22 @@
 #include <cassert>
 #include <iostream>
 #include <type_traits>
+#include <vector>
 
 #include <origin/utility.hpp>
 #include <origin/container/vector.hpp>
 
 using namespace origin;
+
+
+template <typename R>
+  void print(const R& range)
+  {
+    for (auto x : range)
+      std::cout << x << ' ';
+    std::cout << '\n';
+  }
+
 
 template <typename C>
   void test_default_init()
@@ -148,6 +159,64 @@ template <typename V>
     assert(v.capacity() > 5);
   }
 
+
+// FIXME: It would be nice if I actually asserted these properties.
+template <typename V>
+  void test_insert()
+  {
+    V v1 {1, 2, 3};
+    v1.reserve(10);
+
+    std::cout << "insert value at end: ";
+    v1.insert(v1.end(), 4);
+    print(v1);
+
+    std::cout << "insert value in middle: ";
+    v1.insert(v1.begin() + 1, -1);
+    print(v1);
+
+    std::cout << "insert many in middle: ";
+    v1.insert(v1.begin() + 3, 2, -2);
+    print(v1);
+
+    std::cout << "insert many at end: ";
+    v1.insert(v1.end(), 5, -5);
+    print(v1);
+  }
+
+template <typename V>
+  void test_erase()
+  {
+    V v {1, 2, 3, 4, 5};
+    
+    auto i1 = v.erase(v.begin());
+    assert(*i1 == 2);
+    print(v);
+
+    auto i2 = v.erase(v.end() - 1);
+    assert(i2 == v.end());
+    print(v);
+
+    auto i3 = v.erase(v.begin() + 1);
+    assert(*i3 == 4);
+    print(v);
+  }
+
+template <typename V>
+  void test_erase_range()
+  {
+    V v {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for(auto i = v.begin() + 2; i != v.end() - 2; ++i)
+      std::cout << *i << ' ';
+    std::cout << '\n';
+    
+    auto i = v.erase(v.begin() + 2, v.end() - 2);
+    print(v);
+    assert(*i == 9);
+  }
+
+
 int main() 
 {
   using V = vector<int>;
@@ -165,4 +234,7 @@ int main()
   test_resize<V>();
 
   test_push_pop_back<V>();
+  test_insert<V>();
+  test_erase<V>();
+  test_erase_range<V>();
 }

@@ -20,6 +20,8 @@ namespace origin
   // module take an allocator argument so that they may be overloaded for
   // specific allocator types. For basic allocators, no overloads should be
   // required.
+  //
+  // TODO: Should these allocators be in with allocation.hpp?
 
 
 
@@ -42,6 +44,11 @@ namespace origin
   // operator to do something other than return the address cannot be
   // initialized using this operation. The preferred alternative is to overload
   // this operation specifically for that type.
+  //
+  // FIXME: If T is "allocator-friendly", then we should propagate the
+  // allocator reference to the initialized class. I believe, but am not 
+  // certain that any allocator-friendly class will have, for every constructor,
+  // an equivalent constructor that takes an additional allocator. 
   template <typename Alloc, typename T, typename... Args>
     void construct(Alloc& alloc, T& x, Args&&... args)
     {
@@ -140,12 +147,17 @@ namespace origin
 
   // Uninitialized move
   //
+  // For these algorithms, Value_type<I> is not nothrow-constructible, but is
+  // constructible, then the algorithm will actually copy instead of moving.
+  // This helps preserve the strong exception safety. This algorithm is still
+  // allowed to throw, but it won't invalidate the source data if it does.
+  //
   // FIXME: Document these algorithms...
 
   template <typename Alloc, typename I, typename O>
     inline void uninitialized_move_step(Alloc& alloc, I& iter, O& result)
     {
-      construct(alloc, *result, std::move(*iter));
+      construct(alloc, *result, std::move_if_noexcept(*iter));
       ++iter;
       ++result;
     }
