@@ -110,7 +110,7 @@ namespace origin
 
 
       // Capacity
-      void reserve();
+      void collapse();
       void reserve(std::size_t n);
       void resize(std::size_t n, const T& value = {});
 
@@ -171,7 +171,7 @@ namespace origin
     vector<T>::vector(vector&& x, allocator& alloc)
       : base(x.size(), alloc)
     {
-      vector_util::move_init(base, x.base);
+      base.move_at_end(x.base);
       x.base.last = x.base.first;
     }
 
@@ -188,15 +188,15 @@ namespace origin
   template <typename T>
     vector<T>::vector(const vector& x)
       : base(x.size())
-    { 
-      vector_util::copy_init(base, x.base);;
+    {
+      base.copy_at_end(x.base);
     }
 
   template <typename T>
     vector<T>::vector(const vector& x, allocator& alloc)
       : base(alloc, x.size())
     {
-      vector_util::copy_init(base, x.base);
+      base.copy_at_end(x.base);
     }
 
   template <typename T>
@@ -210,14 +210,14 @@ namespace origin
     inline vector<T>::vector(std::size_t n, const T& value)
       : base(n)
     {
-      vector_util::fill_init(base, n, value);
+      base.fill_at_end(n, value);
     }
 
   template <typename T>
     inline vector<T>::vector(std::size_t n, const T& value, allocator& alloc)
       : base(alloc, n)
     {
-      vector_util::fill_init(base, n, value);
+      base.fill_at_end(n, value);
     }
 
   template <typename T>
@@ -250,7 +250,7 @@ namespace origin
       vector<T>::vector(I first, I last, Requires<Forward_iterator<I>()>*)
         : base(distance(first, last))
       {
-        vector_util::copy_init(base, first, last);
+        base.copy_at_end(first, last);
       }
 
   template <typename T>
@@ -258,7 +258,7 @@ namespace origin
       vector<T>::vector(I first, I last, allocator& alloc, Requires<Forward_iterator<I>()>*)
         : base(alloc, distance(first, last))
       {
-        vector_util::copy_init(base, first, last);
+        base.copy_at_end(first, last);
       }
 
   template <typename T>
@@ -292,7 +292,7 @@ namespace origin
       vector<T>::vector(const R& range, Requires<Forward_range<R>()>*)
         : base(origin::size(range))
       {
-        vector_util::copy_init(base, origin::begin(range), origin::end(range));
+        base.copy_at_end(origin::begin(range), origin::end(range));
       }
 
   template <typename T>
@@ -300,7 +300,7 @@ namespace origin
       vector<T>::vector(const R& range, allocator& alloc, Requires<Forward_range<R>()>*)
         : base(alloc, origin::size(range))
       {
-        vector_util::copy_init(base, begin(range), end(range));
+        base.copy_at_end(origin::begin(range), origin::end(range));
       }
 
   template <typename T>
@@ -315,14 +315,14 @@ namespace origin
     vector<T>::vector(std::initializer_list<T> list)
       : base(list.size())
     {
-      vector_util::copy_init(base, list.begin(), list.size());
+      base.copy_at_end(list.begin(), list.end());
     }
 
   template <typename T>
     vector<T>::vector(std::initializer_list<T> list, allocator& alloc)
       : base(alloc, list.size())
     {
-      vector_util::copy_init(base, list.begin(), list.size());
+      base.copy_at_end(list.begin(), list.end());
     }
 
   template <typename T>
@@ -337,11 +337,11 @@ namespace origin
     {
       if (full()) {
         vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_init(tmp, base);
-        vector_util::insert_at_end(tmp, std::move(value));
+        tmp.move_at_end(tmp, base);
+        tmp.append(std::move(value));
         base.swap(tmp);
       } else {
-        insert_at_end(base, std::move(value));
+        base.append(std::move(value));
     }
   }
 
@@ -350,11 +350,11 @@ namespace origin
     {
       if (full()) {
         vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_init(tmp, base);
-        vector_util::insert_at_end(tmp, value);
+        tmp.move_at_end(base);
+        tmp.append(value);
         base.swap(tmp);
       } else {
-        vector_util::insert_at_end(base, value);
+        base.append(value);
       }
     }
 
@@ -362,49 +362,51 @@ namespace origin
     void vector<T>::pop_back()
     {
       assert(!empty());
-      vector_util::erase_at_end(base, 1);
-    }
-
-  template <typename T>
-    auto vector<T>::insert(const_iterator pos, const T& value) -> iterator
-    {
-      std::size_t n = pos - base.first;
-      if (full()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_to_end(tmp, base.first, pos);
-        vector_util::insert_at_end(tmp, value);
-        vector_util::move_to_end(tmp, pos, base.last).
-        base.swap(tmp);
-      } else {
-        if (pos == end()) {
-          vector_util::insert_at_end(base, value);
-        } else {
-          vector_util::shift_right(base, pos, 1);
-          vector_util::insert_at(base, base.first + n, value);
-        }
-      }
-      return base.first + n;
+      base.erase_at_end(1);
     }
 
   template <typename T>
     auto vector<T>::insert(const_iterator pos, T&& value) -> iterator
     {
       std::size_t n = pos - base.first;
+      T* mid = base.first + n;
       if (full()) {
         vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_to_end(tmp, base.first, pos);
-        vector_util::insert_at_end(tmp, std::move(value));
-        vector_util::move_to_end(tmp, pos, base.last);
+        tmp.move_at_end(base.first, mid);
+        tmp.append(std::move(value));
+        tmp.move_at_end(mid, base.last);
         base.swap(tmp);
+        return base.first + n;
       } else {
         if (pos == end()) {
-          vector_util::insert_at_end(base, std::move(value));
+          base.append(std::move(value));
         } else {
-          vector_util::shift_right(base, pos, 1);
-          vector_util::insert_at(base, base.first + n, std::move(value));
+          base.insert(mid, std::move(value));
         }
+        return mid;
       }
-      return base.first + n;
+    }
+
+  template <typename T>
+    auto vector<T>::insert(const_iterator pos, const T& value) -> iterator
+    {
+      std::size_t n = pos - base.first;
+      T* mid = base.first + n;
+      if (full()) {
+        vector_base<T> tmp(base.next_capacity(), base.alloc);
+        tmp.move_at_end(base.first, mid);
+        tmp.append(value);
+        tmp.move_at_end(mid, base.last);
+        base.swap(tmp);
+        return base.first + n;
+      } else {
+        if (pos == end()) {
+          base.append(value);
+        } else {
+          base.insert(mid, value);
+        }
+        return mid;
+      }
     }
 
   template <typename T>
@@ -412,21 +414,23 @@ namespace origin
       -> iterator
     {
       std::size_t m = pos - base.first;
+      T* mid = base.first + m;
       if (size() + n >= capacity()) {
         vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_to_end(tmp, base.first, pos);
-        vector_util::fill_at_end(tmp, n, value);
-        vector_util::move_to_end(tmp, pos, base.last);
+        tmp.move_at_end(base.first, mid);
+        tmp.fill_at_end(n, value);
+        tmp.move_at_end(base.first, mid);
         base.swap(tmp);
+        return base.first + m;
       } else {
         if (pos == end()) {
-          vector_util::fill_at_end(base, n, value);
+          base.fill_at_end(n, value);
         } else {
-          vector_util::shift_right(base, pos, n);
-          vector_util::fill_at(base, base.first + m, n, value);
+          base.shift_right(mid, n);
+          base.fill_at_pos(mid, n, value);
         }
+        return mid;
       }
-      return base.first + m;
     }
 
   template <typename T>
@@ -446,14 +450,15 @@ namespace origin
         -> iterator
       {
         std::size_t n = distance(first, last);
+        T* mid = const_cast<T*>(pos);
         if (size() + n >= capacity) {
           vector_base<T> tmp(base.next_capacity(), base.alloc);
-        vector_util::move_to_end(tmp, base.first, pos);
-        vector_util::copy_at_end(tmp, first, last);
-        vector_util::move_to_end(tmp, pos, base.last);
+          tmp.move_at_end(base.first, mid);
+          tmp.copy_at_end(first, last);
+          tmp.move_at_end(mid, base.last);
         } else {
-          vector_util::shift_right(base, pos, n);
-          vector_util::copy_at_pos(base, base.first + n, first, last);
+          base.shift_right(pos, n);
+          base.copy_at_pos(base.first + n, first, last);
         }
       }
 
@@ -470,7 +475,7 @@ namespace origin
     {
       assert(pos >= base.first && pos < base.last);
       std::size_t n = pos - base.first;
-      vector_util::shift_left(base, base.first + n, 1);
+      base.shift_left(base.first + n, 1);
       return base.first + n;
     }
 
@@ -479,7 +484,7 @@ namespace origin
     {
       assert(first >= base.first && last <= base.last);
       std::size_t n = first - base.first;
-      vector_util::shift_left(base, base.first + n, last - first);
+      base.shift_left(base.first + n, last - first);
       return base.first + n;
     }
 
@@ -492,11 +497,11 @@ namespace origin
   // implement this, or we can reserve more memory than just the size. However,
   // the implementation is easy enough.
   template <typename T>
-    void vector<T>::reserve()
+    void vector<T>::collapse()
     {
       if (capacity() != size()) {
         vector_base<T> tmp(size(), base.alloc);
-        vector_util::move_init(tmp, base);
+        tmp.move_at_end(base);
         base.swap(tmp);
       }
     }
@@ -508,27 +513,27 @@ namespace origin
     {
       if (n > capacity()) {
         vector_base<T> tmp(n, base.alloc);
-        vector_util::move_init(tmp, base);
+        tmp.move_at_end(base);
         base.swap(tmp);
       }
     }
 
   // FIXME: Thiis can be made much, much simpler by writing it in terms of
-  // insert.
+  // insert and erase. See libstdc++.
   template <typename T>
     void vector<T>::resize(std::size_t n, const T& value)
     {
       if (n > size()) {
         if (n > capacity()) {
           vector_base<T> tmp(n, base.alloc);
-          vector_util::move_init(tmp, base);
-          vector_util::fill_at_end(tmp, n - size(), value);
+          tmp.move_at_end(base);
+          tmp.fill_at_end(n - size(), value);
           base.swap(tmp);
         } else {
-          vector_util::fill_at_end(base, n - size(), value);
+          base.fill_at_end(n - size(), value);
         }
       } else if (n < size()) {
-        vector_util::erase_at_end(base, size() - n);
+        base.erase_at_end(size() - n);
       }
     }
 
@@ -537,7 +542,7 @@ namespace origin
   template <typename T>
     void vector<T>::clear()
     {
-      vector_util::erase_all(base);
+      base.erase();
     }
 
 
@@ -549,10 +554,6 @@ namespace origin
       base.swap(x.base);
       return *this;
     }
-
-
-
-
 
 } // namespace origin
 

@@ -16,6 +16,11 @@ namespace origin
   // The vector base implements the basic allocation logic for a dynamic array.
   // Note that the vector base is non-copyable. This is class represents a
   // resource: a block of allocated memory.
+  //
+  // Invariants:
+  //    this->first <= this->last
+  //    this->last <= this->limit
+  //    is_uninitilized(this->last, this->limit)
   template <typename T>
     class vector_base
     {
@@ -126,7 +131,7 @@ namespace origin
       // Returns the next capacity of the vector base if the owning vector
       // is dynamically resized.
       //
-      // TODO: Better name for this function?
+      // TODO: Can I find a better name for this function?
       std::size_t next_capacity() const
       {
         return capacity() == 0 ? 4 : capacity() * 2;
@@ -134,13 +139,128 @@ namespace origin
 
 
       // Mutators
-      void swap(vector_base& x)
+
+      // Exchange the reresentation of x with this object. The operation is
+      // only valid when the allocators of this and x compare equal.
+      //
+      // Requires:
+      //    this->alloc == x.alloc
+      void swap(vector_base& x);
+
+
+      // Copy the values in [first, last) into the uninitialized range of
+      // objects in this buffer indicated by pos.
+      //
+      // Requires:
+      //    pos >= this->first
+      //    pos + (last - first) <= this->limit
+      //    is_uninitilized(pos, pos + (last - first))
+      template <typename I>
+        T* copy_at_pos(T* pos, I first, I last);
+
+
+      // Copy the values in [first, last) into the uninitialized range of
+      // objects at the end of this buffer. 
+      //
+      // Requires:
+      //    this->last + (last - first) <= this->limit
+      //    is_uninitialized(this->last, this->last + (last - first))
+      template <typename I>
+        void copy_at_end(I first, I last);
+
+
+      // Copy the values in x into the uninitialized range of objects at the
+      // end of this buffer.
+      //
+      // Requires:
+      //    this->last + x.size() <= this->limit
+      //    is_uninitialized(this->last, this->last + x.size())
+      void copy_at_end(const vector_base<T>& x);
+
+
+
+      template <typename I>
+        T* move_at_pos(T* pos, I first, I last);
+
+      template <typename I>
+        void move_at_end(I first, I last);
+
+      void move_at_end(vector_base<T>& x);
+
+
+
+    // Fill the objects in the range [pos, pos + n) with the given value. Note
+    // that this operation does not update the any of the pointers on the vector
+    // base. This is assumed to have been done previously.
+    //
+    // Requires:
+    //    Constructible<T, U>
+    //    ???
+    template <typename U>
+      T* fill_at_pos(T* pos, std::size_t n, const U& value)
       {
-        assert(alloc == x.alloc);
-        std::swap(first, x.first);
-        std::swap(last, x.last);
-        std::swap(limit, x.limit);
+        static_assert(Constructible<T, U>(), "");
+        return uninitialized_fill_n(this->alloc, pos, n, value);
       }
+
+    // Fill the objects of [this->last, this->last + n) with the given value and
+    // update this->last to this->last + n.
+    //
+    // Requires:
+    //    Constructible<T, U>
+    //    ???
+    template <typename U>
+      void fill_at_end(std::size_t n, const U& value) 
+      {
+        static_assert(Constructible<T, U>(), "");
+        this->last = fill_at_pos(this->last, n, value);
+      }
+
+
+      // Erase n elements at the end of this buffer, updating this->last to
+      // point to the new last initialized value.
+      //
+      // Requires:
+      //    n < this->size()
+      void erase_at_end(std::size_t n);
+
+
+      // Erase all the elements in this buffer, updating the buffer so that
+      // it is empty.
+      void erase();
+
+
+      // Insert or emplace args into the position indicated by pos. Note that
+      // this does not update out's last pointer; it is assumed that is done
+      // when data is shifted to accommodate the insertion.
+      //
+      // Requires:
+      //    is_uninitialized(pos)
+      template <typename... Args>
+        void insert(T* pos, Args&&... args);
+
+
+      // Insert or emplace the given arguments into the last object of the base
+      // and update the last pointer to reflect the insertion.
+      //
+      // Requires:
+      //    this->last < this->limit
+      template <typename... Args>
+        void append(Args&&... args);
+
+
+      // TODO: These are great candidates for general purpose memory algorithms.
+
+      // Shift the elements of the buffer to the "right", creating an n-object
+      // range of uninitialized objects at pos., That is, [pos, pos + n) is an
+      // uninitialized after the shift operation and [pos + n, pos + 2 * n)
+      // hold the elements of the original range.
+      void shift_right(T* pos, std::size_t n);
+
+      // Shift the elements of the buffer to the "left", effectively erasing the
+      // n elements pointed to by pos. That is, the elements [pos, pos + n) are
+      // replaced by those in [pos + n, pos + 2 * n).
+      void shift_left(T* pos, std::size_t n);
 
     public:
       allocator& alloc;
@@ -151,214 +271,131 @@ namespace origin
 
 
 
-  // Vector (utility)
-  // The vector util class implements common algorithms for the vector and
-  // vector base classes. The purpose of this class is to encapsulate the
-  // actual logic used by the data structure, hopefully allowing us to reuse
-  // aspects of it in other data structures.
-  //
-  // FIXME: Move these methods into the vector base class, but do a better job
-  // designing them. They need some serious attention.
-  struct vector_util
-  {
-    // Move values from the input base to the output base where
-    // out.capacity() >= in.size().
-    //
-    // This function only supports the strong exception guarantee when called
-    // from a constructor. A propagated exception will cause the vector's base
-    // to be destroyed.
-    template <typename Base>
-      static void move_init(Base& out, const Base& in) 
+  template <typename T>
+    void vector_base<T>::swap(vector_base& x)
+    {
+      assert(alloc == x.alloc);
+      std::swap(first, x.first);
+      std::swap(last, x.last);
+      std::swap(limit, x.limit);
+    }
+
+  template <typename T>
+    template <typename I>
+      inline T* vector_base<T>::copy_at_pos(T* pos, I first, I last)
       {
-        out.last = uninitialized_move_n(out.alloc, in.first, in.size(), out.first);
+        assert(pos >= this->first && pos <= this->last);
+        return uninitialized_copy(this->alloc, first, last, pos);
       }
 
-
-
-    // Move the elemnts in the range [first, last) to the end of output base.
-    // The output base must have out.capacity() > out.size() + (last - first).
-    template <typename Base, typename T>
-      static void move_to_end(Base& out, const T* first, const T* last)
+  template <typename T>
+    template <typename I>
+      inline void vector_base<T>::copy_at_end(I first, I last)
       {
-        out.last = uninitialized_move(out.alloc, first, last, out.last);
+        this->last = copy_at_pos(this->last, first, last);
       }
 
+  template <typename T>
+    inline void vector_base<T>::copy_at_end(const vector_base& x)
+    {
+      assert(this->last + x.size() <= this->limit);
+      copy_at_end(x.first, x.last);
+    }
 
-
-    // Copy the values from the range [first, first + n) into the output base
-    // where out.capacity() >= n.
-    template <typename T, typename I>
-      static void copy_init(vector_base<T>& out, I first, std::size_t n)
+  template <typename T>
+    template <typename I>
+      inline T* vector_base<T>::move_at_pos(T* pos, I first, I last)
       {
-        out.last = uninitialized_copy_n(out.alloc, first, n, out.first);
+        assert(pos >= this->first && pos <= this->last);
+        return uninitialized_move(this->alloc, first, last, pos);
       }
 
-
-    // Copy the values in [first, last) into the uninitialized range of objects
-    // indicated by pos.
-    template <typename T, typename I>
-      static T* copy_at_pos(vector_base<T>& out, T* pos, I first, I last)
+  template <typename T>
+    template <typename I>
+      inline void vector_base<T>::move_at_end(I first, I last)
       {
-        return uninitialized_copy(out.alloc, first, last, pos);
+        this->last = move_at_pos(this->last, first, last);
       }
 
-    // Copy the values in [first, last) into the uninitialized range of
-    // objects at the end of the buffer.
-    template <typename T, typename I>
-      void copy_at_end(vector_base<T>& out, I first, I last)
+  template <typename T>
+    inline void vector_base<T>::move_at_end(vector_base& x)
+    {
+      assert(this->last + x.size() <= this->limit);
+      move_at_end(x.first, x.last);
+    }
+
+  template <typename T>
+    template <typename... Args>
+      inline void vector_base<T>::insert(T* pos, Args&&... args)
       {
-        out.last = copy_at_pos(out, first, last, out.last);
+        this->shift_right(pos, 1);
+        construct(this->alloc, *pos, std::forward<Args>(args)...);
       }
 
-
-    // FIXME: This algorithm is redundant with copy_at_end but only when
-    // out.first == out.last.
-    template <typename T, typename I>
-      static void copy_init(vector_base<T>& out, I first, I last)
+  template <typename T>
+    template <typename... Args>
+      inline void vector_base<T>::append(Args&&... args)
       {
-        out.last = copy_at_pos(out, out.first, first, last);
+        construct(this->alloc, *this->last, std::forward<Args>(args)...);
+        ++this->last;
       }
 
+  template <typename T>
+    inline void vector_base<T>::erase_at_end(std::size_t n)
+    {
+      destroy(this->alloc, this->last - n, this->last);
+      this->last -= n;
+    }
 
-    // Copy values from the input base to the output base where 
-    // out.capacity() >= in.size(). 
-    template <typename Base>
-      static void copy_init(Base& out, const Base& in)
-      {
-        copy_init(out, in.first, in.size());
+  template <typename T>
+    inline void vector_base<T>::erase()
+    {
+      destroy(this->alloc, this->first, this->last);
+      this->last = this->first;
+    }
+
+  template <typename T>
+    void vector_base<T>::shift_right(T* pos, std::size_t n)
+    {
+      T* p = this->last - 1;
+      T* q = p + n;
+
+      // Shift the last elements of the vector base into the uninitialized
+      // segment of memory. This is effectively unitialized_move_backward.
+      while (q != this->last) {
+        construct(this->alloc, *q, std::move(*p));
+        --p;
+        --q;
       }
 
-
-
-    // Fill the objects of the output base with the given value where
-    // out.capacity() >= n.
-    template <typename Base, typename T>
-      static void fill_init(Base& out, std::size_t n, const T& value)
-      {
-        out.last = uninitialized_fill_n(out.alloc, out.first, n, value);
-      }
-
-
-
-    // Destroy the n objects at the end of the vector where n <= size().
-    template <typename Base>
-      static void erase_at_end(Base& out, std::size_t n)
-      {
-        destroy(out.alloc, out.last - n, out.last);
-        out.last -= n;
-      }
-
-
-
-    // Erase all of the initialized elements in the vector base.
-    template <typename Base>
-      static void erase_all(Base& out)
-      {
-        erase_at_end(out, out.size());
-      }
-
-
-
-    // Fill the values in the range [pos, pos + n) with the given value. The
-    // out base must have out.capaicty() >= out.size() + n. Note that this
-    // operation does not update the any of the pointers on the vector base.
-    // This is assumed to have been done previously.
-    template <typename Base, typename I, typename T>
-      static void fill_at(Base& out, I pos, std::size_t n, const T& value)
-      {
-        uninitialized_fill_n(out.alloc, pos, n, value);
-      }
-
-    // Fill the objects of [out.last, out.last + n) with the given value
-    // where out.capacity() >= out.size() + n.
-    template <typename Base, typename T>
-      static void fill_at_end(Base& out, std::size_t n, const T& value) 
-      {
-        out.last = uninitialized_fill_n(out.alloc, out.last, n, value);
-      }
-
-
-
-    // Insert or emplace the given arguments into the position indicated by
-    // pos. Note that this does not update out's last pointer. We assume that
-    // is done when data is shifted to accommodate the insertion.
-    template <typename Base, typename I, typename... Args>
-      static void insert_at(Base& out, I pos, Args&&... args)
-      {
-        construct(out.alloc, *pos, std::forward<Args>(args)...);
-      }
-
-
-    // Insert or emplace the given arguments into the last object of the base,
-    // assuming that out.capacity() > out.size().
-    template <typename Base, typename... Args>
-      static void insert_at_end(Base& out, Args&&... args)
-      {
-        construct(out.alloc, *out.last, std::forward<Args>(args)...);
-        ++out.last;
-      }
-
-
-
-    // Shift the elements of the output base to the right, creating a range
-    // of invalid values in the middle of the vector base. Note that
-    // out.capacity() >= out.size() + n.
-    //
-    // Note that this operation leaves the resulting base in a state that
-    // violates its invariants; there are partially formed objects in the middle
-    // of the vector on termination. A subsequent insert or fill is required
-    // to re-initialize those values.
-    template <typename T>
-      static void shift_right(vector_base<T>& out, const T* pos, std::size_t n)
-      {
-        T* p = out.last - 1;
-        T* q = p + n;
-
-        // Shift the last elements of the vector base into the uninitialized
-        // segment of memory.
-        // This is effectively unitialized_move_backward.
-        while (q != out.last) {
-          construct(out.alloc, *q, std::move(*p));
-          --p;
-          --q;
-        }
-
-        // Then shift the remaining elements from [pos, p) using standard
-        // move assignment, guaranteeing destruction of initialized elements.
-        // This is effectively move_backward.
-        while (p != pos) {
-          *q = std::move(*p);
-          --p;
-          --q;
-        }
+      // Then shift the remaining elements from [pos, p) using standard
+      // move assignment, guaranteeing destruction of initialized elements.
+      // This is effectively move_backward.
+      while (p != pos) {
         *q = std::move(*p);
-        
-        out.last += n;
+        --p;
+        --q;
       }
+      *q = std::move(*p);
 
+      this->last += n;
+    }
 
-    // Shift the elements of the vector to the left so that those in the
-    // range [pos, pos + n) are overwritten by the elements to the right of
-    // pos + n. The remaining n elements at the end of the vector are destroyed.
-    // The function returns an iterator pointing to the first element to the
-    // right of pos that was not destroyed.
-    template <typename T>
-      static void shift_left(vector_base<T>& out, T* pos, std::size_t n)
-      {
-        // This should be equivalent to move(pos + n, out.last, pos).
-        T* p = pos + n;
-        T* q = pos;
-        while (p != out.last) {
-          *q = std::move(*p);
-          ++q;
-          ++p;
-        }
-        assert(out.last - q == n);
-        destroy(out.alloc, q, out.last);
-        out.last = q;
+  template <typename T>
+    void vector_base<T>::shift_left(T* pos, std::size_t n)
+    {
+      // This should be equivalent to move(pos + n, out.last, pos).
+      T* p = pos + n;
+      T* q = pos;
+      while (p != this->last) {
+        *q = std::move(*p);
+        ++q;
+        ++p;
       }
+      destroy(this->alloc, q, this->last);
+      this->last = q;
+    }
 
-  };
 } // namespace origin
 
 #endif
