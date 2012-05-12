@@ -7,8 +7,6 @@
 
 #include <cassert>
 #include <iostream>
-#include <type_traits>
-#include <vector>
 
 #include <origin/utility.hpp>
 #include <origin/container/vector.hpp>
@@ -73,7 +71,7 @@ template <typename C>
     C b;
     b = std::move(a);
     assert(a.empty());
-    assert(a.capacity() == 0);
+    // assert(a.capacity() == 0);
 
     for (auto x : b)
       std::cout << x << ' ';
@@ -103,6 +101,24 @@ template <typename C>
     assert(a[2] == b[2]);
   }
 
+template <typename C>
+  void test_iter_init()
+  {
+    auto list = {1, 2, 3, 4};
+
+    std::cout << "iter init: ";
+    C c(list.begin(), list.end());
+    print(c);
+  }
+
+template <typename C>
+  void test_range_init()
+  {
+    vector<short> a {1, 2, 3};
+    std::cout << "range init: ";
+    C c {a};
+    print(c);
+  }
 
 template <typename V>
   void test_reserve()
@@ -229,6 +245,9 @@ int main()
   test_move_assign<V>();
   test_copy_init<V>();
   test_copy_assign<V>();
+
+  test_iter_init<V>();
+  test_range_init<V>();
 
   test_reserve<V>();
   test_resize<V>();
