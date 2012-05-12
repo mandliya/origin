@@ -8,6 +8,10 @@
 #ifndef ORIGIN_CONTAINER_VECTOR_HPP
 #define ORIGIN_CONTAINER_VECTOR_HPP
 
+#include <initializer_list>
+
+#include <origin/iterator.hpp>
+#include <origin/range.hpp>
 #include <origin/container/impl/vector_base.hpp>
 
 namespace origin
@@ -43,11 +47,39 @@ namespace origin
       // Fill constructible
       vector(std::size_t n, const T& value = {});
       vector(std::size_t n, const T& value, allocator& alloc);
+      vector& assign(std::size_t n, const T& value);
+
+      // Iterator range constructible
+      template <typename I>
+        vector(I first, I last, Requires<Strict_input_iterator<I>()>* = {});
+      template <typename I>
+        vector(I first, I last, allocator& alloc, Requires<Strict_input_iterator<I>()>* = {});
+      template <typename I>
+        vector(I first, I last, Requires<Forward_iterator<I>()>* = {});
+      template <typename I>
+        vector(I first, I last, allocator& alloc, Requires<Forward_iterator<I>()>* = {});
+      template <typename I>
+        vector& assign(I first, I last);
+
+
 
       // Range constructible
+      template <typename R>
+        explicit vector(const R& range, Requires<Strict_input_range<R>()>* = {});
+      template <typename R>
+        vector(const R& range, allocator& alloc, Requires<Strict_input_range<R>()>* = {});
+      template <typename R>
+        explicit vector(const R& range, Requires<Forward_range<R>()>* = {});
+      template <typename R>
+        vector(const R& range, allocator& alloc, Requires<Forward_range<R>()>* = {});
+      template <typename R>
+        auto operator=(const R& range) -> Requires<Range<R>(), vector&>;
+
+
+
       vector(std::initializer_list<T> list);
       vector(std::initializer_list<T> list, allocator& alloc);
-      vector& operator=(std::initializer_list<T>& list);
+      vector& operator=(std::initializer_list<T> list);
 
       // Destructible
       ~vector() { clear(); }
@@ -92,6 +124,14 @@ namespace origin
       iterator insert(const_iterator pos, T&& value);
       iterator insert(const_iterator pos, const T& value);
       iterator insert(const_iterator pos, std::size_t n, const T& value);
+      iterator insert(const_iterator pos, std::initializer_list<T> list);
+
+      template <typename I>
+        iterator insert(const_iterator pos, I first, I last, Requires<Strict_input_iterator<I>()>* = {});
+      template <typename I>
+        iterator insert(const_iterator pos, I first, I last, Requires<Forward_iterator<I>()>* = {});
+      template <typename R>
+        iterator insert(const_iterator pos, const R& range, Requires<Range<R>()>* = {});
 
       iterator erase(const_iterator pos);
       iterator erase(const_iterator first, const_iterator last);
@@ -119,21 +159,29 @@ namespace origin
       : base(std::move(x.base)) 
     { }
 
+
   // If an alternative allocator is given for the move, then we must allocate
   // new memory using that allocator and move the elements of x into the
   // newly allocated memory. We can't just steal pointers since alloc was not
   // responsible for the creation of x's pointers.
+  //
+  // Note that memory allocated to x is not released by this operation. However,
+  // x is returned to an empty state.
   template <typename T>
     vector<T>::vector(vector&& x, allocator& alloc)
-      : base(alloc, x.size())
+      : base(x.size(), alloc)
     {
       vector_util::move_init(base, x.base);
+      x.base.last = x.base.first;
     }
 
+  // NOTE: Move assignment results in allocation. Because the allocator is
+  // held by reference, it can't be replaced. That's fine since we've said
+  // that allocators can't be replaced after initialization anyways.
   template <typename T>  
     auto vector<T>::operator=(vector&& x) -> vector&
     { 
-      vector tmp {std::move(x)};
+      vector tmp {std::move(x), base.alloc};
       return swap(tmp); 
     }
 
@@ -148,13 +196,13 @@ namespace origin
     vector<T>::vector(const vector& x, allocator& alloc)
       : base(alloc, x.size())
     {
-      vector_util::copy_init(base, x.base);;
+      vector_util::copy_init(base, x.base);
     }
 
   template <typename T>
     auto vector<T>::operator=(const vector& x) -> vector&
     {
-      vector tmp {x};
+      vector tmp {x, base.alloc};
       return swap(tmp);
     }
 
@@ -173,6 +221,97 @@ namespace origin
     }
 
   template <typename T>
+    inline auto vector<T>::assign(std::size_t n, const T& value) -> vector&
+    {
+      vector tmp {n, value, base.alloc};
+      return swap(tmp);
+    }
+
+  template <typename T>
+    template <typename I>
+      vector<T>::vector(I first, I last, Requires<Strict_input_iterator<I>()>*)
+        : base()
+      {
+        while (first != last)
+          push_back(*first);
+      }
+
+  template <typename T>
+    template <typename I>
+      vector<T>::vector(I first, I last, allocator& alloc, Requires<Strict_input_iterator<I>()>*)
+        : base(alloc)
+      {
+        while (first != last)
+          push_back(*first);
+      }
+
+  template <typename T>
+    template <typename I>
+      vector<T>::vector(I first, I last, Requires<Forward_iterator<I>()>*)
+        : base(distance(first, last))
+      {
+        vector_util::copy_init(base, first, last);
+      }
+
+  template <typename T>
+    template <typename I>
+      vector<T>::vector(I first, I last, allocator& alloc, Requires<Forward_iterator<I>()>*)
+        : base(alloc, distance(first, last))
+      {
+        vector_util::copy_init(base, first, last);
+      }
+
+  template <typename T>
+    template <typename I>
+      auto vector<T>::assign(I first, I last) -> vector&
+      {
+        vector tmp {first, last, base.alloc};
+        return swap(tmp);
+      }
+
+  template <typename T>
+    template <typename R>
+      vector<T>::vector(const R& range, Requires<Strict_input_range<R>()>*)
+        : base()
+      {
+        for (const auto& x : range)
+          push_back(x);
+      }
+
+  template <typename T>
+    template <typename R>
+      vector<T>::vector(const R& range, allocator& alloc, Requires<Strict_input_range<R>()>*)
+        : base(alloc)
+      {
+        for (const auto& x : range)
+          push_back(x);
+      }
+
+  template <typename T>
+    template <typename R>
+      vector<T>::vector(const R& range, Requires<Forward_range<R>()>*)
+        : base(origin::size(range))
+      {
+        vector_util::copy_init(base, origin::begin(range), origin::end(range));
+      }
+
+  template <typename T>
+    template <typename R>
+      vector<T>::vector(const R& range, allocator& alloc, Requires<Forward_range<R>()>*)
+        : base(alloc, origin::size(range))
+      {
+        vector_util::copy_init(base, begin(range), end(range));
+      }
+
+  template <typename T>
+    template <typename R>
+      auto vector<T>::operator=(const R& range) -> Requires<Range<R>(), vector&>
+      {
+        vector tmp {range, base.alloc};
+        swap(tmp);
+      }
+
+  template <typename T>
     vector<T>::vector(std::initializer_list<T> list)
       : base(list.size())
     {
@@ -187,9 +326,9 @@ namespace origin
     }
 
   template <typename T>
-    auto vector<T>::operator=(std::initializer_list<T>& list) -> vector&
+    auto vector<T>::operator=(std::initializer_list<T> list) -> vector&
     {
-      vector tmp {list};
+      vector tmp {list, base.alloc};
       return swap(tmp);
     }
 
@@ -290,6 +429,41 @@ namespace origin
       return base.first + m;
     }
 
+  template <typename T>
+    template <typename I>
+      auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Strict_input_iterator<I>()>*)
+        -> iterator
+      {
+        while (first != last) {
+          pos = insert(pos, *first);
+          ++first;
+        }
+      }
+
+  template <typename T>
+    template <typename I>
+      auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Forward_iterator<I>()>*)
+        -> iterator
+      {
+        std::size_t n = distance(first, last);
+        if (size() + n >= capacity) {
+          vector_base<T> tmp(base.next_capacity(), base.alloc);
+        vector_util::move_to_end(tmp, base.first, pos);
+        vector_util::copy_at_end(tmp, first, last);
+        vector_util::move_to_end(tmp, pos, base.last);
+        } else {
+          vector_util::shift_right(base, pos, n);
+          vector_util::copy_at_pos(base, base.first + n, first, last);
+        }
+      }
+
+  template <typename T>
+    template <typename R>
+      auto vector<T>::insert(const_iterator pos, const R& range, Requires<Range<R>()>*)
+        -> iterator
+      {
+        return insert(pos, begin(range), end(range));
+      }
 
   template <typename T>
     auto vector<T>::erase(const_iterator pos) -> iterator

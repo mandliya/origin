@@ -47,6 +47,13 @@ namespace origin
         x.first = x.last = x.limit = nullptr;
       }
 
+      vector_base(vector_base&& x, allocator& alloc)
+        : alloc(alloc)
+        , first {allocate(x.size())}, last {first}, limit {first + x.size()}
+      {
+
+      }
+
       vector_base& operator=(vector_base&&) = delete;
 
 
@@ -118,6 +125,8 @@ namespace origin
 
       // Returns the next capacity of the vector base if the owning vector
       // is dynamically resized.
+      //
+      // TODO: Better name for this function?
       std::size_t next_capacity() const
       {
         return capacity() == 0 ? 4 : capacity() * 2;
@@ -147,6 +156,9 @@ namespace origin
   // vector base classes. The purpose of this class is to encapsulate the
   // actual logic used by the data structure, hopefully allowing us to reuse
   // aspects of it in other data structures.
+  //
+  // FIXME: Move these methods into the vector base class, but do a better job
+  // designing them. They need some serious attention.
   struct vector_util
   {
     // Move values from the input base to the output base where
@@ -175,12 +187,37 @@ namespace origin
 
     // Copy the values from the range [first, first + n) into the output base
     // where out.capacity() >= n.
-    template <typename Base, typename I>
-      static void copy_init(Base& out, I first, std::size_t n)
+    template <typename T, typename I>
+      static void copy_init(vector_base<T>& out, I first, std::size_t n)
       {
         out.last = uninitialized_copy_n(out.alloc, first, n, out.first);
       }
 
+
+    // Copy the values in [first, last) into the uninitialized range of objects
+    // indicated by pos.
+    template <typename T, typename I>
+      static T* copy_at_pos(vector_base<T>& out, T* pos, I first, I last)
+      {
+        return uninitialized_copy(out.alloc, first, last, pos);
+      }
+
+    // Copy the values in [first, last) into the uninitialized range of
+    // objects at the end of the buffer.
+    template <typename T, typename I>
+      void copy_at_end(vector_base<T>& out, I first, I last)
+      {
+        out.last = copy_at_pos(out, first, last, out.last);
+      }
+
+
+    // FIXME: This algorithm is redundant with copy_at_end but only when
+    // out.first == out.last.
+    template <typename T, typename I>
+      static void copy_init(vector_base<T>& out, I first, I last)
+      {
+        out.last = copy_at_pos(out, out.first, first, last);
+      }
 
 
     // Copy values from the input base to the output base where 
