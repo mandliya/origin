@@ -11,6 +11,7 @@
 #include <utility>
 #include <iostream>
 
+#include <origin/concepts.hpp>
 #include <origin/memory/allocation.hpp>
 
 namespace origin
@@ -99,6 +100,63 @@ namespace origin
 
 
 
+  // Can memmove (constraint)
+  // Returns true if the memmove function can be used to move memory from thes
+  // I iterators into O iterators. In order for this to be the case, I and O
+  // must be pointers to the same trivially move constructible value type.
+  //
+  // FIXME: GCC does not currently implement is_trivially_move_constructible,
+  // so we have to rely on the Trivial constraint. There should be no
+  // false positives.
+  template <typename I, typename O>
+    constexpr bool Can_memmove()
+    {
+      return Cxx_pointer<I>() && Cxx_pointer<O>()
+          && Same<Value_type<I>, Value_type<O>>()
+          && Trivial<Value_type<I>>();
+    }
+
+
+  // Memmove
+  // Move n trivial objects pointed to by src into the memory pointed to by dst.
+  //
+  // FIXME: The correct type requirement is trivially move constructible, but
+  // GCC does not yet implement that operation.
+  template <typename T>
+    inline T *origin_memmove(const T* src, std::size_t n, T* dest)
+    {
+      static_assert(Trivial<T>(), "");
+      std::memmove(dest, src, n * sizeof(T));
+      return dest + n;
+    }
+
+
+  // FIXME: These need to be in algorithm module (but not included by this
+  // header). They might be included by containers in general.
+  template <typename I, typename O>
+    O move_backward(I first, I last, O result)
+    {
+      while (first != last) {
+        --last;
+        --result;
+        *result = std::move(*last);
+      }
+      return result;
+    }
+
+  template <typename T>
+    auto move_backward(const T* first, const T* last, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      std::ptrdiff_t n = last - first;
+      result -= n;
+      std::memmove(result, first, n * sizeof(T));
+      return result;
+    }
+
+
+
+
   // Uninitialized copy step
   // Construct *result with the value of *iter, and increment both iterators.
   template <typename Alloc, typename I, typename O>
@@ -162,22 +220,49 @@ namespace origin
       ++result;
     }
 
+
+
+  // Uninitialized move
+  // Move the elements in [first, last) into the uninitialized range of pointed
+  // to by result.
   template <typename Alloc, typename I, typename O>
-    O uninitialized_move(Alloc& alloc, I first, I last, O result)
+    inline O uninitialized_move(Alloc& alloc, I first, I last, O result)
     {
       while (first != last)
         uninitialized_move_step(alloc, first, result);
       return result;
     }
 
+  // Optimization for mem-movable inputs.
+  template <typename Alloc, typename T>
+    inline auto uninitialized_move(Alloc& alloc, const T* first, const T* last, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      return origin_memmove(first, last - first, result);
+    }
+
+
+
+
+  // Uninitialzed move n
+  // Move the elemnts in [first, first + n) into the region of uninitialized
+  // range pointed to by result.
   template <typename Alloc, typename I, typename O>
-    O uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
+    inline O uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
     {
       while (n != 0) {
         uninitialized_move_step(alloc, first, result);
         --n;
       }
       return result;
+    }
+
+  // Optimization for mem-movable inputs.
+  template <typename Alloc, typename T>
+    inline auto uninitialized_move_n(Alloc& alloc, const T* first, std::size_t n, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      return origin_memmove(first, n, result);
     }
 
 

@@ -15,10 +15,9 @@ origin_executable(test_pointer pointer.cpp)
 target_link_libraries(test_pointer origin)
 
 
-
 origin_executable(test_vector vector.cpp)
 target_link_libraries(test_vector origin)
 
 
-# origin_executable(test_dynarray dynarray.cpp)
-# target_link_libraries(test_dynarray origin)
+origin_executable(perf_vector perf_vector.cpp)
+target_link_libraries(perf_vector origin)

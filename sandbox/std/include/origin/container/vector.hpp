@@ -160,20 +160,14 @@ namespace origin
     { }
 
 
-  // If an alternative allocator is given for the move, then we must allocate
-  // new memory using that allocator and move the elements of x into the
-  // newly allocated memory. We can't just steal pointers since alloc was not
-  // responsible for the creation of x's pointers.
+  // Initialize this object by moving the elements of x into this object using
+  // alloc for memory allocation and deallocation.
   //
-  // Note that memory allocated to x is not released by this operation. However,
-  // x is returned to an empty state.
+  // If alloc != x.get_allocator(), then additional me
   template <typename T>
     vector<T>::vector(vector&& x, allocator& alloc)
-      : base(x.size(), alloc)
-    {
-      base.move_at_end(x.base);
-      x.base.last = x.base.first;
-    }
+      : base(std::move(x.base), alloc)
+    { }
 
   // NOTE: Move assignment results in allocation. Because the allocator is
   // held by reference, it can't be replaced. That's fine since we've said
@@ -337,7 +331,7 @@ namespace origin
     {
       if (full()) {
         vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(tmp, base);
+        tmp.move_at_end(base);
         tmp.append(std::move(value));
         base.swap(tmp);
       } else {
@@ -542,7 +536,7 @@ namespace origin
   template <typename T>
     void vector<T>::clear()
     {
-      base.erase();
+      base.clear();
     }
 
 
