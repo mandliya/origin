@@ -8,10 +8,11 @@
 #ifndef ORIGIN_MEMORY_HPP
 #define ORIGIN_MEMORY_HPP
 
+#include <cstdlib>
 #include <utility>
-#include <iostream>
 
 #include <origin/concepts.hpp>
+#include <origin/algorithm.hpp>
 #include <origin/memory/allocation.hpp>
 
 namespace origin
@@ -50,6 +51,8 @@ namespace origin
   // allocator reference to the initialized class. I believe, but am not 
   // certain that any allocator-friendly class will have, for every constructor,
   // an equivalent constructor that takes an additional allocator. 
+  //
+  // FIXME: Should x be a pointer? Maybe? Maybe not.
   template <typename Alloc, typename T, typename... Args>
     void construct(Alloc& alloc, T& x, Args&&... args)
     {
@@ -79,16 +82,12 @@ namespace origin
 
 
 
-  // NOTE: The following algorithms are not intended to be overloaded by library
-  // users.
-
-
-
   // Destroy
   // Destroy the objects in the range [first, last). Note that this does not
   // deallocate memory.
   template <typename Alloc, typename I>
-    void destroy(Alloc& alloc, I first, I last)
+    auto destroy(Alloc& alloc, I first, I last)
+      -> Requires<!Trivial<Value_type<I>>(), void>
     {
       // static_assert(Input_iterator<I>(), "");
       // assert(is_bounded_range(first, last));
@@ -98,62 +97,12 @@ namespace origin
       }
     }
 
-
-
-  // Can memmove (constraint)
-  // Returns true if the memmove function can be used to move memory from thes
-  // I iterators into O iterators. In order for this to be the case, I and O
-  // must be pointers to the same trivially move constructible value type.
-  //
-  // FIXME: GCC does not currently implement is_trivially_move_constructible,
-  // so we have to rely on the Trivial constraint. There should be no
-  // false positives.
-  template <typename I, typename O>
-    constexpr bool Can_memmove()
-    {
-      return Cxx_pointer<I>() && Cxx_pointer<O>()
-          && Same<Value_type<I>, Value_type<O>>()
-          && Trivial<Value_type<I>>();
-    }
-
-
-  // Memmove
-  // Move n trivial objects pointed to by src into the memory pointed to by dst.
-  //
-  // FIXME: The correct type requirement is trivially move constructible, but
-  // GCC does not yet implement that operation.
-  template <typename T>
-    inline T *origin_memmove(const T* src, std::size_t n, T* dest)
-    {
-      static_assert(Trivial<T>(), "");
-      std::memmove(dest, src, n * sizeof(T));
-      return dest + n;
-    }
-
-
-  // FIXME: These need to be in algorithm module (but not included by this
-  // header). They might be included by containers in general.
-  template <typename I, typename O>
-    O move_backward(I first, I last, O result)
-    {
-      while (first != last) {
-        --last;
-        --result;
-        *result = std::move(*last);
-      }
-      return result;
-    }
-
-  template <typename T>
-    auto move_backward(const T* first, const T* last, T* result)
-      -> Requires<Trivial<T>(), T*>
-    {
-      std::ptrdiff_t n = last - first;
-      result -= n;
-      std::memmove(result, first, n * sizeof(T));
-      return result;
-    }
-
+  // If the value type being destroyed is trivially destructible, then don't
+  // do anything.
+  template <typename Alloc, typename I>
+    auto destroy(Alloc& alloc, I first, I last)
+      -> Requires<Trivial<Value_type<I>>(), void>
+    { }
 
 
 
@@ -172,25 +121,32 @@ namespace origin
   // Uninitialized copy
   // Copy each value in the input range [first, last) into an uninitialized 
   // object in the output range [result, ...).
-  //
-  // FIXME: Optimize this for the case where we can use memmove.
-  //
-  // FIXME: This algorithm does not work on iterators whose result types are
-  // not references. This should be reflected in the type requirements.
   template <typename Alloc, typename I, typename O>
     O uninitialized_copy(Alloc& alloc, I first, I last, O result)
     {
-      // static_assert(Copy<I, O>(), "");
       while (first != last)
         uninitialized_copy_step(alloc, first, result);
       return result;
     }
 
+  // FIXME: The correct requirement is Trivially_copyable, not Trivial.
+  //
+  // FIXME: What guarantee do we have that alloc will not do anything  with the
+  // initialization of trivially copyable types? It may be necessary to require
+  // some static property of allocators w.r.t. to trivial types, or to make
+  // a runtime check.
+  template <typename Alloc, typename T>
+    auto uninitialized_copy(Alloc& alloc, const T* first, const T* last, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      return copy(first, last, result);
+    }
+
+
 
   // Uninitialized copy n.
-  // FIXME: This needs to return pair<I, O>.
   //
-  // FIXME: Optimize for memmovable types.
+  // FIXME: This needs to return pair<I, O>.
   template <typename Alloc, typename I, typename O>
     O uninitialized_copy_n(Alloc& alloc, I first, std::size_t n, O result)
     {
@@ -199,6 +155,14 @@ namespace origin
         --n;
       }
       return result;
+    }
+
+  // FIXME: See comments uninitialized_copy.
+  template <typename Alloc, typename T>
+    auto uninitialized_copy_n(Alloc& alloc, const T* first, std::size_t n, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      copy(first, first + n, result);
     }
 
 
@@ -220,8 +184,6 @@ namespace origin
       ++result;
     }
 
-
-
   // Uninitialized move
   // Move the elements in [first, last) into the uninitialized range of pointed
   // to by result.
@@ -233,12 +195,12 @@ namespace origin
       return result;
     }
 
-  // Optimization for mem-movable inputs.
+  // FIXME: See comments uninitialized_copy.
   template <typename Alloc, typename T>
     inline auto uninitialized_move(Alloc& alloc, const T* first, const T* last, T* result)
       -> Requires<Trivial<T>(), T*>
     {
-      return origin_memmove(first, last - first, result);
+      return move(first, last, result);
     }
 
 
@@ -257,12 +219,12 @@ namespace origin
       return result;
     }
 
-  // Optimization for mem-movable inputs.
+  // FIXME: See comments uninitialized_copy.
   template <typename Alloc, typename T>
     inline auto uninitialized_move_n(Alloc& alloc, const T* first, std::size_t n, T* result)
       -> Requires<Trivial<T>(), T*>
     {
-      return origin_memmove(first, n, result);
+      return move(first, first + n, result);
     }
 
 
@@ -277,10 +239,23 @@ namespace origin
   template <typename Alloc, typename I, typename T>
     void uninitialized_fill(Alloc& alloc, I first, I last, const T& value)
     {
-      while (first != last) {
-        construct(alloc, *first, value);
-        ++first;
+      I init = first;
+      try {
+        while (first != last) {
+          construct(alloc, *first, value);
+          ++first;
+        }
+      } catch(...) {
+        destory(alloc, init, first);
+        throw;
       }
+    }
+
+  template <typename Alloc, typename T>
+    auto uninitialized_fill(Alloc& alloc, T* first, T* last, const T& value)
+      -> Requires<Trivial<T>() && sizeof(T) == 1, void>
+    {
+      fill(first, last, value);
     }
 
 
@@ -288,17 +263,28 @@ namespace origin
   // Uninitialized fill n
   // Initialize each object in the range [first, first + n) with a copy of
   // value.
-  //
-  // FIXME: Optimize where we can use memset.
   template <typename Alloc, typename I, typename T>
     I uninitialized_fill_n(Alloc& alloc, I first, std::size_t n, const T& value)
     {
-      while (n != 0) {
-        construct(alloc, *first, value);
-        ++first;
-        --n;
+      I init = first;
+      try {
+        while (n != 0) {
+          construct(alloc, *first, value);
+          ++first;
+          --n;
+        }
+      } catch(...) {
+        destroy(alloc, init, first);
+        throw;
       }
       return first;
+    }
+
+  template <typename Alloc, typename T>
+    auto uninitialized_fill_n(Alloc& alloc, T* first, std::size_t n, const T& value)
+      -> Requires<Trivial<T>() && sizeof(T) == 1, void>
+    {
+      fill(first, first + n, value);
     }
 }
 

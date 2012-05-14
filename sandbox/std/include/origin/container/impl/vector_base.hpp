@@ -11,6 +11,7 @@
 #include <cassert>
 
 #include <origin/memory.hpp>
+#include <origin/algorithm.hpp>
 
 namespace origin
 {
@@ -164,9 +165,13 @@ namespace origin
       template <typename... Args> 
         void append(Args&&... args);
 
+      template <typename I>
+        void range_insert(T* pos, I first, I last);
+
       // TODO: These are good candidates for general purpose memory algorithms.
       void shift_right(T* pos, std::size_t n);
-      void shift_left(T* pos, std::size_t n);
+      void shift_left(T* pos);
+      void shift_left(T* first, T* last);
 
     public:
       allocator& alloc;
@@ -373,68 +378,72 @@ namespace origin
         ++this->last;
       }
 
+  // Copy the values in [first, last) into the buffer. Note that the buffer
+  // must have sufficient capacity to accommodate the insertion.
+  //
+  // Requires:
+  //    this->size() + distance(first, last) <= capacity
+  template <typename T>
+    template <typename I>
+      void vector_base<T>::range_insert(T* pos, I first, I last)
+      {
+        T* end = this->last;                   // The original end of the buffer
+        std::size_t k = end - pos;             // The size of [pos, end)
+        std::size_t n = distance(first, last); // The size of [first, last)
+        if (k > n) {
+          // There are fewer elements being inserted than in the remainder of
+          // the buffer, so we can simply shift and copy.
+          shift_right(pos, k);
+          copy(first, last, pos);
+        } else {
+          // There are more elements being inserted than in the remainder so
+          // we break up the sequence of elements being inserted, copying some
+          // elements into the uninitilized buffer, moving the remainder, and
+          // copying the rest over the moved elements.
+          I mid = next(first, k);
+          copy_at_end(mid, last);
+          move_at_end(pos, end);
+          copy(first, mid, pos);
+        }
+      }
+
   // Shift the elements of the buffer to the "right", creating an n-object range
   // of uninitialized objects at pos. That is, [pos, pos + n) is uninitialized
   // after the shift operation and [pos + n, pos + 2 * n) hold the elements of
   // the original range.
-  //
-  // FIXME: This algorithm is slow. Very slow. It should use the uninitialized
-  // move and move_backward algorithms to ensure that we get as good performance
-  // as we think we should.
   template <typename T>
     void vector_base<T>::shift_right(T* pos, std::size_t n)
     {
-      /*
       // Move the last - n - 1 into the uninitalized region of the buffer and
       // update last so it points to the new end.
-      last = uninitialized_move(alloc, last - n, last, last);
-
-      // Move [pos, pos + n) to pos + n, but do it backwards.
-      move_backward(pos, pos + n, pos + n);
-      */
-
-      T* p = this->last - 1;
-      T* q = p + n;
-
-      // Shift the last elements of the vector base into the uninitialized
-      // segment of memory. This is effectively unitialized_move.
-      while (q != this->last) {
-        construct(this->alloc, *q, std::move(*p));
-        --p;
-        --q;
-      }
-
-      // Then shift the remaining elements from [pos, p) using standard
-      // move assignment, guaranteeing destruction of initialized elements.
-      // This is effectively move_backward.
-      while (p != pos) {
-        *q = std::move(*p);
-        --p;
-        --q;
-      }
-      *q = std::move(*p);
-
-      this->last += n;
+      T* last = this->last;
+      T* mid = last - n;
+      this->last = uninitialized_move(alloc, mid, last, last);
+      move_backward(pos, mid, last);
     }
 
   // Shift the elements of the buffer to the "left", effectively erasing the n
   // elements pointed to by pos. That is, the elements [pos, pos + n) are
   // replaced by those in [pos + n, pos + 2 * n).
-  //
-  // FIXME: Use move_backward.
   template <typename T>
-    void vector_base<T>::shift_left(T* pos, std::size_t n)
+    void vector_base<T>::shift_left(T* pos)
     {
-      // This should be equivalent to move(pos + n, out.last, pos).
-      T* p = pos + n;
-      T* q = pos;
-      while (p != this->last) {
-        *q = std::move(*p);
-        ++q;
-        ++p;
+      T* mid = pos + 1;
+      if (mid != this->last)
+        move(mid, this->last, pos);
+      --last;
+      destroy(alloc, *this->last);
+    }
+
+  // Shift the elements of the vector left over the range [first, last).
+  template <typename T>
+    void vector_base<T>::shift_left(T* first, T* last)
+    {
+      if (first != last) {
+        if (last != this->last)
+          move(last, this->last, first);
+        erase_at_end(this->last - last);
       }
-      destroy(this->alloc, q, this->last);
-      this->last = q;
     }
 
 } // namespace origin

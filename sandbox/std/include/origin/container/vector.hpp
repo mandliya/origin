@@ -196,6 +196,8 @@ namespace origin
   template <typename T>
     auto vector<T>::operator=(const vector& x) -> vector&
     {
+      // FIXME: Should this always allocate the exact amount of memory required
+      // or should we allow the existing capacity to be used?
       vector tmp {x, base.alloc};
       return swap(tmp);
     }
@@ -314,7 +316,7 @@ namespace origin
 
   template <typename T>
     vector<T>::vector(std::initializer_list<T> list, allocator& alloc)
-      : base(alloc, list.size())
+      : base(list.size(), alloc)
     {
       base.copy_at_end(list.begin(), list.end());
     }
@@ -421,21 +423,24 @@ namespace origin
           base.fill_at_end(n, value);
         } else {
           base.shift_right(mid, n);
-          base.fill_at_pos(mid, n, value);
+          // base.fill_at_pos(mid, n, value);
         }
         return mid;
       }
     }
 
+  // FIXME: This is probably wrong.
   template <typename T>
     template <typename I>
       auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Strict_input_iterator<I>()>*)
         -> iterator
       {
+        T* p = const_cast<T*>(pos);
         while (first != last) {
-          pos = insert(pos, *first);
+          p = insert(p, *first);
           ++first;
         }
+        return p;
       }
 
   template <typename T>
@@ -443,16 +448,23 @@ namespace origin
       auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Forward_iterator<I>()>*)
         -> iterator
       {
+        T* p = const_cast<T*>(pos);
         std::size_t n = distance(first, last);
-        T* mid = const_cast<T*>(pos);
-        if (size() + n >= capacity) {
-          vector_base<T> tmp(base.next_capacity(), base.alloc);
-          tmp.move_at_end(base.first, mid);
-          tmp.copy_at_end(first, last);
-          tmp.move_at_end(mid, base.last);
+        if (residual() >= n) {
+          base.range_insert(p, first, last);
+          return p;
         } else {
-          base.shift_right(pos, n);
-          base.copy_at_pos(base.first + n, first, last);
+          vector_base<T> tmp(base.next_capacity(), base.alloc);
+          try {
+            tmp.move_at_end(base.first, p);
+            tmp.copy_at_end(first, last);
+            tmp.move_at_end(p, base.last);
+          } catch(...) {
+            tmp.clear();
+            throw;
+          }
+          base.swap(tmp);
+          return base.first + n;
         }
       }
 
@@ -465,21 +477,30 @@ namespace origin
       }
 
   template <typename T>
+    auto vector<T>::insert(const_iterator pos, std::initializer_list<T> list)
+      -> iterator
+    {
+      return insert(pos, list.begin(), list.end());
+    }
+
+  template <typename T>
     auto vector<T>::erase(const_iterator pos) -> iterator
     {
       assert(pos >= base.first && pos < base.last);
-      std::size_t n = pos - base.first;
-      base.shift_left(base.first + n, 1);
-      return base.first + n;
+      T* p = const_cast<T*>(pos);
+      base.shift_left(p);
+      return p;
     }
 
+    // FIXME: This is broken.
   template <typename T>
     auto vector<T>::erase(const_iterator first, const_iterator last) -> iterator
     {
       assert(first >= base.first && last <= base.last);
-      std::size_t n = first - base.first;
-      base.shift_left(base.first + n, last - first);
-      return base.first + n;
+      T* f = const_cast<T*>(first);
+      T* l = const_cast<T*>(last);
+      base.shift_left(f, l);
+      return f;
     }
 
 
@@ -505,7 +526,7 @@ namespace origin
   template <typename T>
     void vector<T>::reserve(std::size_t n)
     {
-      if (n > capacity()) {
+      if (capacity() < n) {
         vector_base<T> tmp(n, base.alloc);
         tmp.move_at_end(base);
         base.swap(tmp);
@@ -547,6 +568,85 @@ namespace origin
     {
       base.swap(x.base);
       return *this;
+    }
+
+
+
+  // Equality_comparable<vector<T>, vector<U>>
+  template <typename T, typename U>
+    bool operator==(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return a.size() == b.size() 
+          && lexicographical_equal(a.begin(), a.end(), b.begin());
+    }
+
+  template <typename T, typename U>
+    bool operator!=(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return !(a == b);
+    }
+
+  // Equality comparable<vector<T>, initializer_list<U>>
+  template <typename T, typename U>
+    bool operator==(const vector<T>& a, std::initializer_list<U> b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return a.size() == b.size()
+          && lexicographical_equal(a.begin(), a.end(), b.begin());
+    }
+
+  template <typename T, typename U>
+    bool operator==(std::initializer_list<U> a, const vector<T>& b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return a.size() == b.size()
+          && lexicographical_equal(a.begin(), a.end(), b.begin());
+    }
+
+  template <typename T, typename U>
+    bool operator!=(const vector<T>& a, std::initializer_list<U> b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return !(a == b);
+    }
+
+  template <typename T, typename U>
+    bool operator!=(std::initializer_list<U> a, const vector<T>& b)
+    {
+      static_assert(Equality_comparable<T, U>(), "");
+      return !(a == b);
+    }
+
+
+  // Totally_ordered<vector<T>, vector<U>>
+  template <typename T, typename U>
+    bool operator<(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Totally_ordered<T, U>(), "");
+      return lexicographical_less(a.begin(), a.end(), b.begin(), b.end());
+    }
+
+  template <typename T, typename U>
+    bool operator>(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Totally_ordered<T, U>(), "");
+      return b < a;
+    }
+
+  template <typename T, typename U>
+    bool operator<=(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Totally_ordered<T, U>(), "");
+      return !(b < a);
+    }
+
+  template <typename T, typename U>
+    bool operator>=(const vector<T>& a, const vector<U>& b)
+    {
+      static_assert(Totally_ordered<T, U>(), "");
+      return (!a < b);
     }
 
 } // namespace origin

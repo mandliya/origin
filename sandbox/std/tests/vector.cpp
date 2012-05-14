@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 #include <origin/utility.hpp>
 #include <origin/container/vector.hpp>
@@ -36,18 +37,14 @@ template <typename C>
   void test_fill()
   {
     C c(5, 3);
-    for (auto x : c)
-      std::cout << x << ' ';
-    std::cout << '\n';
+    assert((c == {3, 3, 3, 3, 3}));
   }
 
 template <typename C>
   void test_init_list()
   {
     C c {1, 2, 3, 4, 5};
-    for (auto x : c)
-      std::cout << x << ' ';
-    std::cout << '\n';
+    assert((c == {1, 2, 3, 4, 5}));
   };
 
 
@@ -58,10 +55,7 @@ template <typename C>
     C b = std::move(a);
     assert(a.empty());
     assert(a.capacity() == 0);
-
-    for (auto x : b)
-      std::cout << x << ' ';
-    std::cout << '\n';
+    assert((b == {1, 2, 3}));
   }
 
 template <typename C>
@@ -71,11 +65,7 @@ template <typename C>
     C b;
     b = std::move(a);
     assert(a.empty());
-    // assert(a.capacity() == 0);
-
-    for (auto x : b)
-      std::cout << x << ' ';
-    std::cout << '\n';
+    assert((b == {1, 2, 3}));
   }
 
 template <typename C>
@@ -83,10 +73,7 @@ template <typename C>
   {
     C a {1, 2, 3};
     C b {a};
-    assert(a.size() == b.size());
-    assert(a[0] == b[0]);
-    assert(a[1] == b[1]);
-    assert(a[2] == b[2]);
+    assert(a == b);
   }
 
 template <typename C>
@@ -96,28 +83,23 @@ template <typename C>
     C b;
     b = {a};
     assert(a.size() == b.size());
-    assert(a[0] == b[0]);
-    assert(a[1] == b[1]);
-    assert(a[2] == b[2]);
+    assert(a == b);
   }
 
 template <typename C>
   void test_iter_init()
   {
     auto list = {1, 2, 3, 4};
-
-    std::cout << "iter init: ";
     C c(list.begin(), list.end());
-    print(c);
+    assert(c == list);
   }
 
 template <typename C>
   void test_range_init()
   {
     vector<short> a {1, 2, 3};
-    std::cout << "range init: ";
     C c {a};
-    print(c);
+    assert(c == a);
   }
 
 template <typename V>
@@ -183,21 +165,17 @@ template <typename V>
     V v1 {1, 2, 3};
     v1.reserve(10);
 
-    std::cout << "insert value at end: ";
     v1.insert(v1.end(), 4);
-    print(v1);
+    assert((v1 == {1, 2, 3, 4}));;
 
-    std::cout << "insert value in middle: ";
     v1.insert(v1.begin() + 1, -1);
-    print(v1);
+    assert((v1 == {1, -1, 2, 3, 4}));
 
-    std::cout << "insert many in middle: ";
     v1.insert(v1.begin() + 3, 2, -2);
-    print(v1);
+    assert((v1 == {1, -1, 2, -2, -2, 3, 4}));
 
-    std::cout << "insert many at end: ";
     v1.insert(v1.end(), 5, -5);
-    print(v1);
+    assert((v1 == {1, -1, 2, -2, -2, 3, 4, -5, -5, -5, -5, -5}));
   }
 
 template <typename V>
@@ -223,10 +201,6 @@ template <typename V>
   {
     V v {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    for(auto i = v.begin() + 2; i != v.end() - 2; ++i)
-      std::cout << *i << ' ';
-    std::cout << '\n';
-    
     auto i = v.erase(v.begin() + 2, v.end() - 2);
     print(v);
     assert(*i == 9);
@@ -236,6 +210,31 @@ template <typename V>
 int main() 
 {
   using V = vector<int>;
+
+  {
+    // Insert at the end of an empty vector (without resizing).
+    vector<int> v;
+    v.reserve(1024);
+    v.insert(v.end(), {1, 2, 3, 4, 5});
+  }
+
+  {
+    // Insert at the front of an empty vector (without resizing).
+    vector<int> v;
+    v.reserve(1024);
+    v.insert(v.begin(), {1, 2, 3});
+    print(v);
+  }
+
+  {
+    // Insert more elemnts at the front of a vector than there are in
+    // the remainder of the vector (without resizing).
+    vector<int> v;
+    v.reserve(1024);
+    v.insert(v.end(), {1, 2, 3});
+    v.insert(v.begin(), {-1, -2, -3, -4,-5});
+    print(v);
+  }
 
   test_default_init<V>();
   test_fill<V>();

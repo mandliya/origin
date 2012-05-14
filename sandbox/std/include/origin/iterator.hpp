@@ -637,40 +637,90 @@ namespace origin
     
 
 
-  // Advance interator
-  // Advance i by n positions.
-  template<typename Iter>
-    inline void o_advance(Iter& i, Distance_type<Iter> n = 1)
+  template <typename I>
+    void iterative_advance(I& i, Distance_type<I> n = 1)
     {
-      static_assert(Weakly_incrementable<Iter>(), "");
-      assert(( is_weak_range(i, n) ));
-
-      std::advance(i, n);
+      assert(i >= 0);
+      while (n != 0) {
+        ++i;
+        --n;
+      }
     }
-    
+
+  template <typename I>
+    void iterative_retreat(I& i, Distance_type<I> n = -1)
+    {
+      assert(i <= 0);
+      while (n != 0) {
+        --i;
+        ++n;
+      }
+    }
+
+  
+
+  // Advance interator
+  // Advance i by n positions. 
+  //
+  // If I is weakly inrementable, then n must be
+  // non-neative. If I is bidirectional, then n may be negative. If I is a
+  // random access iterator, then the operation completes in constant time.
+  //
+  // Requires:
+  //    Weakly_incrementable<I>
+  //    Acceptable values of n depends on the concept modeled by I.
+  //
+  // TODO: Replace bidirectional with decrementable and replace random access
+  // with something that supports constant-time arithmetic + and -, etc.
+  template <typename I>
+    inline auto advance(I& i, Distance_type<I> n = 1)
+      -> Requires<Weakly_incrementable<I>() && !Bidirectional_iterator<I>()>
+    {
+      assert(is_weak_range(i, n));
+      iterative_advance(i, n);
+    }
+  
+  template <typename I>
+    inline auto advance(I& i, Distance_type<I> n = 1)
+      -> Requires<Bidirectional_iterator<I>() && !Random_access_iterator<I>()>
+    {
+      assert(is_weak_range(i, n));
+      if (i > 0)
+        iterative_advance(i, n);
+      else
+        iterative_retreat(i, n);
+     }
+
+  template <typename I>
+    inline auto advance(I& i, Distance_type<I> n = 1)
+      -> Requires<Random_access_iterator<I>()>
+    {
+      i += n;
+    }
+
 
 
   // Next iterator
-  // Return the nth iterator past i.
-  template<typename Iter>
-    inline Iter o_next(Iter i, Distance_type<Iter> n = 1)
+  // Return the the iterator i advanced by n position.
+  template <typename I>
+    inline I next(I i, Distance_type<I> n = 1)
     {
-      static_assert(Weakly_incrementable<Iter>(), "");
-      assert(( is_weak_range(i, n) ));
-      
-      return std::next(i, n);
+      static_assert(Weakly_incrementable<I>(), "");
+      assert(is_weak_range(i, n));
+      advance(i, n);
+      return i;
     }
     
     
   // Previous iterator
   // Return the nth iterator before i.
-  template<typename Iter>
-    inline Iter o_prev(Iter i, Distance_type<Iter> n = 1)
+  template <typename I>
+    inline I prev(I i, Distance_type<I> n = 1)
     {
-      static_assert(Bidirectional_iterator<Iter>(), "");
-      assume(( bounded_range(prev(i, n), i) ));
-
-      return std::prev(i, n);
+      static_assert(Bidirectional_iterator<I>(), "");
+      assume(bounded_range(prev(i, n), i));
+      advance(i, -n);
+      return i;
     }
   
 
