@@ -80,7 +80,9 @@ namespace origin
     {
       static_assert(!Void<T>(), "");
       using Ptr = Pointer_to<T, Alloc>;
-      return static_ptr_cast<Ptr>(alloc.allocate(n * sizeof(T)));
+      return n != 0
+        ? static_ptr_cast<Ptr>(alloc.allocate(n * sizeof(T))) 
+        : nullptr;
     }
 
 

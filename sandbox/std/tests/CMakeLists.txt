@@ -19,5 +19,4 @@ origin_executable(test_vector vector.cpp)
 target_link_libraries(test_vector origin)
 
 
-origin_executable(perf_vector perf_vector.cpp)
-target_link_libraries(perf_vector origin)
+add_subdirectory(perf)

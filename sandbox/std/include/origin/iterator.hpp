@@ -62,6 +62,8 @@ namespace origin
     };
   
   // Returns true if the expression *i = value is valid.
+  //
+  // TODO: Break this into Copy_writable and Move_writable.
   template<typename I, typename T>
     constexpr bool Writable()
     {

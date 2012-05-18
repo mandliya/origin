@@ -42,10 +42,11 @@ namespace origin
     }
 
 
+
   // Copy
 
   template <typename I, typename O>
-    void copy_step(I& i, O& o)
+    inline void copy_step(I& i, O& o)
     {
       *o = *i;
       ++o;
@@ -53,7 +54,7 @@ namespace origin
     }
 
   template <typename I, typename O>
-    O copy(I first, I last, O result)
+    inline O copy(I first, I last, O result)
     {
       while (first != last)
         copy_step(first, result);
@@ -62,10 +63,48 @@ namespace origin
     }
 
   template <typename T>
-    auto copy(const T* first, const T* last, T* result)
+    inline auto copy(const T* first, const T* last, T* result) 
       -> Requires<Trivial<T>(), T*>
     {
       std::size_t n = last - first;
+      std::memcpy(result, first, n * sizeof(T));
+      return result + n;
+    }  
+
+  template <typename T>
+    inline auto copy(T* first, T* last, T* result) 
+      -> Requires<Trivial<T>(), T*> 
+    {
+      std::size_t n = last - first;
+      std::memcpy(result, first, n * sizeof(T));
+      return result + n;
+    }  
+
+
+
+  // Copy n
+
+  template <typename I, typename O>
+    inline O copy_n(I first, std::ptrdiff_t n, O result)
+    {
+      while (n != 0) {
+        copy_step(first, result);
+        --n;
+      }
+    }
+
+  template <typename T>
+    inline auto copy_n(const T* first, std::ptrdiff_t n, T* result) 
+      -> Requires<Trivial<T>(), T*>
+    {
+      std::memcpy(result, first, n * sizeof(T));
+      return result + n;
+    }  
+
+  template <typename T>
+    inline auto copy_n(T* first, std::ptrdiff_t n, T* result) 
+      -> Requires<Trivial<T>(), T*> 
+    {
       std::memcpy(result, first, n * sizeof(T));
       return result + n;
     }  
@@ -83,7 +122,7 @@ namespace origin
     }
 
   template <typename I, typename O>
-    O move(I first, I last, O result)
+    inline O move(I first, I last, O result)
     {
       while (first != last)
         move_step(first, result);
@@ -91,10 +130,19 @@ namespace origin
     }
 
   template <typename T>
-    auto move(const T* first, const T* last, T* result)
+    inline auto move(const T* first, const T* last, T* result)
       -> Requires<Trivial<T>(), T*>
     {
-      std::size_t n = last - first;
+      std::ptrdiff_t n = last - first;
+      std::memmove(result, first, n * sizeof(T));
+      return result + n;
+    }
+
+  template <typename T>
+    inline auto move(T* first, T* last, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      std::ptrdiff_t n = last - first;
       std::memmove(result, first, n * sizeof(T));
       return result + n;
     }
@@ -103,8 +151,9 @@ namespace origin
 
   // Move backward
 
+  // FIXME: Refactor to use backwards step.
   template <typename I, typename O>
-    O move_backward(I first, I last, O result)
+    inline O move_backward(I first, I last, O result)
     {
       while (first != last) {
         --last;
@@ -115,7 +164,7 @@ namespace origin
     }
 
   template <typename T>
-    auto move_backward(const T* first, const T* last, T* result)
+    inline auto move_backward(const T* first, const T* last, T* result)
       -> Requires<Trivial<T>(), T*>
     {
       std::ptrdiff_t n = last - first;
@@ -123,6 +172,17 @@ namespace origin
       std::memmove(result, first, n * sizeof(T));
       return result;
     }
+
+  template <typename T>
+    inline auto move_backward(T* first, T* last, T* result)
+      -> Requires<Trivial<T>(), T*>
+    {
+      std::ptrdiff_t n = last - first;
+      result -= n;
+      std::memmove(result, first, n * sizeof(T));
+      return result;
+    }
+
 
 
   // Fill
@@ -135,7 +195,7 @@ namespace origin
     }
 
   template <typename I, typename T>
-    void fill(I first, I last, const T& value)
+    inline void fill(I first, I last, const T& value)
     {
       while (first != last)
         fill_step(first, value);
@@ -149,6 +209,7 @@ namespace origin
     }
 
 
+
   // Generate
 
   template <typename I, typename Gen>
@@ -159,7 +220,7 @@ namespace origin
     }
 
   template <typename I, typename Gen>
-    Gen generate(I first, I last, Gen gen)
+    inline Gen generate(I first, I last, Gen gen)
     {
       while (first != last)
         generate_step(first, gen);

@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <utility>
+#include <iostream>
 
 #include <origin/concepts.hpp>
 #include <origin/algorithm.hpp>
@@ -24,6 +25,44 @@ namespace origin
   // required.
   //
   // TODO: Should these allocators be in with allocation.hpp?
+
+
+
+  // Trivial uninitialized copy
+  // Returns true when the object pointed at by an output iterator of type O
+  // is trivially copy initialized with the value T.
+  //
+  // FIXME: It seems probable that O needs to be a forward iterator or have
+  // some other property that enables me to reason about its value type. Would
+  // a zip iterator satisfy these requirements? I'm not sure.
+  //
+  // FIXME: The actual requirements should be Trivially_constructible, but
+  // the corresponding type trait has not been implemented. For now, we ensure
+  // that Value_type<O> is trivial and constructible over T.
+  template <typename O, typename T>
+    constexpr bool Trivial_uninitialized_copy()
+    {
+      return Trivial<Value_type<O>>() && Constructible<Value_type<O>, const T&>();
+    }
+
+
+
+  // Trivial uninitialized move
+  // Returns true when the object pointed at by an output iterator of type O
+  // trivially move initialized with the value T and does not propagate exceptions.
+  //
+  // FIXME: It seems probable that O needs to be a forward iterator or have
+  // some other property that enables me to reason about its value type. Would
+  // a zip iterator satisfy these requirements? I'm not sure.
+  //
+  // FIXME: The actual requirements should be Trivially_constructible, but
+  // the corresponding type trait has not been implemented. For now, we ensure
+  // that Value_type<O> is trivial and constructible over T.
+  template <typename O, typename T>
+    constexpr bool Trivial_uninitialized_move()
+    {
+      return Trivial<Value_type<O>>() && Constructible<Value_type<O>, T&&>();
+    }
 
 
 
@@ -42,22 +81,17 @@ namespace origin
   //    x       - A reference to an uninitialized object being constructed
   //    args... - Arguments forwarded to T's constructor
   //
-  // Note: The address of x is taken using operator &. Any type overloading that
-  // operator to do something other than return the address cannot be
-  // initialized using this operation. The preferred alternative is to overload
-  // this operation specifically for that type.
+  // FIXME: If T is "allocator-friendly", then we should propagate the allocator
+  // reference to the initialized class. I believe, but am not  certain that any
+  // allocator-friendly class will have, for every constructor, an equivalent
+  // constructor that takes an additional allocator.
   //
-  // FIXME: If T is "allocator-friendly", then we should propagate the
-  // allocator reference to the initialized class. I believe, but am not 
-  // certain that any allocator-friendly class will have, for every constructor,
-  // an equivalent constructor that takes an additional allocator. 
-  //
-  // FIXME: Should x be a pointer? Maybe? Maybe not.
+  // FIXME: Rewrite in terms of the allocator's pointer type.
   template <typename Alloc, typename T, typename... Args>
-    void construct(Alloc& alloc, T& x, Args&&... args)
+    inline void construct(Alloc& alloc, T* p, Args&&... args)
     {
       // static_assert(Constructible<T, Args...>(), "");
-      new (&x) T(std::forward<Args>(args)...);
+      new (p) T(std::forward<Args>(args)...);
     }
 
 
@@ -73,45 +107,57 @@ namespace origin
   // Parameters:
   //    alloc   - An allocator object; unused in this definition
   //    x       - A reference to an initialized object being destroyed
+  //
+  // FIXME: Rewrite using Alloc's pointer type.
   template <typename Alloc, typename T>
-    void destroy(Alloc& alloc, T& x)
+    inline void destroy(Alloc& alloc, T* p)
     {
       // static_assert(Destructible<T>(), "");
-      x.~T();
+      p->~T();
     }
 
 
 
-  // Destroy
+  // Destroy (range)
   // Destroy the objects in the range [first, last). Note that this does not
   // deallocate memory.
+  //
+  // FIXME: Use alloc's addressof function to get the address of *first.
   template <typename Alloc, typename I>
-    auto destroy(Alloc& alloc, I first, I last)
-      -> Requires<!Trivial<Value_type<I>>(), void>
+    inline auto destroy(Alloc& alloc, I first, I last)
+      -> Requires<!Trivially_destructible<Value_type<I>>(), void>
     {
       // static_assert(Input_iterator<I>(), "");
       // assert(is_bounded_range(first, last));
       while (first != last) {
-        destroy(alloc, *first);
+        destroy(alloc, &*first);
         ++first;
       }
     }
 
+
+
+  // Destroy (range)
   // If the value type being destroyed is trivially destructible, then don't
   // do anything.
+  //
+  // FIXME: What if if the destructor needs to do house-keeping for these
+  // types too. It seems like the notion of triviality may depend on the 
+  // allocator in addition to the type. That seems less than ideal.
   template <typename Alloc, typename I>
-    auto destroy(Alloc& alloc, I first, I last)
-      -> Requires<Trivial<Value_type<I>>(), void>
+    inline auto destroy(Alloc& alloc, I first, I last)
+      -> Requires<Trivially_destructible<Value_type<I>>(), void>
     { }
 
 
 
   // Uninitialized copy step
-  // Construct *result with the value of *iter, and increment both iterators.
+  // Initialize the object pointed to by result with the value of the object
+  // pointed to by iter, incrementing both iter and result.
   template <typename Alloc, typename I, typename O>
     inline void uninitialized_copy_step(Alloc& alloc, I& iter, O& result)
     {
-      construct(alloc, *result, *iter);
+      construct(alloc, &*result, *iter);
       ++iter;
       ++result;
     }
@@ -121,23 +167,28 @@ namespace origin
   // Uninitialized copy
   // Copy each value in the input range [first, last) into an uninitialized 
   // object in the output range [result, ...).
+  //
+  // NOTE: When the object type pointed to by O can be nothrow-constructed
+  // over the value type of I, then this operation is equivalent to
+  // copy(first, last, result).
   template <typename Alloc, typename I, typename O>
-    O uninitialized_copy(Alloc& alloc, I first, I last, O result)
+    inline auto uninitialized_copy(Alloc& alloc, I first, I last, O result)
+      -> Requires<!Trivial_uninitialized_copy<O, Value_type<I>>(), O>
     {
-      while (first != last)
-        uninitialized_copy_step(alloc, first, result);
+      I init = first;
+      try {
+        while (first != last)
+          uninitialized_copy_step(alloc, first, result);
+      } catch (...) {
+        destroy(alloc, init, first);
+        throw;
+      }
       return result;
     }
 
-  // FIXME: The correct requirement is Trivially_copyable, not Trivial.
-  //
-  // FIXME: What guarantee do we have that alloc will not do anything  with the
-  // initialization of trivially copyable types? It may be necessary to require
-  // some static property of allocators w.r.t. to trivial types, or to make
-  // a runtime check.
-  template <typename Alloc, typename T>
-    auto uninitialized_copy(Alloc& alloc, const T* first, const T* last, T* result)
-      -> Requires<Trivial<T>(), T*>
+  template <typename Alloc, typename I, typename O>
+    inline auto uninitialized_copy(Alloc& alloc, I first, I last, O result)
+      -> Requires<Trivial_uninitialized_copy<O, Value_type<I>>(), O>
     {
       return copy(first, last, result);
     }
@@ -146,23 +197,34 @@ namespace origin
 
   // Uninitialized copy n.
   //
-  // FIXME: This needs to return pair<I, O>.
+  // Note: When the object type pointed to by O can be nothrow-constructed
+  // over the value type of I, then this operation is equivalent to
+  // copy_n(first, n, result).
+  //
+  // FIXME: This needs to return pair<I, O>, but I need to implement pair 
+  // first.
   template <typename Alloc, typename I, typename O>
-    O uninitialized_copy_n(Alloc& alloc, I first, std::size_t n, O result)
+    inline auto uninitialized_copy_n(Alloc& alloc, I first, std::size_t n, O result)
+      -> Requires<!Trivial_uninitialized_copy<O, Value_type<I>>(), O>
     {
-      while(n != 0) {
-        uninitialized_copy_step(alloc, first, result);
-        --n;
+      I init = first;
+      try {
+        while(n != 0) {
+          uninitialized_copy_step(alloc, first, result);
+          --n;
+        }
+      } catch (...) {
+        destroy(alloc, init, first);
+        throw;
       }
       return result;
     }
 
-  // FIXME: See comments uninitialized_copy.
-  template <typename Alloc, typename T>
-    auto uninitialized_copy_n(Alloc& alloc, const T* first, std::size_t n, T* result)
-      -> Requires<Trivial<T>(), T*>
+  template <typename Alloc, typename I, typename O>
+    inline auto uninitialized_copy_n(Alloc& alloc, I first, std::size_t n, O result)
+      -> Requires<Trivial_uninitialized_copy<O, Value_type<I>>(), O>
     {
-      copy(first, first + n, result);
+      return copy_n(first, first + n, result);
     }
 
 
@@ -174,57 +236,117 @@ namespace origin
   // This helps preserve the strong exception safety. This algorithm is still
   // allowed to throw, but it won't invalidate the source data if it does.
   //
-  // FIXME: Document these algorithms...
 
+
+  // Uninitialized mvoe step
+  // Initialize the object pointed to by result by moving the representation of
+  // iter's object into it. Increment both iter and result.
   template <typename Alloc, typename I, typename O>
     inline void uninitialized_move_step(Alloc& alloc, I& iter, O& result)
     {
-      construct(alloc, *result, std::move_if_noexcept(*iter));
+      construct(alloc, &*result, std::move_if_noexcept(*iter));
       ++iter;
       ++result;
     }
 
+
+
   // Uninitialized move
   // Move the elements in [first, last) into the uninitialized range of pointed
   // to by result.
+  //
+  // Template parameters:
+  //    Alloc -- An Allocator type
+  //    I -- An Input_iterator type
+  //    O -- An Move_output_iterator type
+  //
+  // Parameters:
+  //    alloc -- An Allocator
+  //    first -- The first iterator in the input range
+  //    last -- The last iterator in the input range
+  //    result -- The first iterator in the output range
+  //
+  // Returns:
+  //    The last iterator in the output range
+  //
+  // Note:  
+  // When the object type pointed to by O can be nothrow-constructed over the
+  // value type of I, then this operation is equivalent to move(first, last, 
+  // result).
+  //
+  // FIXME: Write the type requirements of this algorithm.
   template <typename Alloc, typename I, typename O>
-    inline O uninitialized_move(Alloc& alloc, I first, I last, O result)
+    inline auto uninitialized_move(Alloc& alloc, I first, I last, O result)
+      -> Requires<!Trivial_uninitialized_move<O, Value_type<I>>(), O>
     {
-      while (first != last)
-        uninitialized_move_step(alloc, first, result);
+      I init = first;
+      try {
+        while (first != last)
+          uninitialized_move_step(alloc, first, result);
+      } catch (...) {
+        destroy(alloc, init, first);
+        throw;
+      }
       return result;
     }
 
-  // FIXME: See comments uninitialized_copy.
-  template <typename Alloc, typename T>
-    inline auto uninitialized_move(Alloc& alloc, const T* first, const T* last, T* result)
-      -> Requires<Trivial<T>(), T*>
+  template <typename Alloc, typename I, typename O>
+    inline auto uninitialized_move(Alloc& alloc, I first, I last, O result)
+      -> Requires<Trivial_uninitialized_move<O, Value_type<I>>(), O>
     {
       return move(first, last, result);
     }
 
 
 
-
   // Uninitialzed move n
   // Move the elemnts in [first, first + n) into the region of uninitialized
   // range pointed to by result.
+  //
+  // Template parameters:
+  //
+  // Parameters:
+  //
+  // Return:
+  //
+  // TODO: Consider losening the restrictions on the optimizations. As far as
+  // I can tell, we only need Nothrow_constructible<O, Value_type<I>&&>.
   template <typename Alloc, typename I, typename O>
-    inline O uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
+    inline auto uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
+      -> Requires<!Trivial_uninitialized_move<O, Value_type<I>>(), O>
     {
-      while (n != 0) {
-        uninitialized_move_step(alloc, first, result);
-        --n;
+      I init = first;
+      try {
+        while (n != 0) {
+          uninitialized_move_step(alloc, first, result);
+          --n;
+        }
+      } catch (...) {
+        destroy(alloc, init, first);
+        throw;
       }
       return result;
     }
 
-  // FIXME: See comments uninitialized_copy.
-  template <typename Alloc, typename T>
-    inline auto uninitialized_move_n(Alloc& alloc, const T* first, std::size_t n, T* result)
-      -> Requires<Trivial<T>(), T*>
+  // Optimization moving 
+  template <typename Alloc, typename I, typename O>
+    inline auto uninitialized_move_n(Alloc& alloc, I first, std::size_t n, O result)
+      -> Requires<Trivial_uninitialized_move<O, Value_type<I>>(), O>
     {
       return move(first, first + n, result);
+    }
+
+
+
+
+  // Uninitialized fill step
+  // Initialize the un-initialized object pointed to by iter with the given
+  // value. Increment iter.
+  template <typename Alloc, typename I, typename T>
+    inline void uninitialized_fill_step(Alloc& alloc, I& iter, const T& value)
+    {
+      construct(alloc, &*iter, value);
+      ++iter;
     }
 
 
@@ -237,23 +359,22 @@ namespace origin
   // FIXME: This algorithm does not work on iterators whose result types are
   // not references. This should be reflected in the type requirements.
   template <typename Alloc, typename I, typename T>
-    void uninitialized_fill(Alloc& alloc, I first, I last, const T& value)
+    inline auto uninitialized_fill(Alloc& alloc, I first, I last, const T& value)
+      -> Requires<!Trivial_uninitialized_copy<I, T>(), void>
     {
       I init = first;
       try {
-        while (first != last) {
-          construct(alloc, *first, value);
-          ++first;
-        }
+        while (first != last)
+          uninitialized_fill_step(first, value);
       } catch(...) {
         destory(alloc, init, first);
         throw;
       }
     }
 
-  template <typename Alloc, typename T>
-    auto uninitialized_fill(Alloc& alloc, T* first, T* last, const T& value)
-      -> Requires<Trivial<T>() && sizeof(T) == 1, void>
+  template <typename Alloc, typename I, typename T>
+    inline auto uninitialized_fill(Alloc& alloc, I first, I last, const T& value)
+      -> Requires<Trivial_uninitialized_copy<I, T>(), void>
     {
       fill(first, last, value);
     }
@@ -264,13 +385,13 @@ namespace origin
   // Initialize each object in the range [first, first + n) with a copy of
   // value.
   template <typename Alloc, typename I, typename T>
-    I uninitialized_fill_n(Alloc& alloc, I first, std::size_t n, const T& value)
+    inline auto uninitialized_fill_n(Alloc& alloc, I first, std::size_t n, const T& value)
+      -> Requires<!Trivial_uninitialized_copy<I, T>(), I>
     {
       I init = first;
       try {
         while (n != 0) {
-          construct(alloc, *first, value);
-          ++first;
+          uninitialized_fill_step(first, value);
           --n;
         }
       } catch(...) {
@@ -280,11 +401,13 @@ namespace origin
       return first;
     }
 
-  template <typename Alloc, typename T>
-    auto uninitialized_fill_n(Alloc& alloc, T* first, std::size_t n, const T& value)
-      -> Requires<Trivial<T>() && sizeof(T) == 1, void>
+  template <typename Alloc, typename I, typename T>
+    inline auto uninitialized_fill_n(Alloc& alloc, I first, std::size_t n, const T& value)
+      -> Requires<Trivial_uninitialized_copy<I, T>(), I>
     {
+      // FIXME: Write this in terms of fill_n.
       fill(first, first + n, value);
+      return first + n;
     }
 }
 

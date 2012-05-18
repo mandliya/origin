@@ -117,9 +117,16 @@ namespace origin
 
 
       // Modifiers
+      template <typename... Args>
+        void emplace_back(Args&&... args);
+
       void push_back(T&& value);
       void push_back(const T& value);
       void pop_back();
+
+
+      template <typename... Args>
+        iterator emplace(const_iterator pos, Args&&... args);
 
       iterator insert(const_iterator pos, T&& value);
       iterator insert(const_iterator pos, const T& value);
@@ -162,8 +169,6 @@ namespace origin
 
   // Initialize this object by moving the elements of x into this object using
   // alloc for memory allocation and deallocation.
-  //
-  // If alloc != x.get_allocator(), then additional me
   template <typename T>
     vector<T>::vector(vector&& x, allocator& alloc)
       : base(std::move(x.base), alloc)
@@ -329,29 +334,55 @@ namespace origin
     }
 
   template <typename T>
+    template <typename... Args>
+      void vector<T>::emplace_back(Args&&... args)
+      {
+        if (!full()) {
+          base.append(std::forward<Args>(args)...);
+        } else {
+          // Allocate new memory for the inserted element.
+          std::size_t n = base.next_capacity();
+          T* first = base.allocate(n);
+          T* last = first;
+
+          // Try to move data into the newly allocated memory. Note that
+          // uninitialized 
+          try {
+            // Try moving the data to the new buffer. If an exception is thrown
+            // the moved (or copied) values will already have been destroyed.
+            last = uninitialized_move(base.alloc, base.first, base.last, first);
+
+            // Append the element to the end of the new buffer. If this fails,
+            // no harm, no foul.
+            construct(base.alloc, last, std::forward<Args>(args)...);
+            ++last;
+          } catch(...) {
+            base.deallocate(first, n);
+            throw;
+          }
+
+          // Destroy and deallocate the previous data. We still have to
+          // destroy partially formed (moved) objects.
+          base.clear();
+          base.deallocate(base.first, base.capacity());
+
+          // Make the vector point to the new buffer.
+          base.first = first;
+          base.last = last;
+          base.limit = first + n;
+      }
+    }
+
+  template <typename T>
     void vector<T>::push_back(T&& value)
     {
-      if (full()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(base);
-        tmp.append(std::move(value));
-        base.swap(tmp);
-      } else {
-        base.append(std::move(value));
+      emplace_back(std::move(value));
     }
-  }
 
   template <typename T>
     void vector<T>::push_back(const T& value)
     {
-      if (full()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(base);
-        tmp.append(value);
-        base.swap(tmp);
-      } else {
-        base.append(value);
-      }
+      emplace_back(value);
     }
 
   template <typename T>
@@ -361,48 +392,76 @@ namespace origin
       base.erase_at_end(1);
     }
 
+
+  template <typename T>
+    template <typename... Args>
+      auto vector<T>::emplace(const_iterator pos, Args&&... args) -> iterator
+      {
+        assert(pos >= begin() && pos < end());
+
+        T *mid = const_cast<T*>(pos);
+        if (!full()) {
+          // If the vector isn't empty, then we can just append or insert an
+          // object with the given arguments.
+          if (pos == end())
+            base.append(std::forward<Args>(args)...);
+          else
+            base.insert(mid, std::forward<Args>(args)...);
+          return mid;
+        } else {
+          // Allocate new memory for the inserted element.
+          std::size_t n = base.next_capacity();
+          T* first = base.allocate(n);
+          T* last = first;
+          T* result = nullptr;
+
+          // Try to move data into the newly allocated memory. Note that
+          // uninitialized 
+          try {
+            // Try moving the data to the new buffer. If an exception is here,
+            // then the moved part is destroyed, and last is not assigned.
+            last = uninitialized_move(base.alloc, base.first, mid, first);
+
+            // Append the element to the end of the new buffer. We will need
+            // to destroy the successfully moved part of the range.
+            construct(base.alloc, last, std::forward<Args>(args)...);
+            result = last;
+            ++last;
+
+            // Finally, move the remainder of the original vector into place.
+            // If an exception is thrown here, then we will need to destroy the
+            // previously constructed elements [first, last).
+            last = uninitialized_move(base.alloc, mid, base.last, last);
+          } catch(...) {
+            if (first != last)
+              destroy(base.alloc, first, last);
+            base.deallocate(first, n);
+            throw;
+          }
+
+          // Destroy and deallocate the previous data. We still have to
+          // destroy partially formed (moved) objects.
+          base.clear();
+          base.deallocate(base.first, base.capacity());
+
+          // Make the vector point to the new buffer.
+          base.first = first;
+          base.last = last;
+          base.limit = first + n;
+          return result;
+        }
+      }
+
   template <typename T>
     auto vector<T>::insert(const_iterator pos, T&& value) -> iterator
     {
-      std::size_t n = pos - base.first;
-      T* mid = base.first + n;
-      if (full()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(base.first, mid);
-        tmp.append(std::move(value));
-        tmp.move_at_end(mid, base.last);
-        base.swap(tmp);
-        return base.first + n;
-      } else {
-        if (pos == end()) {
-          base.append(std::move(value));
-        } else {
-          base.insert(mid, std::move(value));
-        }
-        return mid;
-      }
+      return emplace(pos, std::move(value));
     }
 
   template <typename T>
     auto vector<T>::insert(const_iterator pos, const T& value) -> iterator
     {
-      std::size_t n = pos - base.first;
-      T* mid = base.first + n;
-      if (full()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(base.first, mid);
-        tmp.append(value);
-        tmp.move_at_end(mid, base.last);
-        base.swap(tmp);
-        return base.first + n;
-      } else {
-        if (pos == end()) {
-          base.append(value);
-        } else {
-          base.insert(mid, value);
-        }
-        return mid;
-      }
+      return emplace(pos, value);
     }
 
   template <typename T>
@@ -429,7 +488,7 @@ namespace origin
       }
     }
 
-  // FIXME: This is probably wrong.
+  // FIXME: The result of this operation is almost certainly incorrect.
   template <typename T>
     template <typename I>
       auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Strict_input_iterator<I>()>*)
@@ -492,7 +551,6 @@ namespace origin
       return p;
     }
 
-    // FIXME: This is broken.
   template <typename T>
     auto vector<T>::erase(const_iterator first, const_iterator last) -> iterator
     {

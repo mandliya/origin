@@ -134,6 +134,7 @@ namespace origin
       // Mutators
       void swap(vector_base& x);
 
+      T* move_to(T *first);
 
       template <typename I> 
         T* move_at_pos(T* pos, I first, I last);
@@ -228,6 +229,16 @@ namespace origin
       std::swap(first, x.first);
       std::swap(last, x.last);
       std::swap(limit, x.limit);
+    }
+
+
+
+  // Move the elements of this vector base into the range pointed at by
+  // result, and return a pointer past the end of the output range.
+  template <typename T>
+    T* vector_base<T>::move_to(T* result)
+    {
+      return uninitialized_move(alloc, first, last, result);
     }
 
 
@@ -360,7 +371,7 @@ namespace origin
       {
         static_assert(Constructible<T, Args...>(), "");
         this->shift_right(pos, 1);
-        construct(this->alloc, *pos, std::forward<Args>(args)...);
+        construct(this->alloc, &*pos, std::forward<Args>(args)...);
       }
 
   // Insert or emplace the given arguments into the last object of the base
@@ -374,7 +385,7 @@ namespace origin
       inline void vector_base<T>::append(Args&&... args)
       {
         static_assert(Constructible<T, Args...>(), "");
-        construct(this->alloc, *this->last, std::forward<Args>(args)...);
+        construct(this->alloc, &*this->last, std::forward<Args>(args)...);
         ++this->last;
       }
 
@@ -432,7 +443,7 @@ namespace origin
       if (mid != this->last)
         move(mid, this->last, pos);
       --last;
-      destroy(alloc, *this->last);
+      destroy(alloc, &*this->last);
     }
 
   // Shift the elements of the vector left over the range [first, last).
