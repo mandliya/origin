@@ -14,13 +14,8 @@
 
 using namespace origin;
 
-int main()
+int main(int argc, char *argv[])
 {
-  // vector<int> v;
-  // for(int i = 0; i < 10; ++i) {
-  //   v.push_back(i);
-  // }
-  
-  performance_tester env;
+  performance_tester env(argc, argv);
   exec<vector<int>>(env);
 }

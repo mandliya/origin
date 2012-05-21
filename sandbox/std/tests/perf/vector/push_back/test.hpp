@@ -37,7 +37,7 @@ template <typename T, typename Env>
   void exec(Env& env)
   {
     push_back_test<T> test;
-    run(env, test, 10, 6);
+    run(env, test, env.repetitions(), 6);
     env.print(std::cout);
   }
 

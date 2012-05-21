@@ -11,8 +11,8 @@
 #include "perf.hpp"
 #include "test.hpp"
 
-int main()
+int main(int argc, char *argv[])
 {
-  origin::performance_tester env;
+  origin::performance_tester env(argc, argv);
   exec<std::vector<int>>(env);
 }

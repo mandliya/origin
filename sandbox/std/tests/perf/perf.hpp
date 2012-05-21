@@ -35,7 +35,7 @@ namespace origin
   //
   // FIXME: Parameterize over a different random number generator? A different
   // clock?
-  struct performance_tester
+  class performance_tester
   {
     using Clock = std::chrono::system_clock;
     using Time = Clock::time_point;
@@ -52,17 +52,41 @@ namespace origin
 
     using Results = std::vector<Measurements>;
 
+  public:
+    static constexpr int default_repeat = 10;
+
     // Initialize the performance testing environment.
-    performance_tester() : eng() { init(); }
+    performance_tester() 
+      : eng(), repeat {default_repeat}
+    { 
+      init(); 
+    }
 
     // Initialize the performance testing environment 
-    performance_tester(std::time_t t) : eng(t) { init(); }
+    performance_tester(std::time_t t) 
+      : eng(t), repeat {default_repeat}
+    { 
+      init(); 
+    }
+
+    // Initialize the performance tester with the given command line
+    // arguments. The arguments are parsed, setting default values.
+    performance_tester(int argc, char *argv[])
+      : eng(), repeat {default_repeat}
+    { 
+      init(argc, argv); 
+    }
+
 
     // Return the current time.
     static Time now() { return Clock::now(); }
 
     // Return the pseudorandom number generator.
     Engine& engine() { return eng; }
+
+    // Returns the number of repetitions to be executed for each data size.
+    int repetitions() const { return repeat; }
+
 
 
     // Execute the given test with test size n and record the results.
@@ -110,10 +134,32 @@ namespace origin
       delete [] new int[64];
     }
 
+    void init (int argc, char *argv[]);
+
   private:
     Engine eng;
     Results res;
+
+    // Testint options.
+    int repeat;
   };
+
+
+  // Initialize the performance testing environment by parsing the given
+  // command line options and arguments.
+  //
+  // TODO: Currently, we only understand how to configure repetition, which
+  // is just passed as an integral argument.
+  //
+  // FIXME: This should *NOT* be in a header. In fact, this entire module
+  // should be moved into the Origin core and made part of the static
+  // library.
+  inline void performance_tester::init(int argc, char *argv[])
+  {
+    if (argc > 1)
+      repeat = std::atoi(argv[1]);
+    init();
+  }
 
 
 
