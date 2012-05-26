@@ -36,6 +36,7 @@ if(NOT ORIGIN_INCLUDED)
   include(OriginDepend)
   include(OriginExecutable)
   include(OriginTest)
+  include(OriginPerformance)
   include(OriginInstall)
   include(OriginPackage)
 
