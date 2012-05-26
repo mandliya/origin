@@ -52,10 +52,17 @@ int main()
 {
   using V = origin::vector<int>;
   V v = {1, 2, 3, 5};
+  auto f = make_transform_iterator(v.begin(), twice{});
+  auto l = make_transform_iterator(v.end(), twice{});
+  while (f != l) {
+    std::cout << *f << '\n';
+    ++f;
+  }
 
-  using I = transform_iterator<V::iterator, twice>;
-  static_assert(Input_iterator<I>(), "");
 
-  // Check properties.
-  assert(check_transform_iterator(v.begin(), v.end(), twice{}));
+  // using I = transform_iterator<V::iterator, twice>;
+  // static_assert(Input_iterator<I>(), "");
+
+  // // Check properties.
+  // assert(check_transform_iterator(v.begin(), v.end(), twice{}));
 }

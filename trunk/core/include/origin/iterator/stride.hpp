@@ -60,7 +60,7 @@ namespace origin
 
 
       // Returns the underlying iterator
-      I base() const { return iter(); }
+      I base() const { return first(); }
       
       // Returns the advance action.
       Step step_func() const { return inc(); }
@@ -70,7 +70,7 @@ namespace origin
       
       
       // Readable
-      Iterator_reference<I> operator*() const { return *iter(); }
+      Iterator_reference<I> operator*() const;
       using Base::operator[];
 
       // Incrementable
@@ -86,8 +86,8 @@ namespace origin
       stride_iterator& operator-=(Difference_type<I> n);
 
     private:
-      I&       iter()       { return std::get<0>(data); }
-      const I& iter() const { return std::get<0>(data); }
+      I&       first()       { return std::get<0>(data); }
+      const I& first() const { return std::get<0>(data); }
       
       I&       last()       { return std::get<1>(data); }
       const I& last() const { return std::get<1>(data); }
@@ -100,32 +100,47 @@ namespace origin
 
 
   template <typename I, typename S>
-    inline auto stride_iterator<I, S>::operator++() -> stride_iterator&
+    inline Iterator_reference<I> 
+    stride_iterator<I, S>::operator*() const 
     { 
-      iter() = bounded_next(iter(), step(), last());
+      assert(first() != last());
+      return *first(); 
+    }
+
+
+  template <typename I, typename S>
+    inline auto 
+    stride_iterator<I, S>::operator++() -> stride_iterator&
+    { 
+      assert(first() != last());
+      first() = bounded_next(first(), step(), last());
       return *this; 
     }
 
   template <typename I, typename S>
-    inline auto stride_iterator<I, S>::operator--() -> stride_iterator&
+    inline auto 
+    stride_iterator<I, S>::operator--() -> stride_iterator&
     { 
-      iter() = prev(iter(), step());
+      first() = prev(first(), step());
       return *this; 
     }
 
   template <typename I, typename S>
-    inline auto stride_iterator<I, S>::operator+=(Difference_type<I> n)
+    inline auto 
+    stride_iterator<I, S>::operator+=(Difference_type<I> n)
       -> stride_iterator&
-    { 
-      iter() = bounded_next(iter(), step() * n, last());
+    {
+      assert(first() != last());
+      first() = bounded_next(first(), step() * n, last());
       return *this;
     }
 
   template <typename I, typename S>
-    inline auto stride_iterator<I, S>::operator-=(Difference_type<I> n) 
+    inline auto 
+    stride_iterator<I, S>::operator-=(Difference_type<I> n) 
       -> stride_iterator&
     { 
-      iter() *= prev(iter(), step * n);
+      first() *= prev(first(), step * n);
       return *this; 
     }
 
@@ -135,13 +150,15 @@ namespace origin
   // Two stride iterators are equal if they refer to the same object and have
   // the same step function.
   template <typename I, typename S>
-    inline bool operator==(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator==(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return a.base() == b.base();
     }
 
   template <typename I, typename S>
-    inline bool operator!=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator!=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return !(a == b);
     }
@@ -153,25 +170,29 @@ namespace origin
   // underlying iterator. The order is undefined if the iterators have different
   // step functions.
   template <typename I, typename S>
-    inline bool operator<(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator<(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return a.base() < b.base();
     }
 
   template <typename I, typename S>
-    inline bool operator>(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator>(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return a.base() > b.base();
     }
 
   template <typename I, typename S>
-    inline bool operator<=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator<=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return a.base() <= b.base();
     }
 
   template <typename I, typename S>
-    inline bool operator>=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline bool 
+    operator>=(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     { 
       return a.base() >= b.base();
     }
@@ -182,17 +203,37 @@ namespace origin
   // The difference between two stride iterators is undefined if a and b have
   // different step functions.
   template <typename I, typename S>
-    Difference_type<I> operator-(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
+    inline Difference_type<I> 
+    operator-(const stride_iterator<I, S>& a, const stride_iterator<I, S>& b)
     {
       return (a.base() - b.base()) / a.stride();
     }
 
 
 
-  // Stride iter
-  // Construct a stride iterator with some predetermined stride or step.
+  // Make stride iterator
+  //
+  // Construct a stride iterator with some predetermined stride or step. There
+  // are four overloads of this function:
+  //
+  //    make_stride_iterator(first, last, n) ~> i
+  //    make_stride_iterator(last, n) ~> i
+  //    make_stride_iterator(first, last, step) ~> i
+  //    make_stride_iterator(last, step) ~> i
+  //
+  // The first two overloads construct stride iterators using a constant step n
+  // where n is the difference type of first and last. These are the most
+  // commonly used overloads.
+  //
+  // The last two overloads construct stride iterators whose step function is
+  // given explicitly. These can be used to construct iteratos functions with
+  // dynamic strides or whose strides are constant expressions. For example:
+  //
+  //    auto i = make_stride_iterator(f, l, literal(2));
+  //
+  // This creates a stride iterator whose stride is the literal value 2 (i.e.,
+  // a constant expression).
  
-  // Returns a stride iterator over [first, last) stepping by n.
   template <typename I>
     inline auto make_stride_iterator(I first, I last, Difference_type<I> n)
       -> Requires<Iterator<I>(), stride_iterator<I>>
@@ -201,8 +242,6 @@ namespace origin
       return {first, last, F{n}};
     }
 
-  // Returns a stride iterator over [last, last) stepping by n. This is
-  // generally used to construct end iterators.
   template <typename I>
     inline auto make_stride_iterator(I last, Difference_type<I> n)
       -> Requires<Iterator<I>(), stride_iterator<I>>
@@ -211,9 +250,6 @@ namespace origin
       return {last, F{n}};
     }
 
-
-  // Returns a stride iterator over i with a step specified by the given
-  // function.
   template <typename I, typename Step>
     inline auto make_stride_iterator(I first, I last, Step step) 
       -> Requires<Iterator<I>() && Function<Step>(), stride_iterator<I, Step>>

@@ -19,10 +19,10 @@ int main()
   origin::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   
   {
-    auto f = make_stride_iterator(v.begin(), 2), 
+    auto f = make_stride_iterator(v.begin(), v.end(), 2), 
          l = make_stride_iterator(v.end(), 2);
     static_assert(Random_access_iterator<decltype(f)>(), "");
-    for( ; f < l; ++f) {
+    for( ; f != l; ++f) {
       cout << *f << ' ';
     }
     cout << '\n';

@@ -9,6 +9,7 @@
 #define ORIGIN_ITERATOR_CORE_HPP
 
 #include <cassert>
+#include <iostream>
 
 #include <origin/concepts.hpp>
 
@@ -653,7 +654,7 @@ namespace origin
       -> Requires<Random_access_iterator<I>(), I>
     {
       assert(n >= 0);
-      Difference_type<I> d = distance(first, last);
+      Difference_type<I> d = last - first;
       return first += (n < d ? n : d);
     }
 
