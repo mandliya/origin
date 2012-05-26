@@ -211,7 +211,7 @@ namespace origin
 
 
 
-  // Make stride iterator
+  // Make stride iterator 
   //
   // Construct a stride iterator with some predetermined stride or step. There
   // are four overloads of this function:
@@ -229,7 +229,7 @@ namespace origin
   // given explicitly. These can be used to construct iteratos functions with
   // dynamic strides or whose strides are constant expressions. For example:
   //
-  //    auto i = make_stride_iterator(f, l, literal(2));
+  //    auto i = make_stride_iterator(f, l, integral_constant<int, 2>{});
   //
   // This creates a stride iterator whose stride is the literal value 2 (i.e.,
   // a constant expression).
