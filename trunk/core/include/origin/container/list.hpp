@@ -10,342 +10,402 @@
 
 #include <list>
 
-#include <origin/range.hpp>
+#include <origin/memory.hpp>
 
 namespace origin
 {
-  // impltor (container)
-  // A impltor is a dynamically resizable sequence of contiguously allocated
-  // elements.
-  template <typename T, typename Alloc = std::allocator<T>>
-    class o_list
+  // List node base
+  //
+  // The list node base provides basic linking structure for doubly linked
+  // list. It includes a pair of pointers called next and prev. 
+  struct list_node_base
+  {
+    list_node_base() 
+      : next{this}, prev{this} 
+    { }
+
+    list_node_base(list_node_base* n, list_node_base* p)
+      : next{n}, prev{p}
+    { }
+
+    void hook(list_node_base* p) noexcept;
+    void unhook() noexcept;
+
+    list_node_base* next;
+    list_node_base* prev;
+  };
+
+  // TODO: Would it be better to make these free algorithms like libc++ does?
+  // It might be nice to support methods like link_node, which link a range
+  // of nodes before a given position.
+
+  // Attach this node to the linked list just before p.
+  //
+  // FIXME: Move this into the src dir.
+  inline void list_node_base::hook(list_node_base* p) noexcept
+  {
+    next = p;
+    prev = p->prev;
+    p->prev->next = this;
+    p->prev = this;
+  }
+
+  // Detach this node from the linked list by making the prev point to next
+  // and next point to prev.
+  //
+  // FIXME: Move this into the src dir.
+  inline void list_node_base::unhook() noexcept
+  {
+    list_node_base* p = prev;
+    list_node_base* q = next;
+    p->next = q;
+    q->prev = p;
+  }
+
+  // List node
+  //
+  // The list node class is a node in a linked list that stores a user-specified
+  // data.
+  template <typename T>
+    struct list_node : list_node_base
     {
-      using base_type = std::list<T, Alloc>;
-    public:
-      using allocator_type = typename base_type::allocator_type;
-
-      using value_type      = typename base_type::value_type;
-      using reference       = typename base_type::reference;
-      using const_reference = typename base_type::const_reference;
-      using pointer         = typename base_type::pointer;
-      using const_pointer   = typename base_type::const_pointer;
-      
-      using size_type       = typename base_type::size_type;
-      using difference_type = typename base_type::difference_type;
-      
-      using iterator       = typename base_type::iterator;
-      using const_iterator = typename base_type::const_iterator;
-      using reverse_iterator       = typename base_type::reverse_iterator;
-      using const_reverse_iterator = typename base_type::const_reverse_iterator;
-      
-      
-      // Default constructible
-      explicit o_list(const allocator_type& alloc = {}) 
-        : impl(alloc) 
-      { }
-      
-      
-      
-      // Movable
-      o_list(o_list&& x, const allocator_type& alloc = {})
-        : impl(std::move(x.impl), alloc)
-      { }
-       
-      o_list& operator=(o_list&& x) 
-      {
-        impl = std::move(x.impl); 
-        return *this;
-      }
-      
-      
-      
-      // Copyable
-      o_list(const o_list& x, const allocator_type& alloc = {})
-        : impl(x, alloc)
-      { }
-      
-      o_list& operator=(const o_list& x) 
-      { 
-        return impl = x.impl;
-        return *this;
-      }
-      
-      
-      
-      // Fill initialization
-      explicit o_list(size_type n, 
-                      const value_type& value = {}, 
-                      const allocator_type& alloc = {})
-        : impl(n, value, alloc)
-      { }
-      
-      void assign(size_type n, const value_type value)
-      {
-        impl.assign(n, value);
-      }
-      
-      
-      
-      // Iterator range initialization
-      // Initialize or assign the impltor by copying the elements in the range 
-      // [first, last).
-      template <typename I>
-        o_list(I first, I last, const allocator_type& alloc = {})
-          : impl(first, last, alloc)
+      // Forwarding constructors
+      template <typename... Args>
+        list_node(Args&&... args)
+          : value{std::forward<Args>(args)...}
         { }
-        
-      template <typename I>
-        void assign(I first, I last) 
-        { 
-          impl.assign(first, last); 
-        }
-      
-      
-      
-      // Range initialization
-      // Initialize or assign the impltor by copying the elements in range.
-      template <typename R>
-        explicit o_list(const R& range, 
-                        const allocator_type& alloc = {}, 
-                        Requires<Input_range<R>()>* = {})
-          : impl(o_begin(range), o_end(range), alloc)
-        { }
-      
-      template <typename R>
-        void assign(const R& range, Requires<Input_range<R>()>* = {}) 
-        { 
-          impl.assign(o_begin(range), o_end(range));
-        }
-      
-      
-      
-      // Initializer list initialization
-      // Initialize or assign the impltor by copying the elements in list.
-      o_list(std::initializer_list<value_type> list, const allocator_type& alloc = {})
-        : impl(list.begin(), list.end(), alloc)
-      { }
-      
-      o_list& operator=(std::initializer_list<value_type> list)
-      {
-        impl = list;
-        return *this;
-      }
-      
-      void assign(std::initializer_list<value_type> list)
-      {
-        impl.assign(list);
-      }
-      
-      
-      
-      // Equality comparable
-      bool operator==(const o_list& v) const { return impl == v.impl; }
-      bool operator!=(const o_list& v) const { return impl != v.impl; }
-      
-      
-      // Totally ordered
-      bool operator<(const o_list& v) const  { return impl < v.impl; }
-      bool operator>(const o_list& v) const  { return impl > v.impl; }
-      bool operator<=(const o_list& v) const { return impl <= v.impl; }
-      bool operator>=(const o_list& v) const { return impl >= v.impl; }
-      
-      
-      
-      // Size and capacity
-      bool empty() const { return impl.empty(); }
-      size_type size() const { return impl.size(); }
-      
-      void resize(size_type n, const value_type& value = {}) 
-      { 
-        impl.resize(n, value); 
-      }
-      
-      
-      
-      // Element access
-      reference       front()       { return impl.front(); }
-      const_reference front() const { return impl.front(); }
-      
-      reference       back()       { return impl.back(); }
-      const_reference back() const { return impl.back(); }
-      
-      
-      
-      // Push and pop front
-      template<typename... Args>
-        void emplace_front(Args&&... args)
-        {
-          impl.emplace_front(std::forward<Args>(args)...);
-        }
-        
-      void push_front(const value_type& value) { impl.push_front(value); }
-      void push_front(value_type&& value) { impl.push_front(std::move(value)); }
-      void pop_front() { impl.pop_front(); }
-        
 
-      
-      // Push and pop back
-      template<typename... Args>
-        void emplace_back(Args&&... args) 
-        { 
-          impl.emplace_back(std::forward<Args>(args)...); 
-        }
-
-      void push_back(const value_type& value) { impl.push_back(value); }
-      void push_back(value_type&& value) { impl.push_back(std::move(value)); }
-      void pop_back() { impl.pop_back(); }
-      
-      
-      
-      // Insert
-      template<typename... Args>
-        iterator emplace(const_iterator pos, Args&&... args)
-        {
-          return impl.emplace(pos, std::forward<Args>(args)...);
-        }
-      
-      iterator insert(const_iterator pos, const value_type& value) 
-      { 
-        return impl.insert(pos, value); 
-      }
-      
-      iterator insert(const_iterator pos, value_type&& value)
-      {
-        return impl.insert(pos, value);
-      }
-      
-      // Insert fill
-      iterator insert(const_iterator pos, size_type n, const value_type& value)
-      {
-        return impl.insert(pos, n, value);
-      }
-      
-      // Insert iterator range
-      template<typename I>
-        iterator insert(const_iterator pos, I first, I last)
-        {
-          return impl.insert(pos, first, last);
-        }
-        
-      // Insert range
-      template<typename R>
-        iterator insert(const_iterator pos, const R& range, Requires<Input_range<R>()>* = {})
-        {
-          return impl.insert(pos, o_begin(range), o_end(range));
-        }
-      
-      // Insert initializer list
-      iterator insert(const_iterator pos, std::initializer_list<value_type> list)
-      {
-        return impl.insert(pos, list);
-      }
-      
-      
-      
-      // Erase
-      iterator erase(const_iterator pos) 
-      { 
-        return impl.erase(pos); 
-      }
-      
-      iterator erase(const_iterator first, const_iterator last)
-      {
-        return impl.erase(first, last);
-      }
-      
-      void clear() { impl.clear(); }
-      
-      
-      
-      // Splice
-      void splice(const_iterator pos, o_list& x)  { impl.splice(pos, x); }
-      void splice(const_iterator pos, o_list&& x) { impl.splice(pos, std::move(x)); }
-      
-      void splice(const_iterator pos, o_list& x, const_iterator i)
-      {
-        impl.splice(pos, x, i);
-      }
-      
-      void splice(const_iterator pos, o_list&& x, const_iterator i)
-      {
-        impl.splice(pos, std::move(x), i);
-      }
-      
-      void splice(const_iterator pos, o_list& x, const_iterator first, const_iterator last)
-      {
-        impl.splice(pos, x, first, last);
-      }
-      
-      void splice(const_iterator pos, o_list&& x, const_iterator first, const_iterator last)
-      {
-        impl.splice(pos, std::move(x), first, last);
-      }
-      
-      
-      
-      // Reverse
-      void reverse() { impl.reverse(); }
-      
-      
-      
-      // Remove
-      void remove(const value_type& value) { impl.remove(value); }
-      
-      template <typename P>
-        void remove_if(P pred) { impl.remove(pred); }
-      
-      
-      
-      // Unique
-      void unique() { impl.unique(); }
-      
-      template <typename R>
-        void unique(R comp) { impl.unique(comp); }
-      
-      
-      
-      // Merge
-      void merge(o_list& x)  { impl.merge(x); }
-      void merge(o_list&& x) { impl.merge(std::move(x)); }
-      
-      template <typename R>
-        void merge(o_list& x, R comp) { impl.merge(x, comp); }
-      
-      template <typename R>
-        void merge(o_list&& x, R comp) { impl.merge(std::move(x), comp); }
-      
-      
-      
-      // Sort
-      void sort() { impl.sort(); }
-      
-      template <typename R>
-        void sort(R comp) { impl.sort(comp); }
-      
-      
-      // Swap
-      void swap(o_list& v) { impl.swap(v.impl); }
-      
-      
-      
-      // Iterable
-      iterator begin() { return impl.begin(); }
-      iterator end()   { return impl.end(); }
-      
-      const_iterator begin() const { return impl.begin(); }
-      const_iterator end() const   { return impl.end(); }
-      
-      
-    private:
-      base_type impl;
+      T value;
     };
-    
-    
-    
-  // Specialization for std::swap.
-  template <typename T, typename A>
-    void swap(o_list<T, A>& a, o_list<T, A>& b) { a.swap(b); }
-    
+
+
+
+  // List node cast
+  //
+  // Return p cast as a typed list node.
+  
+  template <typename T>
+    inline list_node<T>* list_node_cast(list_node_base* p)
+    {
+      return static_cast<list_node<T>*>(p);
+    }
+
+  template <typename T>
+    inline const list_node<T>* list_node_cast(const list_node_base* p)
+    {
+      return static_cast<const list_node<T>*>(p);
+    }
+
+  // List base
+  //
+  // The list base class encapsulates the underlying storage and allocation
+  // facilities for a linked list class. 
+  //
+  // The list base stores a single node base object, called its anchor, to which
+  // allocated list nodes are attached. The anchor also serves as a list
+  // specific "end" iterator. This class also stores a count, which is used to
+  // record the number of nodes.
+  template <typename T>
+    class list_base
+    {
+    public:
+      using node = list_node<T>;
+
+      list_base()
+        : alloc(default_allocator()), base{}, count{0}
+      { }
+
+      list_base(allocator& a)
+        : alloc(a), base{}, count{0}
+      { }
+
+
+      // Observers
+      
+      // Returns true if there are no nodes linked to the list.
+      //
+      // Note: When count == 0, it must be the case that tail() == &base.
+      bool empty() const { return count == 0; }
+
+      // Returns the number of nodes linked to the list.
+      std::size_t size() const { return count; }
+
+      // Returns the anchor node.
+      list_node_base* anchor()       { return &base; }
+      list_node_base* anchor() const { return non_const(&base); }
+
+      // Returns the first node attached to the list. Note that the return is
+      // never a const pointer.
+      list_node_base* head()       { return base.next; }
+      list_node_base* head() const { return non_const(base.next); }
+
+      // Returns the last node attached to the list. Note that the return is
+      // never a const pointer.
+      list_node_base* tail()       { return base.prev; }
+      list_node_base* tail() const { return non_const(base.prev); }
+
+      // Returns the object at the front of the list.
+      T&       front();
+      const T& front() const;
+
+      // Returns the object at the back of the list.
+      T&       back();
+      const T& back() const;
+
+
+      // Allocate and deallocate
+      node* allocate();
+      void deallocate(node* p);
+
+    private:
+      // Return p as a non-const node.
+      static list_node_base* non_const(const list_node_base* p)
+      {
+        return const_cast<list_node_base*>(p);
+      }
+
+    public:
+      allocator& alloc;
+      list_node_base base;  // The anchor node
+      std::size_t count;    // Number of linked nodes
+    };
+
+  template <typename T>
+    inline T& list_base<T>::front()
+    { 
+      assert(!empty()); 
+      return list_node_cast<T>(head())->value; 
+    }
+
+  template <typename T>
+    inline const T& list_base<T>::front() const 
+    { 
+      assert(!empty()); 
+      return list_node_cast<T>(head())->value; 
+    }
+
+  template <typename T>
+    inline T& list_base<T>::back() 
+    { 
+      assert(!empty()); 
+      return list_node_cast<T>(tail())->value; 
+    }
+
+  template <typename T>
+    inline const T& list_base<T>::back() const 
+    { 
+      assert(!empty()); 
+      return list_node_cast<T>(tail())->value; 
+    }
+
+  template <typename T>
+    inline auto list_base<T>::allocate() -> node*
+    {
+      node* p = origin::allocate<node>(alloc);
+      ++count;
+      return p;
+    }
+
+  template <typename T>
+    inline void list_base<T>::deallocate(node* p)
+    {
+      origin::deallocate(alloc, p);
+      --count;
+    }
+
+
+
+  // List iterator
+  //
+  // The list iterator class adapts a linked list node pointer into a 
+  // bidirectional iterator.
+  //
+  // TODO: Implement const conversion requirements. A non-const iterator must
+  // be convertible to a const iterator.
+  template <typename T>
+    class list_iterator
+    {
+    public:
+      list_iterator() 
+        : ptr{nullptr} 
+      { }
+      
+      list_iterator(list_node_base* p) 
+        : ptr{p} 
+      { }
+
+      // Returns a pointer to the underlying node pointer.
+      list_node_base*       node()       { return ptr; }
+      const list_node_base* node() const { return ptr; }
+
+      // Read/wrte
+      T& operator*() const;
+
+      // Increment
+      list_iterator& operator++();
+      list_iterator operator++(int);
+
+      // Decrement
+      list_iterator& operator--();
+      list_iterator operator--(int);
+
+    private:
+      // Returns true if ptr is "past the end".
+      bool past_the_end() const { return ptr->next == ptr; }
+
+    private:
+      list_node_base* ptr;
+    };
+
+  template <typename T>
+    inline T& list_iterator<T>::operator*() const
+    {
+      assert(ptr && !past_the_end());
+      return list_node_cast<T>(ptr)->value;
+    }
+
+  template <typename T>
+    inline list_iterator<T>& list_iterator<T>::operator++()
+    {
+      assert(ptr && !past_the_end());
+      ptr = ptr->next;
+      return *this;
+    }
+
+  template <typename T>
+    inline list_iterator<T> list_iterator<T>::operator++(int)
+    {
+      list_iterator tmp;
+      operator++();
+      return tmp;
+    }
+
+  template <typename T>
+    inline list_iterator<T>& list_iterator<T>::operator--()
+    {
+      assert(ptr && !past_the_end());
+      ptr = ptr->next;
+      return *this;
+    }
+
+  template <typename T>
+    inline list_iterator<T> list_iterator<T>::operator--(int)
+    {
+      list_iterator tmp;
+      operator++();
+      return tmp;
+    }
+
+  template <typename T>
+    bool operator==(const list_iterator<T>& a, const list_iterator<T>& b)
+    {
+      return a.node() == b.node();
+    }
+
+  template <typename T>
+    bool operator!=(const list_iterator<T>& a, const list_iterator<T>& b)
+    {
+      return a.node() != b.node();
+    }
+
+
+
+  // List
+  //
+  // The linked list class...
+  template <typename T>
+    class list
+    {
+      using node = list_node<T>;
+    public:
+      using iterator = list_iterator<T>;
+      using const_iterator = list_iterator<const T>;
+
+      list();
+      list(allocator& alloc);
+
+      // Observers
+      bool empty() const { return base.empty(); }
+
+      std::size_t size() const { return base.size(); }
+
+      T&       front()       { return base.front(); }
+      const T& front() const { return base.front(); }
+
+      T&       back()       { return base.back(); }
+      const T& back() const { return base.back(); }
+
+
+      // Mutators
+
+      // Push front
+      template <typename... Args>
+        void emplace_front(Args&&... args);
+      void push_front(T&& x);
+      void push_front(const T& x);
+
+      // Push back
+      template <typename... Args>
+        void emplace_back(Args&&... args);
+      void push_back(T&& value);
+      void push_back(const T& value);
+
+      // Pop front and back
+      void pop_front();
+      void pop_back();
+
+      // Iterators
+      iterator       begin()       { return base.head(); }
+      const_iterator begin() const { return base.head(); }
+      
+      iterator       end()       { return base.anchor(); }
+      const_iterator end() const { return base.anchor(); }
+
+    private:
+      list_base<T> base;
+    };
+
+
+  template <typename T>
+    list<T>::list()
+      : base()
+    { }
+
+  template <typename T>
+    list<T>::list(allocator& alloc)
+      : base(alloc)
+    { }
+
+
+  // TODO: This can probably be used for a single insert function.
+  template <typename T>
+    template <typename... Args>
+    void list<T>::emplace_back(Args&&... args)
+    {
+      // Allocate and initialize the new new.
+      node* p = base.allocate();
+      try {
+        construct(base.alloc, &p->value, std::forward<Args>(args)...);
+      } catch(...) {
+        base.deallocate(p);
+      }
+
+      // Link it at the back of the list.
+      p->hook(base.anchor());
+    }
+
+  template <typename T>
+    void list<T>::push_back(T&& value)
+    {
+      emplace_back(std::move(value));
+    }
+
+  template <typename T>
+    void list<T>::push_back(const T& value)
+    {
+      emplace_back(value);
+    }
+
 } // namespace origin
 
 

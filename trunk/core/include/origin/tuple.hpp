@@ -80,7 +80,6 @@ namespace origin
     template <typename F, typename T, typename... Args>
       static Result apply(F f, T&& x, Args&&... args)
       {
-        using Ith_type = Tuple_element<Forwarded<T>, I>;
         return tuple_expand_args<I + 1, N, Result>::apply(
           f, 
           std::forward<T>(x),             // the tuple
