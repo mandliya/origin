@@ -44,6 +44,7 @@ int main()
   assert(( v.empty() ));
   assert(( v.size() == 0 ));
 
+  /*
   num zero = 0;
   v.insert({zero, 'a'});
   assert(( !v.empty() ));
@@ -51,9 +52,10 @@ int main()
   assert(( v[zero] == 'a' ));
   assert(( v.find(zero) != v.end() ));
   assert(( v.count(zero) == 1 ));
+  */
   
   v.insert({1, 'b'});
-  assert(( v.size() == 2 ));
+  assert(( v.size() == 1 ));
   assert(( v[1] == 'b' ));
   assert(( v.find(1) != v.end() ));
   assert(( v.count(1) == 1 ));

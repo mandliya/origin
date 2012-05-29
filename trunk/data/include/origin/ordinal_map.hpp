@@ -8,11 +8,10 @@
 #ifndef ORIGIN_ORDINAL_MAP_HPP
 #define ORIGIN_ORDINAL_MAP_HPP
 
-#include <vector>
 #include <utility>
 
+#include <origin/vector.hpp>
 #include <origin/ordinal.hpp>
-#include <origin/container.hpp>
 
 namespace origin
 {
@@ -50,220 +49,246 @@ namespace origin
 
   // The ordinal map iterator provides an iterator type over the mappings in 
   // an ordinal map. Ordinal map iterators rae random access iterators.
-  template<typename Key, typename Iter, typename Size>
+  template <typename K, typename I>
     class ordinal_map_iterator
     {
     public:
-      using value_type = std::pair<Key, Value_type<Iter>>;
-      using reference = std::pair<Key, Iterator_reference<Iter>>;
-      using pointer = std::pair<Key, Iterator_pointer<Iter>>;
-      using difference_type = Distance_type<Iter>;
-      using iterator_category = std::random_access_iterator_tag;
+      using value_type = std::pair<K, Value_type<I>>;
+      using reference = std::pair<K, Iterator_reference<I>>;
       
-      ordinal_map_iterator() 
-        : pos(), iter() 
-      { }
+      ordinal_map_iterator() = default;
       
-      ordinal_map_iterator(Size n, Iter i) 
-        : pos(n), iter(i) 
+      ordinal_map_iterator(std::size_t n, I i) 
+        : pos{n}, iter{i}
       { }
       
       // Enable iterator interoperability
-      template<typename Other>
-        ordinal_map_iterator(ordinal_map_iterator<Key, Other, Size> i, 
-                             Requires<Convertible<Other, Iter>()>* = {}) 
-          : pos(i.pos), iter(i.iter)
+      template <typename J>
+        ordinal_map_iterator(ordinal_map_iterator<K, J> i, 
+                             Requires<Convertible<J, I>()>* = {}) 
+          : pos{i.pos}, iter{i.iter}
         { }
       
-      // Equality_comparable
-      bool operator==(ordinal_map_iterator const& x) const { return iter == x.iter; }
-      bool operator!=(ordinal_map_iterator const& x) const { return iter != x.iter; }
-      
-      // Totally_ordered
-      bool operator<(ordinal_map_iterator const& x) const  { return iter < x.iter; }
-      bool operator>(ordinal_map_iterator const& x) const  { return iter > x.iter; }
-      bool operator<=(ordinal_map_iterator const& x) const { return iter <= x.iter; }
-      bool operator>=(ordinal_map_iterator const& x) const { return iter >= x.iter; }
+      // Base iterator
+      I base() const { return iter; }
 
       // Readable
-      reference operator*() const  { return {ordinal_cast<Key>(pos), *iter}; }
-      pointer   operator->() const { return {ordinal_cast<Key>(pos), &*iter}; }
+      reference operator*() const;
+      reference operator[](Difference_type<I> n) const;
 
       // Increment
-      ordinal_map_iterator& operator++() { return advance(1); }
-      
-      ordinal_map_iterator operator++(int) 
-      { 
-        ordinal_map_iterator tmp(*this); 
-        operator++(); 
-        return tmp; 
-      }
+      ordinal_map_iterator& operator++();
+      ordinal_map_iterator operator++(int);
       
       // Decrement
-      ordinal_map_iterator& operator--() { return advance(-1); }
-      
-      ordinal_map_iterator operator--(int) 
-      { 
-        ordinal_map_iterator tmp(*this); 
-        operator--();
-        return tmp; 
-      }
+      ordinal_map_iterator& operator--();
+      ordinal_map_iterator operator--(int);
 
       // Advance
-      ordinal_map_iterator& operator+=(difference_type n) { return advance(n); }
-      
-      friend ordinal_map_iterator 
-      operator+(ordinal_map_iterator i, difference_type n) 
-      { 
-        return i += n; 
-      }
-      
-      friend ordinal_map_iterator 
-      operator+(difference_type n, ordinal_map_iterator i) 
-      { 
-        return i += n;
-      }
-
-      ordinal_map_iterator& operator-=(difference_type n) { return advance(-n); }
-      
-      friend ordinal_map_iterator 
-      operator-(ordinal_map_iterator i, difference_type n) 
-      { 
-        return i -= n; 
-      }
-
-      // Distance
-      friend difference_type 
-      operator-(ordinal_map_iterator const& i, ordinal_map_iterator const& j) 
-      { 
-        return i - j; 
-      }
+      ordinal_map_iterator& operator+=(Difference_type<I> n);
+      ordinal_map_iterator& operator-=(Difference_type<I> n);
       
     private:
-      ordinal_map_iterator& advance(difference_type n)
-      {
-        pos += n;
-        iter += n;
-        return *this;
-      }
-      
-    private:
-      Size pos;
-      Iter iter;
+      std::size_t pos;
+      I iter;
     };
 
-    
-    
-  // A vector map implements a Direct, Unique Map over a Random Access 
-  // Container. Like all Direct Maps, the key type of the vector map is 
-  // the size type of the underlying container. However, all keys are implicitly 
-  // mapped to values. This is an optimization over true Direct Maps where the
-  // mapped value may not be defined for a given key.
+  template <typename K, typename I>
+    inline auto
+    ordinal_map_iterator<K, I>::operator*() const -> reference
+    { 
+      return {ordinal_cast<K>(pos), *iter}; 
+    }
+
+  template <typename K, typename I>
+    inline auto
+    ordinal_map_iterator<K, I>::operator[](Difference_type<I> n) const -> reference
+    { 
+      return *(*this + n);
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>&
+    ordinal_map_iterator<K, I>::operator++()
+    {
+      ++pos;
+      ++iter;
+      return *this;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>&
+    ordinal_map_iterator<K, I>::operator--()
+    {
+      --pos;
+      --iter;
+      return *this;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>&
+    ordinal_map_iterator<K, I>::operator+=(Difference_type<I> n)
+    {
+      pos += n;
+      iter += n;
+      return *this;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>&
+    ordinal_map_iterator<K, I>::operator-=(Difference_type<I> n)
+    {
+      pos -= n;
+      iter -= n;
+      return *this;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>
+    operator+(ordinal_map_iterator<K, I> i, Difference_type<I> n)
+    {
+      return i += n;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>
+    operator+(Difference_type<I> n, ordinal_map_iterator<K, I> i)
+    {
+      return i += n;
+    }
+
+  template <typename K, typename I>
+    inline ordinal_map_iterator<K, I>
+    operator-(ordinal_map_iterator<K, I> i, Difference_type<I> n)
+    {
+      return i -= n;
+    }
+
+  template <typename K, typename I>
+    inline Difference_type<I>
+    operator-(const ordinal_map_iterator<K, I>& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a - b;
+    }
+
+  // Equality comparable
+  template <typename K, typename I>
+    inline bool
+    operator==(ordinal_map_iterator<K, I> const& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() == b.base();
+    }
+
+  template <typename K, typename I>
+    inline bool
+    operator!=(ordinal_map_iterator<K, I> const& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() != b.base();
+    }
+
+      
+    // Totally ordered
+  template <typename K, typename I>
+    inline bool
+    operator<(ordinal_map_iterator<K, I> const& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() < b.base();
+    }
+
+  template <typename K, typename I>
+    inline bool
+    operator>(ordinal_map_iterator<K, I> const& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() > b.base();
+    }
+
+  template <typename K, typename I>
+    inline bool
+    operator<=(ordinal_map_iterator<K, I> const& a, const ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() <= b.base();
+    }
+
+  template <typename K, typename I>
+    inline bool
+    operator>=(ordinal_map_iterator<K, I> const& a, ordinal_map_iterator<K, I>& b)
+    {
+      return a.base() >= b.base();
+    }
+
+
+  // Ordinal map
   //
-  // The ordinal_map is a container adaptor, taking an underlying container as
-  // a template parameter. The allocator for the map can be specified as an
-  // argument to that parameter.
-  template<typename K, typename V, typename Vec = std::vector<V>>
+  // The ordinal map class is a container adaptor. It adapts a random access
+  // container (e.g., a vector) into a direct, unique map. 
+  //
+  // The key parameter of the ordinal map must be an ordianl type; these values
+  // are not stored in the map. Unlike a traditional map, these values are not
+  // stored by the data structure. Key values are used to index into the
+  // underlying random access data structure by their ordinal values.
+  //
+  // FIXME: Add real allocator support.
+  //
+  // FIXME: Cleanup and documentation
+  template <typename K, typename T, typename Cont = vector<T>>
     class ordinal_map
     {
-      using vector_type = Vec;
     public:
-      using allocator_type  = typename vector_type::allocator_type;
-      using size_type       = Size_type<Vec>;
-      using difference_type = Distance_type<Vec>;
+      using value_type  = std::pair<K, T>;
 
-      // Types
-      using key_type    = K;
-      using mapped_type = V;
-      using value_type  = std::pair<K, V>;
-      using reference       = Container_reference<Vec>;
-      using const_reference = Container_reference<Vec const>;
-      using pointer       = Container_pointer<Vec>;
-      using const_pointer = Container_pointer<Vec const>;
-      
-      using iterator       = ordinal_map_iterator<K, Iterator_type<Vec>, size_type>;
-      using const_iterator = ordinal_map_iterator<K, Iterator_type<Vec const>, size_type>;
-      using reverse_iterator       = std::reverse_iterator<iterator>;
-      using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
+      using iterator       = ordinal_map_iterator<K, Iterator_type<Cont>>;
+      using const_iterator = ordinal_map_iterator<K, Iterator_type<Cont const>>;
 
       // Default constructor
-      ordinal_map(allocator_type const& alloc = {}) 
-        : vec()
-      { }
+      ordinal_map() : data{} { }
       
-      // NOTE: Movable and Copyable are provided by default.
-
       // Range initialization
-      // Initializes the map over a sequence of mappings (key/value pairs).
-      template<typename Iter>
-        ordinal_map(Iter first, Iter last)
-          : vec()
+      //
+      // FIXME: Optimize for forward iterators?
+      template <typename I>
+        ordinal_map(I first, I last)
+          : data{}
         {
-          static_assert(Input_iterator<Iter>(), "");
-          static_assert(Convertible<Value_type<Iter>, value_type>(), "");
-
-          while(first != last) {
-            (*this)[first->first] = first->second;
+          while (first != last) {
+            (*this)[(*first).first] = (*first).second;
+            ++first;
           }
         }
-        
-      // List initialization
-      // The initializer list constructor initializes a map over a sequence
-      // of mappings (i.e., key/value pairs).
-      //
-      // FIXME: This could be generalized for convertible types.
-      ordinal_map(std::initializer_list<value_type> list)
-        : vec()
-      {
-        for(auto const& x : list)
-          (*this)[x.first] = x.second;
-      }
-      
-      // List initialization
-      // The initializer list constructor initializess a map over a sequence
-      // of mapped values.
-      ordinal_map(std::initializer_list<mapped_type> list)
-        : vec(list.begin(), list.end())
+
+      ordinal_map(std::initializer_list<value_type> l)
+        : ordinal_map(l.begin(), l.end())
       { }
       
       // Fill initialization
-      // The fill constructor provides a method of initializing a map over a
-      // set of n mappings, optionally initialized to the value x.
-      explicit ordinal_map(size_type n, mapped_type const& x = {})
-        : vec(n, x)
+      //
+      // FIXME: Really necessary?
+      explicit ordinal_map(std::size_t n, const T& x = {})
+        : data(n, x)
       { }
 
 
-      // Empty and size
-      bool empty() const { return vec.empty(); }
+      // Obsrevers
+      bool empty() const { return data.empty(); }
 
-      size_type size() const { return vec.size(); }
+      std::size_t size() const { return data.size(); }
       
+      std::size_t capacity() const { return data.capacity(); }
+
       // Resize the map to contain the specified number of mappings. If n
       // is greater than the current size, new mappings  will be added and
       // the mapped values initialized to x. If n is less than the current 
       // size, all mappings with keys greater than or equal to n will be 
       // destroyed.
-      void resize(size_type n, mapped_type const& a = {}) { vec.resize(n, a); }
+      void resize(std::size_t n, const T& value = {}) { data.resize(n, value); }
 
-
-      // Max size
-      constexpr size_type max_size() const { return vec.max_size(); }
-
-      // Allocator
-      allocator_type allocator() const { return vec.allocator(); }
-
-      // Capacity
-      size_type capacity() const { return vec.capacity(); }
-      void reserve(size_type n) { vec.reserve(n); }
+      void reserve(std::size_t n) { data.reserve(n); }
 
 
       // Return a reference to the mapped value indicated by the given key.
       // If no such key exists, the map is resized in order to accomodate
       // the new value. This may result in the creation of ord(k) - size() 
       // new mappings.
-      mapped_type& operator[](key_type const& k)
+      T& operator[](const K& k)
       {
         maybe_resize(ord(k));
         return get(k);
@@ -271,15 +296,15 @@ namespace origin
 
       // Return a reference to the mapped value indicated by the given key.
       // Note that the key must be in the map.
-      mapped_type const& operator[](key_type const& k) const
+      const T& operator[](const K& k) const
       { 
-        assert(( find(k) != end() ));
+        assert(find(k) != end());
         return get(k); 
       }
 
       // Insert the given key/value pair into the map, returning an iterator to
       // the given position.
-      iterator insert(value_type const& x)
+      iterator insert(const value_type& x)
       {
         maybe_resize(ord(x.first));
         get(x.first) = x.second;
@@ -288,18 +313,18 @@ namespace origin
 
 
       // Clear and swap
-      void clear() { vec.clear(); }
-      void swap(ordinal_map& x) { vec.swap(x); }      
+      void clear() { data.clear(); }
+      void swap(ordinal_map& x) { data.swap(x); }      
 
       
       // Return an iterator to the object indicated by the given key or an
       // iterator past the end if x is outside the bounds of the map.
-      iterator find(key_type const& k)
+      iterator find(const K& k)
       {
         return valid(k) ? begin() + ord(k) : end();
       }
 
-      const_iterator find(key_type const& k) const
+      const_iterator find(const K& k) const
       {
         return valid(k) ? begin() + ord(k) : end();
       }
@@ -307,50 +332,38 @@ namespace origin
  
       // Return the number of objects associated with the given k. If the key
       // is in bounds, this is 1. If not, 0.
-      size_type count(key_type const& k) const
+      std::size_t count(const K& k) const
       {
         return valid(k) ? 1 : 0;
       }
 
       // Iterators
-      iterator begin() { return {0, vec.begin()}; }
-      iterator end()   { return {size(), vec.end()}; }
+      iterator begin() { return {0, data.begin()}; }
+      iterator end()   { return {size(), data.end()}; }
       
-      const_iterator begin() const { return {0, vec.begin()}; }
-      const_iterator end() const   { return {size(), vec.end()}; }
-
-      // Reversible iterators
-      reverse_iterator rbegin() { return vec.rbegin(); }
-      reverse_iterator rend()   { return vec.rend(); }
-      
-      const_reverse_iterator rbegin() const { return vec.rbegin(); }
-      const_reverse_iterator rend() const   { return vec.rend(); }
+      const_iterator begin() const { return {0, data.begin()}; }
+      const_iterator end() const   { return {size(), data.end()}; }
 
     private:
       // Return true if the given key is valid (i.e., in bounds).
-      bool valid(key_type const& k) const { return !empty() && ord(k) < size(); }
+      bool valid(const K& k) const { return !empty() && ord(k) < size(); }
 
       // If the key is larger than the current size, allocate more mappings.
       // Note that the vector won't do this unless we push back. We're usually
       // just doing random-access insertion.
-      void maybe_resize(size_type const& k)
+      void maybe_resize(std::size_t n)
       {
-        if(k >= size()) {
-          if(k >= capacity()) {
-            // FIXME: The resize heuristic is a total guess. There's probably
-            // a better one.
-            reserve(capacity() == 0 ? 8 : 2 * k);
-          }
-          resize(k + 1);
+        if(n >= size()) {
+          resize(n + 1);
         }
       }
       
       // Return the object at the mapped key.
-      mapped_type&       get(key_type const& k)       { return vec[ord(k)]; }
-      mapped_type const& get(key_type const& k) const { return vec[ord(k)]; }
+      T&       get(const K& k)       { return data[ord(k)]; }
+      const T& get(const K& k) const { return data[ord(k)]; }
       
     private:
-      vector_type vec;
+      Cont data;
     };
 
 } // namespace origin
