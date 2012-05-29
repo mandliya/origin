@@ -28,39 +28,57 @@ namespace origin
       : next{n}, prev{p}
     { }
 
-    void hook(list_node_base* p) noexcept;
-    void unhook() noexcept;
-
     list_node_base* next;
     list_node_base* prev;
   };
 
-  // TODO: Would it be better to make these free algorithms like libc++ does?
-  // It might be nice to support methods like link_node, which link a range
-  // of nodes before a given position.
-
-  // Attach this node to the linked list just before p.
+  // Link nodes
   //
-  // FIXME: Move this into the src dir.
-  inline void list_node_base::hook(list_node_base* p) noexcept
+  // Attach the linked range of nodes [f, l] into the linked list before the
+  // node p. Returns a pointer to the first inserted node, f.
+  inline list_node_base*
+  link_nodes(list_node_base* p, list_node_base* f, list_node_base* l)
   {
-    next = p;
-    prev = p->prev;
-    p->prev->next = this;
-    p->prev = this;
+    l->next = p;
+    f->prev = p->prev;
+    p->prev->next = f;
+    p->prev = l;
+    return f;
   }
 
-  // Detach this node from the linked list by making the prev point to next
-  // and next point to prev.
+  // Link node
   //
-  // FIXME: Move this into the src dir.
-  inline void list_node_base::unhook() noexcept
+  // Attach the node q into the linked list before the node p. Returns a pointer
+  // to the first inserted node, q.
+  inline list_node_base*
+  link_node(list_node_base* p, list_node_base* q)
   {
-    list_node_base* p = prev;
-    list_node_base* q = next;
-    p->next = q;
-    q->prev = p;
+    return link_nodes(p, q, q);
   }
+
+  // Unlink nodes
+  //
+  // Remove the linked nodes [f, l] from the list by linking the nodes before
+  // and after f and l. Returns the node after l.
+  inline list_node_base*
+  unlink_nodes(list_node_base* f, list_node_base* l)
+  {
+    f->prev->next = l->next;
+    l->next->prev = f->prev;
+    return l->next;
+  }
+
+  // Unlink node
+  //
+  // Unlink the node p from a list by linking the nodes before and after p.
+  // Returns the node after p.
+  inline list_node_base*
+  unlink_node(list_node_base* p)
+  {
+    return unlink_nodes(p, p);
+  }
+
+
 
   // List node
   //
@@ -214,29 +232,84 @@ namespace origin
     }
 
 
+  // Create node
+  //
+  // Allocate and initialize a list with the given arguments.
+  template <typename T, typename... Args>
+    inline list_node<T>* 
+    create_list_node(list_base<T>& base, Args&&... args)
+    {
+      list_node<T>* p = base.allocate();
+      try {
+        construct(base.alloc, &p->value, std::forward<Args>(args)...);
+      } catch(...) {
+        base.deallocate(p);
+        throw;
+      }
+      return p;
+    }
+
+  // Destroy node
+  //
+  // Destroy the value stored by p and deallocate its memory and return a
+  // pointer to the node after p. 
+  template <typename T>
+    inline void 
+    destroy_list_node(list_base<T>& base, list_node_base* p)
+    {
+      assert(p->next != p);
+      list_node<T>* n = static_cast<list_node<T>*>(p);
+      origin::destroy(base.alloc, &n->value);
+      base.deallocate(n);
+    }
+
+  // Destroy list nodes
+  //
+  // Destroy each of the linked list nodes in the range [first, last) and 
+  // deallocate their memory.
+  template <typename T>
+    inline void 
+    destroy_list_nodes(list_base<T>& base, list_node_base* first, list_node_base* last)
+    {
+      while (first != last) {
+        list_node_base* p = first;
+        first = first->next;
+        destroy_list_node(base, p);
+      }
+      destroy_list_node(base, last);
+    }
 
   // List iterator
   //
   // The list iterator class adapts a linked list node pointer into a 
   // bidirectional iterator.
   //
-  // TODO: Implement const conversion requirements. A non-const iterator must
-  // be convertible to a const iterator.
+  // Note that list_iteator<const T> will generate constant iterator, which
+  // will provide a constant reference to the underlying object.
   template <typename T>
     class list_iterator
     {
     public:
-      list_iterator() 
-        : ptr{nullptr} 
-      { }
-      
-      list_iterator(list_node_base* p) 
+      list_iterator(list_node_base* p = {}) 
         : ptr{p} 
       { }
 
-      // Returns a pointer to the underlying node pointer.
-      list_node_base*       node()       { return ptr; }
-      const list_node_base* node() const { return ptr; }
+      // Conversion to const
+      template <typename U, typename = Requires<Convertible<U, T>()>*>
+        list_iterator(const list_iterator<U>& x)
+          : ptr{x.node()}
+        { }
+
+      template <typename U, typename = Requires<Convertible<U, T>()>*>
+        list_iterator& operator=(const list_iterator<U>& x)
+        {
+          ptr = x.node();
+          return *this;
+        }
+
+      // Returns a pointer to the underlying node base pointer.
+      list_node_base* node()       { return ptr; }
+      list_node_base* node() const { return non_const(ptr); }
 
       // Read/wrte
       T& operator*() const;
@@ -252,6 +325,12 @@ namespace origin
     private:
       // Returns true if ptr is "past the end".
       bool past_the_end() const { return ptr->next == ptr; }
+
+      // Return p as a non-const node.
+      static list_node_base* non_const(const list_node_base* p)
+      {
+        return const_cast<list_node_base*>(p);
+      }
 
     private:
       list_node_base* ptr;
@@ -324,6 +403,16 @@ namespace origin
       list();
       list(allocator& alloc);
 
+      template <typename I>
+        list(I first, I last);
+      template <typename I>
+        list(I first, I last, allocator& alloc);
+
+      // FIXME: Write a generalized range constructor
+      
+      list(std::initializer_list<T> l);
+      list(std::initializer_list<T> l, allocator& alloc);
+
       // Observers
       bool empty() const { return base.empty(); }
 
@@ -354,6 +443,16 @@ namespace origin
       void pop_front();
       void pop_back();
 
+      // Insert
+      template <typename... Args>
+        iterator emplace(const_iterator pos, Args&&... args);
+      iterator insert(const_iterator pos, T&& value);
+      iterator insert(const_iterator pos, const T& value);
+
+      // Erase
+      iterator erase(const_iterator pos);
+      iterator erase(const_iterator first, const_iterator last);
+
       // Iterators
       iterator       begin()       { return base.head(); }
       const_iterator begin() const { return base.head(); }
@@ -368,7 +467,7 @@ namespace origin
 
   template <typename T>
     list<T>::list()
-      : base()
+      : list(default_allocator())
     { }
 
   template <typename T>
@@ -377,33 +476,122 @@ namespace origin
     { }
 
 
-  // TODO: This can probably be used for a single insert function.
   template <typename T>
-    template <typename... Args>
-    void list<T>::emplace_back(Args&&... args)
-    {
-      // Allocate and initialize the new new.
-      node* p = base.allocate();
-      try {
-        construct(base.alloc, &p->value, std::forward<Args>(args)...);
-      } catch(...) {
-        base.deallocate(p);
+    template <typename I>
+      list<T>::list(I first, I last)
+        : base(first, last, default_allocator())
+      { }
+
+  // TODO: It would be more efficient to allocate a number of nodes in
+  // one shot and then initialize and link them in a second pass.
+  template <typename T>
+    template <typename I>
+      list<T>::list(I first, I last, allocator& alloc)
+        : base(alloc)
+      {
+        while (first != last) {
+          push_back(*first);
+          ++first;
+        }
       }
 
-      // Link it at the back of the list.
-      p->hook(base.anchor());
+  template <typename T>
+    list<T>::list(std::initializer_list<T> l)
+      : list(l, default_allocator())
+    { }
+
+  template <typename T>
+    list<T>::list(std::initializer_list<T> l, allocator& alloc)
+      : list(l.begin(), l.end(), alloc)
+    { }
+
+
+  template <typename T>
+    template <typename... Args>
+    inline void 
+    list<T>::emplace_back(Args&&... args)
+    {
+      insert(end(), std::forward<Args>(args)...);
     }
 
   template <typename T>
-    void list<T>::push_back(T&& value)
+    inline void 
+    list<T>::push_back(T&& value)
     {
       emplace_back(std::move(value));
     }
 
   template <typename T>
-    void list<T>::push_back(const T& value)
+    inline void 
+    list<T>::push_back(const T& value)
     {
       emplace_back(value);
+    }
+
+  template <typename T>
+    template <typename... Args>
+      inline void
+      list<T>::emplace_front(Args&&... args)
+      {
+        emplace(begin(), std::forward<Args>(args)...);
+      }
+
+  template <typename T>
+    inline void
+    list<T>::push_front(T&& value)
+    {
+      emplace(begin(), std::move(value));
+    }
+
+  template <typename T>
+    inline void
+    list<T>::push_front(const T& value)
+    {
+      emplace(begin(), value);
+    }
+
+  template <typename T>
+    template <typename... Args>
+      auto 
+      list<T>::emplace(const_iterator pos, Args&&... args) -> iterator
+      {
+        node* p = create_list_node(base, std::forward<Args>(args)...);
+        return link_node(pos.node(), p);
+      }
+
+  template <typename T>
+    inline auto 
+    list<T>::insert(const_iterator pos, T&& value) -> iterator
+    {
+      return emplace(pos, std::move(value));
+    }
+
+  template <typename T>
+    inline auto 
+    list<T>::insert(const_iterator pos, const T& value) -> iterator
+    {
+      return emplace(pos, value);
+    }
+
+  template <typename T>
+    inline auto
+    list<T>::erase(const_iterator pos) -> iterator
+    {
+      list_node_base* p = pos.node();
+      list_node_base* q = unlink_node(p);
+      destroy_list_node(base, p);
+      return q;
+    }
+
+  template <typename T>
+    inline auto
+    list<T>::erase(const_iterator first, const_iterator last) -> iterator
+    {
+      list_node_base* f = first.node();
+      list_node_base* l = last.node()->prev;
+      list_node_base* p = unlink_nodes(f, l);
+      destroy_list_nodes(base, f, l);
+      return p;
     }
 
 } // namespace origin

@@ -28,25 +28,63 @@ template <typename L>
   }
 
 template <typename L>
-  void test_push_back()
+  void test_insert()
   {
     L l;
-    l.push_back(5);
-    assert(!l.empty());
-    assert(l.size() == 1);
+    l.insert(l.end(), 1);
     print(l);
-    l.push_back(10);
-    assert(l.size() == 2);
+    auto i = l.insert(l.end(), 2);
+    l.insert(l.begin(), 0);
     print(l);
-    l.push_back(15);
-    assert(l.size() == 3);
+    l.insert(i, -2);
     print(l);
   }
 
+template <typename L>
+  void test_push_back()
+  {
+    L l;
+    for (int i : range(5))
+      l.push_back(i);
+    print(l);
+  }
+
+template <typename L>
+  void test_push_front()
+  {
+    L l;
+    for (int i : range(5))
+      l.push_front(i);
+    print(l);
+  }
+
+template <typename L>
+  void test_erase()
+  {
+    // Erase the 1st e elements
+    L l{1, 2, 3, 4, 5};
+      l.erase(l.begin());
+    print(l);
+  }
+
+template <typename L>
+  void test_erase_range()
+  {
+    L l{1, 2, 3, 4, 5};
+    l.erase(l.begin(), l.end());
+    assert(l.empty());
+  }
+
+
 int main()
 {
-  list<int> l;
-  test_default<list<int>>();
+  using L = list<int>;
+  test_default<L>();
 
-  test_push_back<list<int>>();
+  test_insert<L>();
+  test_push_back<L>();
+  test_push_front<L>();
+
+  // test_erase<L>();
+  test_erase_range<L>();
 }
