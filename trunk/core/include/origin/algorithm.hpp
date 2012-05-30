@@ -131,7 +131,7 @@ namespace origin
   template <typename I1, typename I2, typename Comp>
     inline auto
     lexicographical_equivalent(I1 first1, I1 last1, I2 first2, I2 last2, Comp comp)
-      -> Requires<Non_random_access_iterator<I1>() && 
+      -> Requires<Non_random_access_iterator<I1>() || 
                   Non_random_access_iterator<I2>(), 
                   bool>
     {

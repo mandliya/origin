@@ -8,8 +8,10 @@
 #include <iostream>
 
 #include <origin/list.hpp>
+#include <origin/container/testing.hpp>
 
 using namespace origin;
+using namespace origin::testing;
 
 template <typename R>
   void print(const R& range)
@@ -20,12 +22,6 @@ template <typename R>
   }
 
 
-template <typename L>
-  void test_default()
-  {
-    L l;
-    assert(l.empty());
-  }
 
 template <typename L>
   void test_insert()
@@ -79,12 +75,35 @@ template <typename L>
 int main()
 {
   using L = list<int>;
-  test_default<L>();
 
-  test_insert<L>();
-  test_push_back<L>();
-  test_push_front<L>();
+  // Static properties of lists.
+  static_assert(Bidirectional_iterator<L::iterator>(), "");
+  static_assert(Bidirectional_iterator<L::const_iterator>(), "");
 
-  // test_erase<L>();
-  test_erase_range<L>();
+  // Prototype values
+  L l1 {1, 2, 3, 4, 5};
+  L l2 {1, 2, 3};
+
+  // Container tests
+  using C = container<L>;
+  C::check_default_ctor();
+  
+  C::check_copy_ctor(l1);
+  C::check_copy_assign(l1, l2);
+  
+  C::check_move_ctor(l1);
+  C::check_move_assign(l1, l2);
+  
+  C::check_init_list_ctor({1, 2, 3, 4, 5});
+  C::check_init_list_assign({1, 2, 3, 4, 5}, l2);
+
+  C::check_swap(l1, l2);
+  C::check_clear(l1);
+
+  // Sequence tests
+  using S = sequence<L>;
+  S::check_insert(l1);
+  S::check_erase(l1);
+
+  // TODO: Write tests for push/pop
 }

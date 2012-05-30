@@ -523,7 +523,8 @@ namespace origin
   //    Weakly_incrementable<I>
   //    Acceptable values of n depends on the concept modeled by I.
   template <typename I>
-    inline auto advance(I& i, Difference_type<I> n = 1)
+    inline auto 
+    advance(I& i, Difference_type<I> n = 1)
       -> Requires<Weakly_incrementable<I>() && !Bidirectional_iterator<I>()>
     {
       assert(is_weak_range(i, n));
@@ -531,19 +532,20 @@ namespace origin
     }
   
   template <typename I>
-    inline auto advance(I& i, Difference_type<I> n = 1)
+    inline auto 
+    advance(I& i, Difference_type<I> n = 1)
       -> Requires<Bidirectional_iterator<I>() && !Random_access_iterator<I>()>
     {
-      assert(is_weak_range(i, n));
-      if (i > 0)
+      if (n > 0)
         iterative_advance(i, n);
-      else
+      else if(n < 0)
         iterative_retreat(i, -n);
      }
 
   // TODO: Replace Random_access_iterator with a more general concept.
   template <typename I>
-    inline auto advance(I& i, Difference_type<I> n = 1)
+    inline auto 
+    advance(I& i, Difference_type<I> n = 1)
       -> Requires<Random_access_iterator<I>()>
     {
       i += n;
@@ -597,8 +599,10 @@ namespace origin
   // FIXME: Because [first, last) is a boundd range, the result of this
   // operation must be non-negative.
   template <typename I>
-    inline auto distance(I first, I last)
-      -> Requires<Strict_weakly_incrementable<I>(), std::ptrdiff_t>
+    inline auto 
+    distance(I first, I last)
+      -> Requires<Weakly_incrementable<I>() && !Random_access_iterator<I>(), 
+                  std::ptrdiff_t>
     {
       assert(is_bounded_range(first, last));
       return iterative_distance(first, last);

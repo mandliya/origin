@@ -61,8 +61,6 @@ namespace origin
       template <typename I>
         vector& assign(I first, I last);
 
-
-
       // Range constructible
       template <typename R>
         explicit vector(const R& range, Requires<Strict_input_range<R>()>* = {});
@@ -502,6 +500,7 @@ namespace origin
         return p;
       }
 
+  // TODO: Optimize this function by removing unnecessary swaps.
   template <typename T>
     template <typename I>
       auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Forward_iterator<I>()>*)

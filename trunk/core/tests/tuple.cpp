@@ -8,17 +8,27 @@
 #include <cassert>
 #include <iostream>
 
+#include <origin/utility.hpp>
 #include <origin/functional.hpp>
 #include <origin/tuple.hpp>
 
 using namespace std;
 using namespace origin;
 
+
+#define literal(E) origin::integral_constant<decltype(E), (E)>{}
+
+
+
 int f1(int a, char b) { return 3; }
 void f2(double a, int& b) { b = 5; }
 
 int main()
 {
+  auto l = literal(5);
+  std::cout << typestr(l) << '\n';
+
+
   // Check return values
   assert(( tuple_invoke(f1, make_tuple(1, 'a')) == 3 ));
   
@@ -27,9 +37,6 @@ int main()
   auto t = make_tuple(0.0, ref(x));
   tuple_invoke(f2, t);
   assert(( x == 5 ));
-  
-  
-  
   
   
   // This is a system configuration test that determines if std::tuple will 
