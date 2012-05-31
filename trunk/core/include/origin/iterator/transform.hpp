@@ -5,8 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_ITERATOR_TRNSFORM_HPP
-#define ORIGIN_ITERATOR_TRNSFORM_HPP
+#ifndef ORIGIN_ITERATOR_TRANSFORM_HPP
+#define ORIGIN_ITERATOR_TRANSFORM_HPP
 
 #include <origin/iterator/facade.hpp>
 

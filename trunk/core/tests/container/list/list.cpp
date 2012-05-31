@@ -13,65 +13,6 @@
 using namespace origin;
 using namespace origin::testing;
 
-template <typename R>
-  void print(const R& range)
-  {
-    for (auto x : range)
-      std::cout << x << ' ';
-    std::cout << '\n';
-  }
-
-
-
-template <typename L>
-  void test_insert()
-  {
-    L l;
-    l.insert(l.end(), 1);
-    print(l);
-    auto i = l.insert(l.end(), 2);
-    l.insert(l.begin(), 0);
-    print(l);
-    l.insert(i, -2);
-    print(l);
-  }
-
-template <typename L>
-  void test_push_back()
-  {
-    L l;
-    for (int i : range(5))
-      l.push_back(i);
-    print(l);
-  }
-
-template <typename L>
-  void test_push_front()
-  {
-    L l;
-    for (int i : range(5))
-      l.push_front(i);
-    print(l);
-  }
-
-template <typename L>
-  void test_erase()
-  {
-    // Erase the 1st e elements
-    L l{1, 2, 3, 4, 5};
-      l.erase(l.begin());
-    print(l);
-  }
-
-template <typename L>
-  void test_erase_range()
-  {
-    L l{1, 2, 3, 4, 5};
-    l.erase(l.begin(), l.end());
-    assert(l.empty());
-  }
-
-
 int main()
 {
   using L = list<int>;
@@ -102,8 +43,14 @@ int main()
 
   // Sequence tests
   using S = sequence<L>;
+  S::check_resize_grow(l1);
+  S::check_resize_shrink(l1);
+
   S::check_insert(l1);
   S::check_erase(l1);
+
+  S::check_push_back(l1);
+  S::check_pop_back(l2);
 
   // TODO: Write tests for push/pop
 }

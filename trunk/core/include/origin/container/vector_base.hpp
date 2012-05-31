@@ -8,10 +8,7 @@
 #ifndef ORIGIN_CONTAINER_VECTOR_BASE_HPP
 #define ORIGIN_CONTAINER_VECTOR_BASE_HPP
 
-#include <cassert>
-
-#include <origin/memory.hpp>
-#include <origin/algorithm.hpp>
+#include <origin/container/core.hpp>
 
 namespace origin
 {
@@ -28,61 +25,23 @@ namespace origin
     class vector_base
     {
     public:
-      // Default constructible
-      // Initialize the vector base with its default state; its first and
-      // last pointers set to nullptr, and its size() is 0.
-      vector_base() noexcept
-        : alloc(default_allocator())
-        , first {nullptr}, last {nullptr}, limit {nullptr}
-      { }
-
-
-      // Default with allocator
-      // Default construct this object, using alloc as the allocator for
-      // memory allocation and deallocation.
-      explicit vector_base(allocator& a) noexcept
-        : alloc(a), first {nullptr}, last {nullptr}, limit {nullptr}
-      { }
-
-
+      // Default construction
+      vector_base() noexcept;
+      explicit vector_base(allocator& a) noexcept;
 
       // Move semantics
-      // Transfer the state of x into this vector base, and reset the state
-      // of x to its default. Note that the vector base is not move-assignable.
       vector_base(vector_base&& x) noexcept;
-      vector_base(vector_base&& x, allocator& a);
+      vector_base& operator=(vector_base&& x) noexcept;
 
-      vector_base& operator=(vector_base&&) = delete;
-
-
-
-      // Copy semantics
-      // A vector base is non-copyable. In order to copy a vector, allocate a
-      // a new block of memory and then copy the values in the derived class.
+      // Copy semantics (deleted)
       vector_base(const vector_base&) = delete;
       vector_base& operator=(const vector_base&) = delete;
 
+      // Allocated construction
+      vector_base(std::size_t n);
+      vector_base(std::size_t n, allocator& a);
 
-
-      // Size construction
-      // Initialize the vector base by allocating exactly n objects.
-      vector_base(std::size_t n)
-        : alloc(default_allocator())
-        , first {allocate(n)}, last {first}, limit {first + n}
-      { }
-
-      // Size with allocator
-      vector_base(std::size_t n, allocator& a)
-        : alloc(a), first {allocate(n)}, last {first}, limit{first + n}
-      { }
-
-
-
-      // Destructible
-      ~vector_base()
-      {
-        deallocate(first, capacity());
-      }
+      ~vector_base();
 
 
       // Allocate and deallocate
@@ -132,6 +91,7 @@ namespace origin
 
 
       // Mutators
+      void reset();
       void swap(vector_base& x);
 
       T* move_to(T *first);
@@ -181,6 +141,17 @@ namespace origin
       T *limit;
     };
 
+  template <typename T>
+    inline 
+    vector_base<T>::vector_base() noexcept
+      : vector_base(default_allocator())
+    { }
+
+  template <typename T>
+    inline
+    vector_base<T>::vector_base(allocator& a) noexcept
+      : alloc(a), first {nullptr}, last {nullptr}, limit {nullptr}
+    { }
 
   // Transfer the state of x into this vector base, and reset the state of x to
   // its default. Note that the vector base is not move-assignable.
@@ -188,32 +159,47 @@ namespace origin
     vector_base<T>::vector_base(vector_base&& x) noexcept
       : alloc(x.alloc), first {x.first}, last {x.last}, limit {x.limit}
     { 
-      x.first = x.last = x.limit = nullptr;
+      x.reset();
     }
 
-  // Initialize this object by moving the elements of x into it.
-  //
-  // If a == x.alloc, then data is moved by simply swapping pointers. If this is
-  // not the case, then we must allocate new memory, and move the elements into
-  // that, resetting x.
-  //
-  // This constructor may throw an exception if allocation of moving fails.
-  //
-  // NOTE: This is the only constructor of this class that does any value
-  // initialization, which breaks the layering of the design. The alternative is
-  // to have the derived vector implement this logic, which is reasonable but
-  // somewhat intrusive.
+  // Move the state of x into this object, resetting x afterwards.
   template <typename T>
-    vector_base<T>::vector_base(vector_base&& x, allocator& a)
-      : alloc(a), first {nullptr}, last {nullptr}, limit {nullptr}
-    { 
-      if (alloc == x.alloc) {
-        swap(x);
-      } else {
-        first = allocate(x.size());
-        move_at_end(x);
-        x.last = x.first;
-      }
+    inline vector_base<T>&
+    vector_base<T>::operator=(vector_base&& x) noexcept
+    {
+      assert(alloc == x.alloc);
+      first = x.first;
+      last = x.last;
+      limit = x.limit;
+      x.reset();
+      return *this;
+    }
+
+  template <typename T>
+    inline 
+    vector_base<T>::vector_base(std::size_t n)
+      : vector_base(n, default_allocator())
+    { }
+
+  // Initialize the vector base with n allocated objects.
+  template <typename T>
+    inline
+    vector_base<T>::vector_base(std::size_t n, allocator& a)
+      : alloc(a), first {allocate(n)}, last {first}, limit{first + n}
+    { }
+
+  template <typename T>
+    vector_base<T>::~vector_base()
+    {
+      deallocate(first, capacity());
+    }
+
+
+  template <typename T>
+    inline void
+    vector_base<T>::reset()
+    {
+      first = last = limit = nullptr;
     }
 
 
@@ -223,7 +209,8 @@ namespace origin
   // Requires:
   //    this->alloc == x.alloc
   template <typename T>
-    void vector_base<T>::swap(vector_base& x)
+    inline void 
+    vector_base<T>::swap(vector_base& x)
     {
       assert(alloc == x.alloc);
       std::swap(first, x.first);

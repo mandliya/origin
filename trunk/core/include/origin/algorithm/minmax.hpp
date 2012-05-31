@@ -524,14 +524,14 @@ namespace origin
   
   // Min elemenet (relation)
   template<typename I, typename R>
-    I o_min_element(I first, I last, R comp)
+    I min_element(I first, I last, R comp)
     {
       static_assert(Relational_query<I, R>(), "");
       assert(is_readable_range(first, last));
       assert(is_strict_weak_ordering(comp));
 
       if(first != last) {
-        for(I i = o_next(first); i != last; ++i) {
+        for(I i = next(first); i != last; ++i) {
           if(comp(*i, *first))
             first = i;
         }
@@ -542,12 +542,12 @@ namespace origin
   
   // Min element (less)
   template<typename I>
-    I o_min_element(I first, I last)
+    I min_element(I first, I last)
     {
       static_assert(Order_query<I>(), "");
       assert(is_readable_range(first, last));
       
-      return o_min_element(first, last, lt());
+      return min_element(first, last, lt());
     }
     
     
@@ -558,7 +558,7 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_min_element(o_begin(range), o_end(range), comp);
+      return min_element(o_begin(range), o_end(range), comp);
     }
 
     
@@ -569,14 +569,14 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_min_element(o_begin(range), o_end(range));
+      return min_element(o_begin(range), o_end(range));
     }
     
 
   
   // Min (relation, const)
   template<typename T, typename R>
-    const T& o_min(const T& a, const T& b, R comp)
+    const T& min(const T& a, const T& b, R comp)
     {
       static_assert(Relation<R, T>(), "");
       return comp(b, a) ? b : a;
@@ -596,7 +596,7 @@ namespace origin
   
   // Min (less, const)
   template<typename T>
-    const T& o_min(const T& a, const T& b)
+    const T& min(const T& a, const T& b)
     {
       static_assert(Totally_ordered<T>(), "");
       return b < a ? b : a;
@@ -615,24 +615,24 @@ namespace origin
       
   // Min (initializer list, relation)
   template<typename T, typename R>
-    const T& o_min(std::initializer_list<T> list, R comp)
+    const T& min(std::initializer_list<T> list, R comp)
     {
       static_assert(Relation<R, T>(), "");
       assert(is_strict_weak_ordering(comp));
       assert(list.size() != 0);
       
-      return *o_min_element(list.begin(), list.end(), comp);
+      return *min_element(list.begin(), list.end(), comp);
     }
     
       
   // Min (initializer list, less)
   template<typename T>
-    const T& o_min(std::initializer_list<T> list)
+    const T& min(std::initializer_list<T> list)
     {
       static_assert(Totally_ordered<T>(), "");
       assert(list.size() != 0);
 
-      return *o_min_element(list.begin(), list.end());
+      return *min_element(list.begin(), list.end());
     }
 
   
@@ -656,7 +656,7 @@ namespace origin
   
   // Max element (relation)
   template<typename I, typename R>
-    I o_max_element(I first, I last, R comp)
+    I max_element(I first, I last, R comp)
     {
       static_assert(Relational_query<I, R>(), "");
       assert(is_readable_range(first, last));
@@ -675,12 +675,12 @@ namespace origin
   
   // Max element (less)
   template<typename I>
-    I o_max_element(I first, I last)
+    I max_element(I first, I last)
     {
       static_assert(Order_query<I>(), "");
       assert(is_readable_range(first, last));
       
-      return o_max_element(first, last, lt());
+      return max_element(first, last, lt());
     }
 
   
@@ -691,7 +691,7 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_max_element(o_begin(range), o_end(range), comp);
+      return max_element(o_begin(range), o_end(range), comp);
     }
 
     
@@ -702,14 +702,14 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_max_element(o_begin(range), o_end(range));
+      return max_element(o_begin(range), o_end(range));
     }
 
     
     
   // Max (relation, const)
   template<typename T, typename R>
-    const T& o_max(const T& a, const T& b, R comp)
+    const T& max(const T& a, const T& b, R comp)
     {
       static_assert(Relation<R, T>(), "");
       return comp(a, b) ? b : a;
@@ -729,7 +729,7 @@ namespace origin
   
   // Max (less, const)
   template<typename T>
-    const T& o_max(const T& a, const T& b)
+    const T& max(const T& a, const T& b)
     {
       static_assert(Totally_ordered<T>(), "");
       return a < b ? b : a;
@@ -748,24 +748,24 @@ namespace origin
       
   // Max (initializer list, relation)
   template<typename T, typename R>
-    const T& o_max(std::initializer_list<T> list, R comp)
+    const T& max(std::initializer_list<T> list, R comp)
     {
       static_assert(Relation<R, T>(), "");
       assert(is_strict_weak_ordering(comp));
       assert(list.size() != 0);
       
-      return *o_max_element(list.begin(), list.end(), comp);
+      return *max_element(list.begin(), list.end(), comp);
     }
     
       
   // Max (initializer list, less)
   template<typename T>
-    const T& o_max(std::initializer_list<T> list)
+    const T& max(std::initializer_list<T> list)
     {
       static_assert(Totally_ordered<T>(), "");
       assert(list.size() != 0);
 
-      return *o_max_element(list.begin(), list.end());
+      return *max_element(list.begin(), list.end());
     }
   
 
@@ -792,7 +792,7 @@ namespace origin
   //
   // FIXME: Implement this algorithm.
   template<typename I, typename R>
-    std::pair<I, I> o_minmax_element(I first, I last, R comp)
+    std::pair<I, I> minmax_element(I first, I last, R comp)
     {
       static_assert(Relational_query<I, R>(), "");
       assert(is_readable_range(first, last));
@@ -805,19 +805,19 @@ namespace origin
   
   // Minmax element (less)
   template<typename I>
-    I o_minmax_element(I first, I last)
+    I minmax_element(I first, I last)
     {
       static_assert(Order_query<I>(), "");
       assert(is_readable_range(first, last));
       
-      return o_minmax_element(first, last, lt());
+      return minmax_element(first, last, lt());
     }
 
   
   
   // Minmax (relation, const)
   template<typename T, typename R>
-    std::pair<const T&, const T&> o_minmax(const T& a, const T& b, R comp)
+    std::pair<const T&, const T&> minmax(const T& a, const T& b, R comp)
     {
       static_assert(Relation<R, T>(), "");
       
@@ -833,7 +833,7 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_minmax_element(o_begin(range), o_end(range), comp);
+      return minmax_element(o_begin(range), o_end(range), comp);
     }
 
     
@@ -844,7 +844,7 @@ namespace origin
     {
       static_assert(Range_order_query<R>(), "");
 
-      return o_minmax_element(o_begin(range), o_end(range));
+      return minmax_element(o_begin(range), o_end(range));
     }
 
     
@@ -863,7 +863,7 @@ namespace origin
   
   // Minmax (less, const)
   template<typename T>
-    std::pair<const T&, const T&> o_minmax(const T& a, const T& b)
+    std::pair<const T&, const T&> minmax(const T& a, const T& b)
     {
       static_assert(Totally_ordered<T>(), "");
       
@@ -886,24 +886,24 @@ namespace origin
       
   // Minmax (initializer list, relation)
   template<typename T, typename R>
-    std::pair<const T&, const T&> o_minmax(std::initializer_list<T> list, R comp)
+    std::pair<const T&, const T&> minmax(std::initializer_list<T> list, R comp)
     {
       static_assert(Relation<R, T>(), "");
       assert(is_strict_weak_ordering(comp));
       assert(list.size() != 0);
       
-      return o_minmax_element(list.begin(), list.end(), comp);
+      return minmax_element(list.begin(), list.end(), comp);
     }
     
       
   // Minmax (initializer list, less)
   template<typename T>
-    std::pair<const T&, const T&> o_minmax(std::initializer_list<T> list)
+    std::pair<const T&, const T&> minmax(std::initializer_list<T> list)
     {
       static_assert(Totally_ordered<T>(), "");
       assert(list.size() != 0);
 
-      return *o_minmax_element(list.begin(), list.end());
+      return *minmax_element(list.begin(), list.end());
     }
   
   

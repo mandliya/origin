@@ -5,5 +5,4 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-add_subdirectory(list)
-add_subdirectory(vector)
+origin_run_test(test_vector vector.cpp)

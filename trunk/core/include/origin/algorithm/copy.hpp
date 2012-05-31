@@ -12,6 +12,31 @@
 
 namespace origin
 {
+  template <typename T> T&       min(T& a, T& b);
+  template <typename T> const T& min(const T& a, const T& b);
+
+
+  // TODO: Write origin_memmove and origin_memcopy too.
+
+  // Origin memset
+  //
+  // The Origin memset algorithm wraps standard memset and returns a pointer
+  // to the end of the filled range. The syntax of the algorithm is:
+  //
+  //    origin_memset(ptr, n, value)
+  //
+  template <typename T>
+    T* origin_memset(T* ptr, std::size_t n, const T& value)
+    {
+      static_assert(Byte<T>(), "");
+      assume(is_writable_range(ptr, ptr + n, value));
+
+      std::memset(ptr, static_cast<unsigned char>(value), n);
+      return ptr + n;
+    }
+
+
+
   // Copy algorithms
   // The copy module concerns the transfer of values form one range of eleemnts
   // into (or over) another range. It has the following algorithms:
@@ -66,13 +91,16 @@ namespace origin
     }
 
 
-
   // Copy implementation
   //
-  // FIXME: The optimizations should require trivially copy assignable, but
-  // GCC does not support those traits yet.
+  // The copy algorithm can be heavily optimized for contiguous ranges of
+  // trivially copyable types.
+  //
+  // TODO:
+
   template <typename I, typename O>
-    inline O copy_impl(I first, I last, O result)
+    inline O 
+    copy_impl(I first, I last, O result)
     {
       while (first != last)
         copy_step(first, result);
@@ -80,7 +108,8 @@ namespace origin
     }
   
   template <typename T>
-    inline auto copy_impl(const T* first, const T* last, T* result) 
+    inline auto 
+    copy_impl(const T* first, const T* last, T* result) 
       -> Requires<Trivial<T>(), T*>
     {
       std::size_t n = last - first;
@@ -89,7 +118,8 @@ namespace origin
     }  
 
   template <typename T>
-    inline auto copy_impl(T* first, T* last, T* result) 
+    inline auto 
+    copy_impl(T* first, T* last, T* result) 
       -> Requires<Trivial<T>(), T*> 
     {
       std::size_t n = last - first;
@@ -98,13 +128,29 @@ namespace origin
     }
 
 
-
   // Copy
-  // Copy the elements in the range [first, last) to the output range pointed
-  // at by result.
+  //
+  // Copy the values from an input range into an output range. There are two
+  // overloads of this function:
+  //
+  //    copy(first, last, result) ~> i
+  //    copy(range, result) ~> i
+  //    copy(in, out) ~> i
+  //
+  // The first overload copies the elements in [first, last) into the output
+  // range indicated by result. The last two overloads are equivalent to:
+  //
+  //    copy(range, result) <=> copy(begin(range), end(range), result)
+  //    copy(in, out) <=> copy(begin(in), end(in), begin(out))
+  //
+  // The algorithm returns an iterator past the last assigned output iterator,
+  // indicating the end of that range.
+
+
 
   template <typename I, typename O>
-    inline O copy(I first, I last, O result)
+    inline O
+    copy(I first, I last, O result)
     {
       static_assert(Copy<I, O>(), "");
       assert(is_readable_range(first, last));
@@ -113,6 +159,98 @@ namespace origin
       return copy_impl(unwrap(first), unwrap(last), unwrap(result));
     }
   
+  template <typename R, typename O>
+    inline auto
+    copy(const R& range, O result)
+      -> Requires<Output_iterator<O>(), O>
+    {
+      return copy(begin(range), end(range), result);
+    }
+
+  template <typename R, typename O>
+    inline auto
+    copy(const R& in, O&& out)
+      -> Requires<Output_range<O>(), decltype(begin(out))>
+    {
+      assume(size(out) >= size(in));
+      return copy(begin(in), end(in), begin(out));
+    }
+
+
+
+  // Bounded copy implementation
+  //
+  // The bounded copy algorithm can be optimized for contiguous ranges of
+  // trivially copyable types.
+  //
+  // FIXME: The optimization constraint is too strong. It should be trivially
+  // copyable not trivial.
+
+  template <typename I, typename O>
+    inline std::pair<I, O>
+    bounded_copy_impl(I first, I last, O result_first, O result_last)
+    {
+      while (first != last && result_first != result_last)
+        copy_step(first, result_first);
+      return {first, result_first};
+    }
+
+  template <typename T>
+    inline auto
+    bounded_copy_impl(const T* first, const T* last, T* result_first, T* result_last) 
+      -> Requires<Trivial<T>(), std::pair<const T*, T*>>
+    {
+      std::size_t n = min(last - first, result_last - result_first);
+      std::memcpy(result_first, first, n * sizeof(T));
+      return {first + n, result_first + n};
+    }
+
+  template <typename T>
+    inline auto
+    bounded_copy_impl(T* first, T* last, T* result_first, T* result_last) 
+      -> Requires<Trivial<T>(), std::pair<T*, T*>>
+    {
+      std::size_t n = min(last - first, result_last - result_first);
+      std::memcpy(result_first, first, n * sizeof(T));
+      return {first + n, result_first + n};
+    }
+
+
+
+  // Bounded copy
+  //
+  // Copy as many elements from an input range into an output range.If the size
+  // of the input range is less than that of the output range, then all elements
+  // will be copied. Otherwise, only some elements will be copied. There are
+  // two overloads of this algorithm:
+  //
+  //    bounded_copy(in_first, in_last, out_first, out_last)
+  //    bounded_copy(in, out)
+  //
+  // The algorithm returns a pair of  iterators past the last copied element in
+  // the input range and the last assigned element in the output range.
+
+  template <typename I, typename O>
+    inline std::pair<I, O>
+    bounded_copy(I in_first, I in_last, O out_first, O out_last)
+    {
+      static_assert(Copy<I, O>(), "");
+      assert(is_readable_range(in_first, in_last));
+      assert(is_writable_range(out_first, out_last, *in_first));
+      assume(not_overlapped(in_first, in_last, out_first));
+      
+      return bounded_copy_impl(unwrap(in_first), unwrap(in_last),
+                               unwrap(out_first), unwrap(out_last));
+    }
+
+  template <typename R, typename O>
+    inline auto
+    bounded_copy(R&& in, O&& out)
+      -> std::pair<decltype(begin(in)), decltype(begin(out))>
+    {
+      return bounded_copy(begin(in), end(in), begin(out), end(out));
+    }
+
 
 
   // Copy n implementation
@@ -252,6 +390,9 @@ namespace origin
 
 
   // Move implementation
+  //
+  // FIXME: 
+
   template <typename I, typename O>
     inline O move_impl(I first, I last, O result)
     {
@@ -261,7 +402,7 @@ namespace origin
     }
 
   template <typename T>
-    inline auto move(const T* first, const T* last, T* result)
+    inline auto move_impl(const T* first, const T* last, T* result)
       -> Requires<Trivial<T>(), T*>
     {
       std::ptrdiff_t n = last - first;
@@ -270,7 +411,7 @@ namespace origin
     }
 
   template <typename T>
-    inline auto move(T* first, T* last, T* result)
+    inline auto move_impl(T* first, T* last, T* result)
       -> Requires<Trivial<T>(), T*>
     {
       std::ptrdiff_t n = last - first;
@@ -278,7 +419,7 @@ namespace origin
       return result + n;
     }
 
-    
+
     
   // Move
   // Move the elements in the range [first, last) into the range 
@@ -292,9 +433,6 @@ namespace origin
       return move_impl(unwrap(first), unwrap(last), unwrap(result));
     }
   
-  
-  
-  // Move (range)
   template <typename R, typename O>
     inline void move(const R& i, O o)
     {
@@ -305,9 +443,74 @@ namespace origin
 
 
 
+  // Bounded move implementation
+  //
+  // FIXME: The optimization constraint is too tight. This should just be
+  // trivially move constructible.
+
+  template <typename I, typename O>
+    inline std::pair<I, O>
+    bounded_move_impl(I in_first, I in_last, O out_first, O out_last)
+    {
+      while (in_first != in_last && out_first != out_last)
+        move_step(in_first, out_first);
+      return {in_first, out_first};
+    }
+
+  template <typename T>
+    inline auto
+    bounded_move_impl(const T* in_first, const T* in_last, T* out_first, T* out_last)
+      -> Requires<Trivial<T>(), std::pair<const T*, T*>>
+    {
+      std::size_t n = min(in_last - in_first, out_last - out_first);
+      return origin_memcopy(out_first, in_first, n);
+    }
+
+  template <typename T>
+    inline auto
+    bounded_move_impl(T* in_first, T* in_last, T* out_first, T* out_last)
+      -> Requires<Trivial<T>(), std::pair<T*, T*>>
+    {
+      std::size_t n = min(in_last - in_first, out_last - out_first);
+      return origin_memcopy(out_first, in_first, n);
+    }
+
+
+
+  // Bounded move
+  //
+  // The bounded move algorithm moves the maximum number of elements from an
+  // input range to an output range. There are two overloads of this function:
+  //
+  //    bounded_move(in_first, in_last, out_first, out_last) ~> p
+  //    bounded_move(in, out) ~> p
+  //
+  // The algorithm returns a pair iterators p such that p.first is past the
+  // last copied input iterator and p.second is past the last move-assigned
+  // output iterator.
+
+  template <typename I, typename O>
+    inline std::pair<I, O>
+    bounded_move(I in_first, I in_last, O out_first, O out_last)
+    {
+      return bounded_move_impl(unwrap(in_first), unwrap(in_last), 
+                               unwrap(out_first), unwrap(out_last));
+    }
+
+  template <typename R, typename O>
+    inline auto
+    bounded_move(R&& in, O&& out) 
+      -> std::pair<decltype(begin(in)), decltype(begin(out))>
+    {
+      return bounded_move(begin(in), end(in), begin(out), end(out));
+    }
+
 
 
   // Move if
+  //
+  // FIXME: Write documentation.
+
   template <typename I, typename O, typename P>
     inline O move_if(I first, I last, O result)
     {
@@ -325,15 +528,12 @@ namespace origin
       return result;
     }
     
-    
-    
-  // Move if (range)
   template <typename R, typename O, typename P>
     inline void move_if(R&& in, O&& out, P pred)
     {
       static_assert(Range_query<R, P>(), "");
       static_assert(Range_move<R, O>(), "");
-      return move_if(std::begin(in), std::end(in), std::begin(out), pred);
+      return move_if(begin(in), end(in), begin(out), pred);
     }
 
     
@@ -364,7 +564,7 @@ namespace origin
     {
       static_assert(Range_query<R, P>(), "");
       static_assert(Range_move<R, O>(), "");
-      return move_if_not(std::begin(in), std::end(in), std::begin(out), pred);
+      return move_if_not(begin(in), end(in), begin(out), pred);
     }
 
     
@@ -491,6 +691,175 @@ namespace origin
     }
     
   
+
+
+
+  // Fill algorithms
+  //
+  // There are a number of algorithms in the fill module. They are:
+  //
+  //    fill_step(out, value)
+  //    fill(first, last, value)
+  //    fill(range, value)
+  //    fill_n(first, n, value)
+  //    bounded_fill_n(first, last, n, value)
+  //    bounded_fill_n(range, n, value)
+
+
+
+  // Fill step
+  //
+  // Assign value to the output iterator out and increment it.
+  template <typename O, typename T>
+    inline void 
+    fill_step(O& out, const T& value)
+    {
+      *out = value;
+      ++out;
+    }
+
+
+
+  // Fill implemenetation
+  //
+  // The fill implementation is optimized for cases where memset is an
+  // appropriate operation: contiguous regions of trivially  constructible
+  // objects whose size is 1 byte.
+  //
+  // FIXME: The optimization constraint is too tight.
+
+  template <typename O, typename T>
+    inline void 
+    fill_impl(O first, O last, const T& value)
+    {
+      while (first != last)
+        fill_step(first, value);
+    }
+
+  template <typename T>
+    inline auto
+    fill_impl(T* first, T* last, const T& value)
+      -> Requires<Byte<T>(), void>
+    {
+      origin_memset(first, last - first, value);
+    }
+
+
+
+  // Fill
+  //
+  // Copy value into each element of an output range. There are two overloads
+  // of this function:
+  //
+  //    fill(first, last, value)
+  //    fill(range, value)
+
+  template <typename O, typename T>
+    void fill(O first, O last, const T& value)
+    {
+      static_assert(Fill<O, T>(), "");
+      assert(is_writable_range(first, last, value));
+
+      fill_impl(unwrap(first), unwrap(last), value);
+    }
+    
+  template <typename R, typename T>
+    inline void 
+    fill(R& range, const T& value)
+    {
+      static_assert(Copyable<T>(), "");
+      static_assert(Output_range<T>(), "");
+      
+      return fill(begin(range), end(range), value);
+    }
+
+    
+
+  // Fill n implementation
+
+  template <typename O, typename T>
+    inline O 
+    fill_n_impl(O first, Difference_type<O> n, const T& value)
+    {
+      while(n != 0) {
+        fill_step(first, value);
+        --n;
+      }
+      return first;
+    }
+
+  template <typename T>
+    inline auto
+    fill_n_impl(T* first, std::ptrdiff_t n, const T& value)
+      -> Requires<Byte<T>(), void>
+    {
+      return origin_memset(first, value, n);
+    }
+
+    
+  // Fill n
+  //
+  // Copy value into each element of the range [first, first + n). There are
+  // no other overloads of this algorithm.
+
+  template <typename O, typename T>
+    inline O 
+    fill_n(O first, Difference_type<O> n, const T& value)
+    {
+      static_assert(Copyable<T>(), "");
+      static_assert(Weak_output_iterator<O, T>(), "");
+      assert(is_writable_range(first, n, value));
+
+      return fill_n_impl(unwrap(first), n, value);
+    }
+    
+
+
+  // Bounded fill n implementation
+  //
+  // The bounded fill n implementation can be optimized for the case where
+  // memset is used to fill a region of memory.
+
+  template <typename O, typename T>
+    inline std::pair<O, Difference_type<O>>
+    bounded_fill_n_impl(O first, O last, Difference_type<O> n, const T& value)
+    {
+      while (first != last && n != 0) {
+        fill_step(first, value);
+        --n;
+      }
+      return {first, n};
+    }
+
+  template <typename T>
+    inline auto
+    bounded_fill_n_impl(T* first, T* last, std::ptrdiff_t n, const T& value)
+      -> Requires<Byte<T>(), std::pair<T*, std::ptrdiff_t>>
+    {
+      return origin_memset(first, min(last - first, n), value);
+    }
+
+
+
+  // Bounded fill n
+  //
+  // Copy as many of n values as possible into the range the output range. The
+  // algorithm returns a pair containing an iterator past the last assigned
+  // iterator and the number of values that were not copied (if any).
+  // 
+
+  template <typename O, typename T>
+    inline std::pair<O, Difference_type<O>>
+    bounded_fill_n(O first, O last, Difference_type<O> n, const T& value)
+    {
+      while (first != last && n != 0) {
+        fill_step(first, value);
+        --n;
+      }
+      return {first, n};
+    }
+
+
 } // namespace origin
 
 #endif

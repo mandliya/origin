@@ -562,48 +562,8 @@ namespace origin
     
     
 
-  // Fill
-  template<typename O, typename T>
-    void fill(O first, O last, const T& value)
-    {
-      static_assert(Fill<O, T>(), "");
-      assert(is_writable_range(first, last, value));
-      
-      while(first != last) {
-        *first = value;
-        ++first;
-      }
-    }
     
-    
-    
-  // Fill (range)
-  template<typename R, typename T>
-    inline void fill(R& range, const T& value)
-    {
-      static_assert(Copyable<T>(), "");
-      static_assert(Output_range<T>(), "");
-      
-      return fill(std::begin(range), std::end(range));
-    }
-    
-    
-    
-  // Fill n
-  template<typename O, typename T>
-    inline O fill_n(O first, Difference_type<O> n, const T& value)
-    {
-      static_assert(Copyable<T>(), "");
-      static_assert(Weak_output_iterator<O, T>(), "");
-      assert(is_writable_range(first, n, value));
 
-      while(n != 0) {
-        *first = value;
-        ++first;
-        --n;
-      }
-    }
-    
     
     
   // Generate

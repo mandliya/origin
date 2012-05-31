@@ -364,14 +364,39 @@ namespace origin
     constexpr bool Void() { return std::is_void<T>::value; }
     
     
-  // Boolean (constraint)
+  // Boolean
+  //
   // Returns true if and only if Convertible<T,  bool>() is true. This
   // predciate provides a more coherent way of expressing requirements on
   // the results of expressions.
   template <typename T>
     constexpr bool Boolean() { return Convertible<T, bool>(); }
     
-    
+
+
+  // Infrastructure for the Byte constraint.
+  namespace traits
+  {
+    template <typename T> struct is_byte : false_type { };
+    template <> struct is_byte<char> : true_type { };
+    template <> struct is_byte<signed char> : true_type { };
+    template <> struct is_byte<unsigned char> : true_type { };
+  } // namespace traits
+
+
+  // Byte
+  //
+  // A Byte type is one that occupies exactly 1 byte in memory and can be
+  // statically casted to an unsigned char.
+  //
+  // FIXME: For now, this is just going to be the standard character types,
+  // but we may allow convertibility in the future.
+  template <typename T>
+    constexpr bool Byte()
+    {
+      return traits::is_byte<T>::value;
+    }
+
     
   // Integral types
   // Predicates describing standard (language-defined) integral types.

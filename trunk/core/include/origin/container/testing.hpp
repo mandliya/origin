@@ -53,11 +53,14 @@ namespace origin
     template <typename S>
       struct sequence
       {
+        static void check_resize_grow(const S& x);
+        static void check_resize_shrink(const S& x);
+
         static void check_insert(const S& x);
         static void check_erase(const S& x);
 
-        static void check_push_back();
-        static void check_pop_back();
+        static void check_push_back(const S& x);
+        static void check_pop_back(const S& x);
       };
 
 
@@ -78,8 +81,7 @@ namespace origin
         assert(c.begin() == c.end());
         assert(begin(c) == c.begin());
         assert(end(c) == c.end());
-        // assert(distance(begin(c), end(c)) == 0);
-        // distance(c.begin(), c.end());
+        assert(distance(begin(c), end(c)) == 0);
       }
 
 
@@ -159,7 +161,40 @@ namespace origin
       }
 
     // Sequence tests
+    template <typename S>
+      void
+      sequence<S>::check_resize_grow(const S& x)
+      {
+        std::size_t n = x.size() * 2;
+        S s = x;
+        s.resize(n);
+        assert(n);
+        
+        // Check that the original values are preserved
+        auto r1 = range(s.begin(), next(s.begin(), x.size()));
+        assert(lexicographical_equal(r1, x));
 
+        // Check that the new values are default initialized.
+        auto r2 = range(next(s.begin(), x.size()), s.end());
+        assert(all_equal(r2, int{}));
+      }
+
+    template <typename S>
+      void
+      sequence<S>::check_resize_shrink(const S& x)
+      {
+        std::size_t n = x.size() / 2;
+        S s = x;
+        s.resize(n);
+        assert(s.size() == n);
+
+        // Check that the remaining values are preserved.
+        auto r = range(x.begin(), next(x.begin(), n));
+        assert(lexicographical_equal(s, r));
+      }
+
+
+    // FIXME: Break these tests into different cases.
     template <typename S>
       void 
       sequence<S>::check_insert(const S& x)
@@ -189,6 +224,7 @@ namespace origin
         assert(lexicographical_equal(r, x));
       };
 
+    // FIXME: Break this test into different cases.
     template <typename S>
       void
       sequence<S>::check_erase(const S& x)
@@ -217,7 +253,29 @@ namespace origin
         assert(s.size() == x.size() - 3);
         assert(*i4 == x3);
       }
-  
+
+    // seq.push_back(value) <=> seq.insert(end(), value)
+    template <typename S>
+      void
+      sequence<S>::check_push_back(const S& x)
+      {
+        S s1 = x;
+        S s2 = x;
+        s1.push_back(int{});
+        s2.insert(s2.end(), int{});
+        assert(s1 == s2);
+      }
+
+    // seq.pop_back() <=> seq.erase(prev(seq.end())  
+    template <typename S>
+      void
+      sequence<S>::check_pop_back(const S& x)
+      {
+        S s1 = x;
+        S s2 = x;
+        s1.pop_back();
+        s2.erase(next(s2.begin(), s2.size() - 1));
+      }
   } // namespace container
 
 } // namespace origin
