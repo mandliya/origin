@@ -20,14 +20,23 @@ using G = directed_adjacency_vector;
 using V = Vertex<G>;
 using E = Edge<G>;
 
-G some_directed_graph();
-
 int main() {
 
   // Make a graph.
-  G g = some_directed_graph();
+  G g(5);
 
-  // Make it weighted.
+  Edge<G> e01 = g.add_edge(V(0),V(1));
+  Edge<G> e02 = g.add_edge(V(0),V(2));
+  Edge<G> e12 = g.add_edge(V(1),V(2));
+  Edge<G> e13 = g.add_edge(V(1),V(3));
+  Edge<G> e21 = g.add_edge(V(2),V(1));
+  Edge<G> e23 = g.add_edge(V(2),V(3));
+  Edge<G> e24 = g.add_edge(V(2),V(4));
+  Edge<G> e34 = g.add_edge(V(3),V(4));
+  Edge<G> e40 = g.add_edge(V(4),V(0));
+  Edge<G> e43 = g.add_edge(V(4),V(3));
+
+  // Make it a weighted graph.
   auto w = label_edges(g,0u);
 
   w(e01) = 10;
@@ -48,26 +57,4 @@ int main() {
     std::cout << ord(pred(v)) << " : " << ord(v) << '\n';
 
   return 0;
-}
-
-
-G some_directed_graph()
-{
-  G g(5);
-
-  // Make graph
-  G g(5);
-
-  Edge<G> e01 = g.add_edge(V(0),V(1));
-  Edge<G> e02 = g.add_edge(V(0),V(2));
-  Edge<G> e12 = g.add_edge(V(1),V(2));
-  Edge<G> e13 = g.add_edge(V(1),V(3));
-  Edge<G> e21 = g.add_edge(V(2),V(1));
-  Edge<G> e23 = g.add_edge(V(2),V(3));
-  Edge<G> e24 = g.add_edge(V(2),V(4));
-  Edge<G> e34 = g.add_edge(V(3),V(4));
-  Edge<G> e40 = g.add_edge(V(4),V(0));
-  Edge<G> e43 = g.add_edge(V(4),V(3));
-
-  return g;
 }
