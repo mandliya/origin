@@ -12,6 +12,7 @@
 
 #include <vector>
 
+#include <origin/heap/binary_heap.hpp>
 #include <origin/ordinal_map.hpp>
 #include <origin/graph/traits.hpp>
 #include <origin/graph/vertex.hpp>

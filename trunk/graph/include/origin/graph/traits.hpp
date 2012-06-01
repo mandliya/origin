@@ -414,20 +414,26 @@ namespace origin
     
   // Source vertex
   // Return the source vertex of the given edge.
-  template<typename G>
-    inline auto source(const G& g, Edge<G> e) -> decltype(g.source(e))
-    {
-      assert(e);
-      return g.source(e);
-    }
+  // FIXME Old design had some asserts. Should they be considered?
+  template<typename E>
+    inline auto source(E e) -> decltype(e.source) { return e.source; }
 
   // Target vertex
   // Return the target vertex of the given edge.
-  template<typename G>
-    inline auto target(const G& g, Edge<G> e) -> decltype(g.target(e))
+  template<typename E>
+    inline auto target(E e) -> decltype(e.target) { return e.target; }
+
+  // Vertex opposite of v given edge e
+  template <typename E, typename V>
+    inline auto opposite(E e, V v) -> V
     {
-      assert(e);
-      return g.target(e);
+      // Opposite is only defined when the vertex supplied is incident to edge e
+      assert (( source(e) == v || target(e) == v ));
+
+      if (source(e) == v)
+        return target(e);
+      else
+        return source(e);
     }
     
     
@@ -493,7 +499,7 @@ namespace origin
   // some common operations. In particular, it requires the operations given
   // above for vertex and edge sets.
   //
-  // FIXME: Should the order and size types be the same?
+  // FIXME: Should the order and size types be the same? Yes. -Michael
   template<typename G>
     constexpr bool Graph()
     {
@@ -538,21 +544,23 @@ namespace origin
   //    In_edge_range<G>
 
 
+  // Incident Edges
+  template <typename G>
+    inline auto incident_edges(const G& g, Vertex<G> v)
+      -> decltype(g.incident_edges(v))
+    { return g.incident_edges(v); }
+
   // Out edges
   // Return the out edges incident to the vertex v in the directed graph g.
   template<typename G>
     inline auto out_edges(const G& g, Vertex<G> v) -> decltype(g.out_edges(v))
-    {
-      return g.out_edges(v); 
-    }
+    { return g.out_edges(v); }
     
   // In edges
   // Return the in edges incident to the vertex v in the directed graph g.
   template<typename G>
     inline auto in_edges(const G& g, Vertex<G> v) -> decltype(g.in_edges(v))
-    {
-      return g.in_edges(v);
-    }
+    { return g.in_edges(v); }
     
   // Out degree
   // Return the number of out edges that are incident to the vertex v in the 
@@ -885,9 +893,9 @@ namespace origin
     {
       return g.remove_edges();
     }
-    
 
-    
+
+
  #if 0
    
   // FIXME: Define this class!

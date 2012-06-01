@@ -8,54 +8,66 @@
 #include <functional>
 #include <limits>
 #include <cstddef>
+#include <tuple>
 
-#include "dijkstra/detail.hpp"
 #include <origin/graph/algorithm/shortest_path/dijkstra.hpp>
+#include <origin/graph/adjacency_vector/directed.hpp>
+#include <origin/graph/traits.hpp>
 
 using namespace origin;
 
+using G = directed_adjacency_vector;
+using V = Vertex<G>;
+using E = Edge<G>;
+
+G some_directed_graph();
+
 int main() {
 
-  // Type definitions
-  /*typedef distance_matrix<char> Dist_Graph;
-  typedef typename Dist_Graph::vertex Vertex;
-  typedef typename Dist_Graph::edge Edge;
-  typedef ordinal_map<Vertex, float> Distance_Map;
-  typedef vertex_label<Distance_Map> Distance_Label;
-  typedef debug_dijkstra_visitor<Dist_Graph> Visitor;
-  typedef typename Visitor::parent_label_type shortest_path_parent_map;
+  // Make a graph.
+  G g = some_directed_graph();
 
-  Dist_Graph g(4);
+  // Make it weighted.
+  auto w = label_edges(g,0u);
 
-  Vertex v[] = { Vertex(0), Vertex(1), Vertex(2), Vertex(3) };
+  w(e01) = 10;
+  w(e02) = 5;
+  w(e12) = 2;
+  w(e13) = 1;
+  w(e21) = 3;
+  w(e23) = 9;
+  w(e24) = 2;
+  w(e34) = 4;
+  w(e40) = 7;
+  w(e43) = 6;
 
-  g[v[0]] = 'a';
-  g[v[1]] = 'b';
-  g[v[2]] = 'c';
-  g[v[3]] = 'd';*/
+  // run dijkstra
+  auto pred = dijkstra(g,V(0),w);
 
-  /**   0
-   *   / \
-   *  1---2
-   *   \ /
-   *    3
-   */
-
-  /*g.add_edge(v[0], v[1], 1.0f);
-  g.add_edge(v[0], v[2], 2.0f);
-  g.add_edge(v[1], v[2], 0.2f);
-  g.add_edge(v[2], v[1], 0.1f);
-  g.add_edge(v[1], v[3], 3.0f);
-  g.add_edge(v[2], v[3], 1.0f);
-
-  shortest_path_parent_map parents;
-  Distance_Map dm(4u);
-  dijkstra_shortest_paths(g, v[0], Distance_Label(dm), Visitor(parents));*/
-
-
-  /*auto path = dsp.visitor_.get_path_to(v[3]);
-  
-  dsp.visitor_.print(g);*/
+  for (auto v : vertices(g))
+    std::cout << ord(pred(v)) << " : " << ord(v) << '\n';
 
   return 0;
+}
+
+
+G some_directed_graph()
+{
+  G g(5);
+
+  // Make graph
+  G g(5);
+
+  Edge<G> e01 = g.add_edge(V(0),V(1));
+  Edge<G> e02 = g.add_edge(V(0),V(2));
+  Edge<G> e12 = g.add_edge(V(1),V(2));
+  Edge<G> e13 = g.add_edge(V(1),V(3));
+  Edge<G> e21 = g.add_edge(V(2),V(1));
+  Edge<G> e23 = g.add_edge(V(2),V(3));
+  Edge<G> e24 = g.add_edge(V(2),V(4));
+  Edge<G> e34 = g.add_edge(V(3),V(4));
+  Edge<G> e40 = g.add_edge(V(4),V(0));
+  Edge<G> e43 = g.add_edge(V(4),V(3));
+
+  return g;
 }

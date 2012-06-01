@@ -12,11 +12,15 @@
 #include <algorithm>
 #include <unordered_map>
 
-#include <origin/utility/meta.hpp>
+//#include <origin/utility/meta.hpp>
 #include <origin/utility/typestr.hpp>
 
 namespace origin
 {
+  // FIXME
+  //template <typename T>
+  //  using Iterator_type = typename T::pointer;
+
   // NOTE: A note on heap ordering. The heap property, say max-heap, states
   // that the item on the top of the heap is greater than all other objects in
   // the heap. Note that when the heap is a tree, the heap property can be

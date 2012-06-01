@@ -12,6 +12,7 @@
 
 #include <origin/vector.hpp>
 #include <origin/ordinal.hpp>
+#include <origin/concepts.hpp>
 
 namespace origin
 {

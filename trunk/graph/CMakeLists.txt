@@ -17,6 +17,6 @@ origin_component(
   DEPENDS core data math
   AUTHORS
     Andrew Sutton <andrew.n.sutton -at- gmail.com>
-    Michael Lopez <mlopez7 -at- kent.edu>
+    Michael Lopez <mlopez -at- cse.tamu.edu>
 )
 add_subdirectory(tests)

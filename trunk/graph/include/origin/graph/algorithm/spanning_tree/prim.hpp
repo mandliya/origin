@@ -10,52 +10,39 @@
 
 // FIXMEs
 //  - need to fix vertex.hpp, or just make own iterator
-//  - note that greater should be greater_equal
+//  - move nil_vertex to vertex.hpp
 
 #include <limits>
-#include <functional>
-#include <iostream>
 
-#include <origin/heap/binary_heap.hpp>
 #include <origin/graph/traits.hpp>
 #include <origin/graph/label.hpp>
 
 
 
 /*============================================================================*/
-enum class tri_color : char { black, gray, white };
-
-template <typename T>
-  constexpr T max_val() { return std::numeric_limits<T>::max(); }
-
 //template <typename T>  using Label_range = 
 
 namespace origin
 {
-  namespace
-  {
-    template <typename Vertex, typename Labeling, typename Relation>
-      struct label_compare
-      {
-        label_compare(Labeling & l, Relation r)
-          : l_(l), r_(r)
-        { }
+  enum class tri_color : char { black, gray, white };
 
-        bool operator()(Vertex a, Vertex b) const {return r_(l_(a),l_(b)); }
+  template <typename T>
+    constexpr T max_val() { return std::numeric_limits<T>::max(); }
 
-        const Labeling & l_;
-        Relation r_;
-      };
-  }
+  // The Nil Vertex
+    // FIXME move this into vertex.hpp
+  template <typename V>
+    V nil_vertex()
+    { return V(max_val<V>()); }
 
 
 /*============================================================================*/
 
   template <typename G, typename Edge_weight>
-    labeling <typename G::vertex,typename G::vertex>
-    prim(const G& g, typename G::vertex s, Edge_weight & w)
+    labeling <Vertex<G>,Vertex<G>>
+    prim(const G& g, Vertex<G> s, Edge_weight & w)
     {
-      auto pred = label_vertices (g, Vertex<G>(99999));
+      auto pred = label_vertices (g, nil_vertex<Vertex<G>>());
       auto color = label_vertices (g, tri_color::white);
       auto v_w = label_vertices (g,max_val<Value_type<Edge_weight>>());
 
@@ -67,7 +54,7 @@ namespace origin
       while (!q.empty()) {
         Vertex<G> u = q.top();
         q.pop();
-        for (auto e : g.incident_edges(u)) {
+        for (auto e : incident_edges(g,u)) {
           Vertex<G> v = opposite(e,u);
           if ((color(v) != tri_color::black) && (w(e) < v_w(v))) {
             v_w(v) = w(e);

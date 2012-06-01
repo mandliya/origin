@@ -35,7 +35,7 @@ namespace origin {
 /*============================================================================*/
   // Common uav definitions
 
-  namespace {
+  /*namespace {
   // This is where vertex type and edge type should go.
   //  using edge_vec = std::vector
 
@@ -94,7 +94,7 @@ namespace origin {
       private:
         map_type map_;
       };
-  } // namespace uav
+  } // namespace uav*/
 
 
 
@@ -169,7 +169,13 @@ namespace origin {
       // Helpers
       // wraps the iterator position into an edge
       edge make_edge() const
-      { return edge(i_, std::get<0>(*(first_ + i_)), std::get<1>(*(first_ + i_))); }
+      { 
+        return edge(
+          i_,
+          std::get<0>(*(first_ + i_)),
+          std::get<1>(*(first_ + i_))
+        );
+      }
     };
 
         // Undirected adjacency vector edge iterator
@@ -270,7 +276,7 @@ namespace origin {
 
       std::size_t edge_index;
     };
-  } // namespace detail
+  } // namespace
 
 
 
@@ -322,6 +328,8 @@ namespace origin {
       bool null()       const { return neighbors_.empty(); }
       size_type order() const { return neighbors_.size(); }
 
+      size_type degree (vertex v) const { return neighbors_[ord(v)].size(); }
+
 
       // Structural Mutators
       vertex add_vertex();
@@ -355,12 +363,12 @@ namespace origin {
   auto undirected_adjacency_vector::add_edge(vertex u, vertex v) -> edge
   {
     // add an edge to the edge list
-    edges_.push_back(std::make_tuple(ord(u), ord(v)));
+    edges_.push_back(internal_edge(ord(u), ord(v)));
     // add v to u's adjacent stuff
-    neighbors_[ord(u)].push_back(std::make_tuple(ord(v), size() - 1));
+    neighbors_[ord(u)].push_back(internal_vertex(ord(v), size() - 1));
     // add u to v's adjacent stuff, unless it is a loop
     if (ord(v) != ord(u))
-      neighbors_[ord(v)].push_back(std::make_tuple(ord(u), size() - 1));
+      neighbors_[ord(v)].push_back(internal_vertex(ord(u), size() - 1));
 
     // return edge
     return edge(size() - 1, ord(u), ord(v));
@@ -416,20 +424,6 @@ namespace origin {
     );
   }
 
-
-
-
-/*============================================================================*/
-  // Support for ...
-
-
-  template <typename Edge, typename Vertex>
-    Vertex opposite(Edge e, Vertex v)
-    {
-      if (v == e.source)
-        return e.target;
-      else return e.source;
-    }
 
 
 /*============================================================================*/

@@ -6,7 +6,7 @@
 # and conditions.
 
 origin_run_test(graph_handles handles.cpp)
-origin_run_test(graph_adjacency_list adjacency_list.cpp)
+# origin_run_test(graph_adjacency_list adjacency_list.cpp)
 origin_run_test(adjacency_vector adjacency_vector.cpp)
 origin_run_test(mst mst.cpp)
 
@@ -17,7 +17,7 @@ origin_run_test(mst mst.cpp)
 # origin_run_test(graph_topological_sort topological_sort.cpp)
 
 # Shortest path Tests
-# origin_run_test(dijkstra_shortest_path dijkstra_shortest_path.cpp)
+origin_run_test(dijkstra_shortest_path dijkstra_shortest_path.cpp)
 # origin_run_test(floyd_warshall floyd_warshall.cpp)
 # origin_run_test(bellman_ford bellman_ford.cpp)
 
