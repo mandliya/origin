@@ -6,10 +6,11 @@
 // and conditions.
 
 #include <origin/dynarray.hpp>
+#include <algorithm>
 
 namespace origin
 {
-  template<typename T, typename Alloc>
+  template<typename T, typename Alloc = std::allocator<T>>
     struct matrix_impl_base
     {
     protected:
@@ -27,13 +28,13 @@ namespace origin
 
     public:
       // typical types to interface with.
-      using typename matrix_storage::value_type;
-      using typename matrix_storage::size_type;
-      using typename matrix_storage::allocator_type;
-      using typename matrix_storage::pointer;
-      using typename matrix_storage::const_pointer;
-      using typename matrix_storage::reference;
-      using typename matrix_storage::const_reference;
+      using value_type = typename matrix_storage::value_type;
+      using size_type = typename matrix_storage::size_type;
+      using allocator_type = typename matrix_storage::allocator_type;
+      using pointer = typename matrix_storage::pointer;
+      using const_pointer = typename matrix_storage::const_pointer;
+      using reference = typename matrix_storage::reference;
+      using const_reference = typename matrix_storage::const_reference;
       
       // Default/Allocator Constructor
       // Default construct an empty matrix.
@@ -57,6 +58,13 @@ namespace origin
       // Moves owner ship of memory from other to the new instance.
       explicit matrix_impl_base(matrix_impl_base&& other)
         :matrix_data(std::move(other.matrix_data))
+      { }
+      
+      
+      // Move + allocator constructor.
+      // Moves owner ship of memory from other to the new instance.
+      matrix_impl_base(matrix_impl_base&& other, const allocator_type& alloc)
+        :matrix_data(std::move(other.matrix_data, alloc))
       { }
       
       // N size Constructor.
@@ -98,6 +106,14 @@ namespace origin
         swap(matrix_data, matrix_storage(new_size));
       }
       
+      // apply
+      // Apply function iterates over each of the different elements 
+      // within the martix.
+      template<typename Func>
+      void apply(Func func)
+      {
+        std::transform(matrix_data.begin(), matrix_data.end(),matrix_data.begin(), func);
+      }
     };
   
 } // end origin
