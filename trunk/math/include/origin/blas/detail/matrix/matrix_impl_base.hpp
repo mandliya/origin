@@ -114,17 +114,11 @@ namespace origin
         std::transform(matrix_data.begin(), matrix_data.end(),matrix_data.begin(), func);
       }
       
-      void swap(matrix_impl_base& rhs)
+      void swap(matrix_impl_base& rhs) noexcept
       {
+        using origin::swap;
         swap(matrix_data, rhs.matrix_data);
       }
-      
-      /*
-      using array_iterator = typename matrix_storage::iterator;
-      using const_array_iterator = typename matrix_storage::const_iterator;
-      using reverse_array_iterator = typename matrix_storage::reverse_iterator;
-      using const_reverse_array_iterator = typename matrix_storage::const_reverse_iterator;
-       */
     };
   
 } // end origin

@@ -84,16 +84,57 @@ int main()
   
   // copy constructor.
   {
+    test_type init_subject(3, 3);
+    test_type subject(init_subject);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
     
+    assert(init_subject.size() == 3);
+    for(auto const& x : init_subject.matrix_data)
+    {
+      assert(x == 3);
+    }
   }
   
   // copy + allocator constructor
   {
+    test_type::allocator_type alloc;
+    test_type init_subject(3, 3);
+    test_type subject(init_subject, alloc);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
     
+    assert(init_subject.size() == 3);
+    for(auto const& x : init_subject.matrix_data)
+    {
+      assert(x == 3);
+    }
   }
   
   // swap
   {
+    test_type::allocator_type alloc;
+    test_type lhs_subject(4, 3);
+    test_type rhs_subject(6, 2);
+    
+    lhs_subject.swap(rhs_subject);
+    assert(lhs_subject.size() == 6);
+    for(auto const& x : lhs_subject.matrix_data)
+    {
+      assert(x == 2);
+    }
+    
+    assert(rhs_subject.size() == 4);
+    for(auto const& x : rhs_subject.matrix_data)
+    {
+      assert(x == 3);
+    }
   }
  
   // clear
