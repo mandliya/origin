@@ -243,6 +243,27 @@ template<typename T>
       }
       reset_static_alloc_helper();
       
+      // copy + allocator constructor.
+      {
+        {
+          alloc_type test_alloc;
+          dynarray_test_type first_subject(range_start, range_end);
+          reset_static_alloc_helper();
+          dynarray_test_type second_subject(first_subject, test_alloc);
+          assert(second_subject.size() == range_size);
+          assert(!second_subject.empty());
+          assert(first_subject == second_subject);
+          
+          assert(static_alloc_helper::copy_ctor_called);
+          assert(static_alloc_helper::allocate_called);
+          assert(equal(range_start, range_end, second_subject.begin()));
+        }
+        assert(static_alloc_helper::destroy_called);
+        assert(static_alloc_helper::destroy_call_count == range_size*2);
+        assert(static_alloc_helper::deallocate_called);
+      }
+      reset_static_alloc_helper();
+      
       // Move Constructor.
       {
         {
@@ -263,6 +284,26 @@ template<typename T>
       reset_static_alloc_helper();
       
 
+      // Move + Allocator Constructor.
+      {
+        {
+          alloc_type test_alloc;
+          dynarray_test_type first_subject(range_start, range_end);
+          reset_static_alloc_helper();
+          dynarray_test_type second_subject(move(first_subject), test_alloc);
+          assert(second_subject.size() == range_size);
+          assert(!second_subject.empty());
+          
+          assert(static_alloc_helper::copy_ctor_called);
+          assert(!static_alloc_helper::allocate_called);
+          assert(equal(range_start, range_end, second_subject.begin()));
+        }
+        assert(static_alloc_helper::destroy_called);
+        assert(static_alloc_helper::destroy_call_count == range_size);
+        assert(static_alloc_helper::deallocate_called);
+      }
+      reset_static_alloc_helper();
+      
       // Testin Assignment operators
       // Copy Assignment
       {
@@ -673,6 +714,7 @@ template<typename T>
       }
     }
   };
+  
 int main()
 {
   dynarray_test_scope<float> dynarray_tests;

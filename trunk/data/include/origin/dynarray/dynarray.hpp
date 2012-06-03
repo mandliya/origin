@@ -61,8 +61,6 @@ namespace origin
         x.first = x.last = nullptr;
       }
 
-
-
       // Fill initialization
       dynarray_base(size_type n)
         : Alloc {}, first {allocate(n)}, last {first + n}
@@ -172,7 +170,12 @@ namespace origin
         std::uninitialized_copy(x.begin(), x.end(), this->begin());
       }
 
-
+      dynarray(dynarray const& x, const allocator_type& alloc)
+        : base_type{x, alloc}
+      {
+        std::uninitialized_copy(x.begin(), x.end(), this->begin());
+      }
+      
       // Copy assignment
       dynarray& operator=(dynarray const& x)
       { 
@@ -190,6 +193,10 @@ namespace origin
       : base_type{std::move(x)}
       { }
 
+      dynarray(dynarray&& x, const allocator_type& alloc ) noexcept
+      : base_type{std::move(x), alloc}
+      { }
+      
       // Move assignment
       dynarray& operator=(dynarray&& x) noexcept
       { 

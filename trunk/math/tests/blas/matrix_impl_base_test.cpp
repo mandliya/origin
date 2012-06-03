@@ -10,7 +10,7 @@
 #include <iostream>
 
 using namespace origin;
-
+using namespace std;
 int main()
 {
   using test_type = matrix_impl_base<float>;
@@ -25,37 +25,77 @@ int main()
   {
     test_type::allocator_type alloc;
     test_type subject(alloc);
-    assert(subject.size() == 0);    
-  }
-  
-  // move constructor
-  {
-  }
-  
-  // move + allocator constructor
-  {
-  }
-  
-  // copy constructor.
-  {
-  }
-  
-  // copy + allocator constructor
-  {
+    assert(subject.size() == 0);
   }
   
   // matrix_impl_base(size_type n)
   {
+    test_type subject(3);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == test_type::value_type());
+    }
   }
   
   // matrix_impl_base(size_type n, value_type const& val)
   {
+    test_type subject(3, 3);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
   }
   
   // matrix_impl_base(size_type n, value_type const& val, allocator_type const& alloc)
   {
+    test_type::allocator_type alloc;
+    test_type subject(3, 3, alloc);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
   }
   
+  // move constructor
+  {
+    test_type init_subject(3, 3);
+    test_type subject(move(init_subject));
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
+  }
+  
+  // move + allocator constructor
+  {
+    test_type::allocator_type alloc;
+    test_type init_subject(3, 3);
+    test_type subject(move(init_subject), alloc);
+    assert(subject.size() == 3);
+    for(auto const& x : subject.matrix_data)
+    {
+      assert(x == 3);
+    }
+  }
+  
+  // copy constructor.
+  {
+    
+  }
+  
+  // copy + allocator constructor
+  {
+    
+  }
+  
+  // swap
+  {
+  }
+ 
   // clear
   {
   }

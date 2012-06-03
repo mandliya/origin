@@ -13,7 +13,6 @@ namespace origin
   template<typename T, typename Alloc = std::allocator<T>>
     struct matrix_impl_base
     {
-    protected:
       
       using matrix_storage = origin::dynarray<T, Alloc>;
       
@@ -25,8 +24,8 @@ namespace origin
       using const_array_iterator = typename matrix_storage::const_iterator;
       using reverse_array_iterator = typename matrix_storage::reverse_iterator;
       using const_reverse_array_iterator = typename matrix_storage::const_reverse_iterator;
-
-    public:
+      
+    
       // typical types to interface with.
       using value_type = typename matrix_storage::value_type;
       using size_type = typename matrix_storage::size_type;
@@ -64,7 +63,7 @@ namespace origin
       // Move + allocator constructor.
       // Moves owner ship of memory from other to the new instance.
       matrix_impl_base(matrix_impl_base&& other, const allocator_type& alloc)
-        :matrix_data(std::move(other.matrix_data, alloc))
+        :matrix_data(std::move(other.matrix_data), alloc)
       { }
       
       // N size Constructor.
@@ -114,6 +113,18 @@ namespace origin
       {
         std::transform(matrix_data.begin(), matrix_data.end(),matrix_data.begin(), func);
       }
+      
+      void swap(matrix_impl_base& rhs)
+      {
+        swap(matrix_data, rhs.matrix_data);
+      }
+      
+      /*
+      using array_iterator = typename matrix_storage::iterator;
+      using const_array_iterator = typename matrix_storage::const_iterator;
+      using reverse_array_iterator = typename matrix_storage::reverse_iterator;
+      using const_reverse_array_iterator = typename matrix_storage::const_reverse_iterator;
+       */
     };
   
 } // end origin
