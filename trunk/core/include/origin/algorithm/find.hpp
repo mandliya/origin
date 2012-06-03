@@ -79,13 +79,6 @@ namespace origin
   //    is_relation_preserving(range, comp)
   //
   
-  // Find algorithms
-  // These algorithms search a range of elements for an element that satisfies
-  // some property.
-  //
-  // The _if family of algorithms search for the first iterator that satisfies
-  // some unary predicate.
-  
 
 
   // Find 
@@ -118,13 +111,16 @@ namespace origin
     inline I 
     find(I first, I last, const T& value)
     {
+      static_assert(Search<I, T, Equal_to>(), "");
+      assert(is_readable_range(first, last));
       return find(first, last, value, eq());
     }
 
-  template <typename R, typename T, typename C>
+  template <typename R, typename T, typename Comp>
     inline auto 
-    find(R&& range, const T& value, C comp) -> decltype(begin(range))
+    find(R&& range, const T& value, Comp comp) -> decltype(begin(range))
     {
+      static_assert(Range_search<R, T, Comp>(), "");
       return find(begin(range), end(range), value, comp);
     }
 
@@ -133,10 +129,12 @@ namespace origin
     find(R&& range, const T& value) 
       -> Requires<!Has_member_find<Forwarded<R>, T>(), decltype(begin(range))>
     {
+      static_assert(Range_search<R, T, Equal_to>(), "");
       return find(begin(range), end(range), value, eq());
     }
 
   // Optimization for sets and maps.
+  // FIXME: Write type requirements; it should be Multiset
   template <typename C, typename T>
     inline auto 
     find(C&& cont, const T& value) -> decltype(cont.find(value))
@@ -146,17 +144,21 @@ namespace origin
 
 
 
-  // Find not equal
+  // Find not related
   //
-  // Returns the first iterator i in [first, last) where *i != value or last
-  // if no such iterator exists.
+  // Returns the first iterator i in a non-empty range where comp(*i, value)
+  // returns false. There are two overloads of this algorithm:
   //
-  // FIXME: The comp versions are not finding based on equality, but they
-  // aren't equivalence relations either. Find not?
+  //    find_not(first, last, value, comp) ~> i
+  //    find_not(first last, value) ~> i
+  //    find_not(range, value, comp) ~> i
+  //    find_not(range, comp) ~> u
+  //
+  // FIXME: Finish docs
 
-  template<typename I, typename T, typename R>
+  template <typename I, typename T, typename R>
     inline I 
-    find_not_equal(I first, I last, const T& value, R comp)
+    find_not(I first, I last, const T& value, R comp)
     {
       static_assert(Search<I, T, R>(), "");
       assert(is_bounded_range(first, last));
@@ -166,102 +168,91 @@ namespace origin
       return last;
     }
 
+  template <typename I, typename T>
+    inline I 
+    find_not(I first, I last, const T& value)
+    {
+      static_assert(Search<I, T, Equal_to>(), "");
+      return find_not_equal(first, last, value, eq());
+    }
 
   template <typename R, typename T, typename Comp>
     inline auto 
-    find_not_equal(R&& range, const T& value, Comp comp) -> decltype(begin(range))
+    find_not(R&& range, const T& value, Comp comp) -> decltype(begin(range))
     {
-      return find_not_equal(begin(range), end(range), value, comp);
-    }
-    
-
-
-
-  // Find not equal
-  //
-  // Returns the first iterator i in a range where *i = value. There are two
-  // overloads of this function:
-  //
-  //    find_not_equal(first, last, value) ~> i
-  //    find_not_equal(range, value) ~> i
-
-  template <typename I, typename T>
-    inline I 
-    find_not_equal(I first, I last, const T& value)
-    {
-      return find_not_equal(first, last, value, eq());
+      static_assert(Range_search<Auto<R>, T, Comp>(), "");
+      return find_not_related(begin(range), end(range), value, comp);
     }
 
   template <typename R, typename T>
     inline auto 
-    find_not_equal(R&& range, const T& value) -> decltype(begin(range))
+    find_not(R&& range, const T& value) -> decltype(begin(range))
     {
+      static_assert(Range_search<Auto<R>, T, Equal_to>(), "");
       return find_not_equal(begin(range), end(range), value, eq());
     }
     
     
 
   // Find next
-  // Returns the first iterator i in [first + 1, last) where comp(*i, value) is
-  // or true last if no such iterator exists or first == last.
+  //
+  // Returns the first iterator i in [next(first), last) where comp(*i, value) 
+  // is true last if no such iterator exists or first == last.
+  //
+  //    find_next(first, last, value, comp)
+  //    find_next(first, last, value)
+  //
+  // FIXME: Finish documenation
 
   template <typename I, typename T, typename R>
     inline I 
     find_next(I first, I last, const T& value, R comp)
     {
       static_assert(Search<I, T, R>(), "");
-      assert(( is_readable_range(first, last) ));
+      assert(is_readable_range(first, last));
       
       if (first != last)
         return find(next(first), last, value, comp);
       else
         return last;
     }
-    
 
-
-  // Find next
-  // Returns the first iterator i in [first + 1, last) where *i == value or
-  // last if no such iterator exists or first == last.
-  //
-  // Note that there is no corresponding range version of this function. The
-  // operation is only intended to be applied to iterators.
   template <typename I, typename T>
     inline I 
     find_next(I first, I last, const T& value)
     {
       static_assert(Search<I, T>(), "");
       assert(is_readable_range(first, last));
-
       return find_next(first, last, value, eq());
     }
 
 
-  
-  // Find nth (iterator, relation)
-  // Return the nth iterator i in [first, last) where *i == value or last if
-  // there are fewer than n elements equal to value.
+
+  // Find nth
+  //
+  // Returns the nth iterator i in a range where *i is matches value.
+  //
+  //    find_nth(first, last, n, value, comp)
+  //    find_nth(first, last, n, value)
+  //    find_nth(range, n, value, comp)
+  //    find_nth(range, n, value)
+
   template <typename I, typename T, typename R>
-    I 
+    inline I 
     find_nth(I first, I last, Difference_type<I> n, const T& value, R comp)
     {
       static_assert(Search<I, T, R>(), "");
       assert(is_readable_range(first, last));
 
-      while (first != last) {
+      while (first != last && n != 0) {
         if (comp(*first, value)) {
           --n;
-          if (n == 0)
-            return first;
         }
         ++first;
       }
       return first;
     }
 
-
-
-  // Find nth (iterator)
   template <typename I, typename T>
     inline I find_nth(I first, I last, Difference_type<I> n, const T& value)
     {
@@ -270,23 +261,18 @@ namespace origin
       return find_nth(first, last, n, value, eq());
     }
 
-
-
-  // Find nth (range, relation)
-  // Return an iterator to the nth element in r that is equal to value.
   template <typename R, typename T, typename C>
-    inline auto find_nth(R&& range, Difference_type<R> n, const T& value, C comp)
+    inline auto
+    ind_nth(R&& range, Difference_type<R> n, const T& value, C comp)
       -> decltype(begin(range))
     {
       static_assert(Range_search<Forwarded<R>, T, C>(), "");
       return find_nth(begin(range), end(range), n, value, comp);
     }
 
-
-
-  // Find nth (range, equality)
   template <typename R, typename T>
-    inline auto find_nth(R&& range, Difference_type<R> n, const T& value)
+    inline auto 
+    find_nth(R&& range, Difference_type<R> n, const T& value)
       -> decltype(begin(range))
     {
       static_assert(Range_search<Forwarded<R>, T, Equal_to>(), "");
@@ -296,29 +282,29 @@ namespace origin
 
         
   // Find if
-  // Returns the first iterator i in [first, last) where pred(*i) is true or
+  //
+  // Returns the first iterator i in a range where pred(*i) is true or
   // last if no such iterator exists.
+  //
+  //    find_if(first, last, pred)
+  //    find_if(range, pred)
+  //
+
   template <typename I, typename P>
-    inline I find_if(I first, I last, P pred)
+    inline I 
+    find_if(I first, I last, P pred)
     {
       static_assert(Query<I, P>(), "");
-      assert(( is_readable_range(first, last) ));
+      assert(is_readable_range(first, last));
 
-      while (first != last) {
-        if (pred(*first))
-          return first;
+      while (first != last && !pred(*first))
         ++first;
-      }
       return last;
     }
 
-
-
-  // Find if (range)
-  // Returns the first iterator i in r where pred(*i) is true or end(r) if no 
-  // such iterator exists.
-  template<typename R, typename P>
-    inline auto find_if(R&& range, P pred) -> decltype(begin(range))
+  template <typename R, typename P>
+    inline auto 
+    find_if(R&& range, P pred) -> decltype(begin(range))
     {
       static_assert(Range_query<Forwarded<R>, P>(), "");
       return find_if(begin(range), end(range), pred);
@@ -327,29 +313,27 @@ namespace origin
     
 
   // Find if not
-  // Returns the first iterator i in [first, last) where !pred(*i) is true or
-  // last if no such iterator exists.
+  // Returns the first iterator i in a range where pred(*i) is false.
+  //
+  //    find_if_not(first, last, pred)
+  //    find_if_not(range, pred)
+  //
+
   template <typename I, typename P>
-    inline I find_if_not(I first, I last, P pred)
+    inline I 
+    find_if_not(I first, I last, P pred)
     {
       static_assert(Query<I, P>(), "");
-      assert(( is_readable_range(first, last) ));
+      assert(is_readable_range(first, last));
 
-      while (first != last) {
-        if (!pred(*first))
-          return first;
+      while (first != last && pred(*first))
         ++first;
-      }
       return last;
     }
 
-
-    
-  // Find if not (range)
-  // Returns the first iterator i in r where pred(*i) is true or end(r) if no 
-  // such iterator exists.
   template <typename R, typename P>
-    inline auto find_if_not(R&& range, P pred) -> decltype(begin(range))
+    inline auto 
+    find_if_not(R&& range, P pred) -> decltype(begin(range))
     {
       static_assert(Range_query<Unqualified<R>, P>(), "");
       

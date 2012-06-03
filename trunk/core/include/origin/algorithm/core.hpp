@@ -17,6 +17,7 @@
 
 namespace origin
 {
+  // Needed for some algoithms.
   template <typename T> class temporary_buffer;
 
 
@@ -46,6 +47,9 @@ namespace origin
   //
   //    Sort
   //    Merge
+
+
+  // FIXME: Revisit the names of all of the algorithm concepts.
 
 
   // Query (concept)

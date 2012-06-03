@@ -28,14 +28,19 @@ namespace origin
   //
   // The range version of the algorithm has the following syntax:
   //
-  //    for_each(range, func) ~>func
+  //    for_each(range, func) ~> func
   //
   // It is equivalent to the iterator version when called over the begin and
   // end of range.
 
   template <typename I, typename F>
-    inline F for_each(I first, I last, F func)
+    inline F 
+    for_each(I first, I last, F func)
     {
+      static_assert(Input_iterator<I>(), "");
+      static_assert(Function<F, Value_type<I>>(), "");
+      assert(is_readable_range(first, last));
+
       while (first != last) {
         func(*first);
         ++first;
@@ -44,8 +49,12 @@ namespace origin
     }
 
   template <typename R, typename F>
-    inline F for_each(R&& range, F func)
+    inline F 
+    for_each(R&& range, F func)
     {
+      static_assert(Input_range<F>(), "");
+      static_assert(Function<F, Value_type<R>>(), "");
+
       return for_each(begin(range), end(range), func);
     }
 
@@ -53,7 +62,8 @@ namespace origin
 
   // Repeat
   //
-  // Calls f(i) exactly n times for each i in [0, n).
+  // Calls f(i) exactly n times for each i in [0, n). Returns the function
+  // argument, f.
   //
   // Requires:
   //    n >= 0
@@ -61,7 +71,8 @@ namespace origin
   // Returns:
   //    The function f.
   template <typename Int, typename F>
-    inline F repeat(Int n, F f)
+    inline F 
+    repeat(Int n, F f)
     {
       static_assert(Integral<Int>(), "");
       static_assert(Function<F, Int>(), "");
@@ -73,6 +84,7 @@ namespace origin
     }
 
 
+
   // Reduce
   //
   // The reduce algorithm evaluates value = f(*i, value) for each iterator i in
@@ -80,19 +92,18 @@ namespace origin
   // iterator range [first, last) and the other that takes a bounded range.
   //
   //    reduce(first, last, value, f) ~> value'
-  //    reduce(range, value, f) -> value'
+  //    reduce(range, value, f) ~> value'
   //
   // The algorithm returns the reduced value as computed over the elements of
   // the range.
 
-  // FIXME: The same type constraint on the result type is too strong.
   template <typename I, typename T, typename F>
     inline T reduce(I first, I last, T value, F f)
     {
       static_assert(Input_iterator<I>(), "");
       static_assert(Function<F, Value_type<I>, T>, "");
       static_assert(Convertible<Result_of<F(Value_type<I>, T)>, T>, "");
-      assert(is_bounded_range(first, last));
+      assert(is_readable_range(first, last));
 
       while (first != last) {
         value = f(*first, value);
