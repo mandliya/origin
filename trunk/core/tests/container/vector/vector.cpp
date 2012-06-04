@@ -52,5 +52,6 @@ int main()
   S::check_insert(v1);
   S::check_erase(v1);
 
-  // TODO: Write tests for push/pop
+  S::check_push_back(v1);
+  S::check_pop_back(v1);
 }

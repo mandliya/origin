@@ -168,8 +168,7 @@ namespace origin
         std::size_t n = x.size() * 2;
         S s = x;
         s.resize(n);
-        assert(n);
-        
+
         // Check that the original values are preserved
         auto r1 = range(s.begin(), next(s.begin(), x.size()));
         assert(lexicographical_equal(r1, x));

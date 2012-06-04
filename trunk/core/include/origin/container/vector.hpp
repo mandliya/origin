@@ -83,14 +83,14 @@ namespace origin
 
 
       // Data access
-      T&       operator[](std::size_t n)       { return *(base.first + n); }
-      const T& operator[](std::size_t n) const { return *(base.first + n); }
+      T&       operator[](std::size_t n)       { return *(base.core.first + n); }
+      const T& operator[](std::size_t n) const { return *(base.core.first + n); }
 
-      T&       front()       { return *base.first; }
+      T&       front()       { return *base.core.first; }
       const T& front() const { return *base.first; }
 
-      T&       back()       { return *(base.last - 1); }
-      const T& back() const { return *(base.last - 1); }
+      T&       back()       { return *(base.core.last - 1); }
+      const T& back() const { return *(base.core.last - 1); }
 
 
       // Capacity
@@ -134,14 +134,14 @@ namespace origin
 
 
       // Iterators
-      iterator begin() { return base.first; }
-      iterator end()   { return base.last; }
+      iterator begin() { return base.core.first; }
+      iterator end()   { return base.core.last; }
 
-      const_iterator begin() const { return base.first; }
-      const_iterator end() const   { return base.last; }
+      const_iterator begin() const { return base.core.first; }
+      const_iterator end() const   { return base.core.last; }
 
-      const_iterator cbegin() const { return base.first; }
-      const_iterator cend() const   { return base.last; }
+      const_iterator cbegin() const { return base.core.first; }
+      const_iterator cend() const   { return base.core.last; }
 
     private:
       vector_base<T> base;
@@ -177,16 +177,8 @@ namespace origin
   template <typename T>
     inline
     vector<T>::vector(vector&& x, allocator& alloc) noexcept
-      : base(alloc)
-    {
-      if (get_allocator() == x.get_allocator()) {
-        base = std::move(x.base());
-      } else {
-        base.first = base.allocate(x.size());
-        base.last = uninitialized_move_n(base.alloc, x.begin(), x.end(), base.first);
-        base.limit = base.last;
-      }
-    }
+      : base(std::move(x), alloc)
+    { }
 
   template <typename T>  
     inline vector<T>&
@@ -205,7 +197,8 @@ namespace origin
     vector<T>::vector(const vector& x, allocator& alloc)
       : base(x.size(), alloc)
     {
-      base.last = uninitialized_copy(base.alloc, x.begin(), x.end(), base.first);
+      base.core.last = 
+        uninitialized_copy(base.alloc, x.begin(), x.end(), begin());
     }
 
   template <typename T>
@@ -224,7 +217,7 @@ namespace origin
     inline vector<T>::vector(std::size_t n, const T& value, allocator& alloc)
       : base(n, alloc)
     {
-      base.last = uninitialized_fill_n(base.alloc, begin(), n, value);
+      base.core.last = uninitialized_fill_n(base.alloc, begin(), n, value);
     }
 
   template <typename T>
@@ -260,9 +253,10 @@ namespace origin
   template <typename T>
     template <typename I>
       vector<T>::vector(I first, I last, allocator& alloc, Requires<Forward_iterator<I>()>*)
-        : base(alloc, distance(first, last))
+        : base(distance(first, last), alloc)
       {
-        base.last = uninitialized_copy(get_allocator(), first, last, begin());
+        base.core.last = 
+          uninitialized_copy(get_allocator(), first, last, begin());
       }
 
   template <typename T>
@@ -293,22 +287,20 @@ namespace origin
   template <typename T>
     inline
     vector<T>::vector(std::initializer_list<T> l)
-      : vector(l, default_allocator())
+      : vector(l.begin(), l.end(), default_allocator())
     { }
 
   template <typename T>
     inline
     vector<T>::vector(std::initializer_list<T> l, allocator& alloc)
-      : base(l.size(), alloc)
-    {
-      base.last = uninitialized_copy(get_allocator(), l.begin(), l.end(), begin());
-    }
+      : vector(l.begin(), l.end(), alloc)
+    { }
 
   template <typename T>
     inline vector<T>&
     vector<T>::operator=(std::initializer_list<T> list)
     {
-      return copy_assign_sequence(*this, list);
+      return assign(list.begin(), list.end());
     }
 
 
@@ -324,41 +316,8 @@ namespace origin
     template <typename... Args>
       void vector<T>::emplace_back(Args&&... args)
       {
-        if (!full()) {
-          base.append(std::forward<Args>(args)...);
-        } else {
-          // Allocate new memory for the inserted element.
-          std::size_t n = base.next_capacity();
-          T* first = base.allocate(n);
-          T* last = first;
-
-          // Try to move data into the newly allocated memory. Note that
-          // uninitialized 
-          try {
-            // Try moving the data to the new buffer. If an exception is thrown
-            // the moved (or copied) values will already have been destroyed.
-            last = uninitialized_move(base.alloc, base.first, base.last, first);
-
-            // Append the element to the end of the new buffer. If this fails,
-            // no harm, no foul.
-            construct(base.alloc, last, std::forward<Args>(args)...);
-            ++last;
-          } catch(...) {
-            base.deallocate(first, n);
-            throw;
-          }
-
-          // Destroy and deallocate the previous data. We still have to
-          // destroy partially formed (moved) objects.
-          base.clear();
-          base.deallocate(base.first, base.capacity());
-
-          // Make the vector point to the new buffer.
-          base.first = first;
-          base.last = last;
-          base.limit = first + n;
+        emplace(end(), std::forward<Args>(args)...);
       }
-    }
 
   template <typename T>
     void vector<T>::push_back(T&& value)
@@ -376,7 +335,7 @@ namespace origin
     void vector<T>::pop_back()
     {
       assert(!empty());
-      base.erase_at_end(1);
+      vector_erase_at_end(base, 1);
     }
 
 
@@ -388,51 +347,27 @@ namespace origin
         if (!full()) {
           // If the vector isn't empty, then we can just append or insert an
           // object with the given arguments.
-          if (pos == end())
-            base.append(std::forward<Args>(args)...);
-          else
-            base.insert(mid, std::forward<Args>(args)...);
-          return mid;
+          return vector_insert(base, mid, std::forward<Args>(args)...);
         } else {
-          // Allocate new memory for the inserted element.
-          std::size_t n = base.next_capacity();
-          T* first = base.allocate(n);
-          T* last = first;
-          T* result = nullptr;
-
-          // Try to move data into the newly allocated memory. Note that
-          // uninitialized 
+          // Allocate a new buffer.
+          vector_core<T> buf = base.allocate_core();
+          T* result = buf.limit;
           try {
-            // Try moving the data to the new buffer. If an exception is here,
-            // then the moved part is destroyed, and last is not assigned.
-            last = uninitialized_move(base.alloc, base.first, mid, first);
-
-            // Append the element to the end of the new buffer. We will need
-            // to destroy the successfully moved part of the range.
-            construct(base.alloc, last, std::forward<Args>(args)...);
-            result = last;
-            ++last;
-
-            // Finally, move the remainder of the original vector into place.
-            // If an exception is thrown here, then we will need to destroy the
-            // previously constructed elements [first, last).
-            last = uninitialized_move(base.alloc, mid, base.last, last);
+            // Transfer the elements of the current buffer into the newly
+            // allocated one.
+            buf.last = uninitialized_move(base.alloc, base.core.first, mid, buf.first);
+            
+            // Construct the new object in place.
+            construct(base.alloc, buf.last, std::forward<Args>(args)...);
+            result = buf.last++;
+            
+            // Transfer the rest of the elements into the buffer.
+            buf.last = uninitialized_move(base.alloc, mid, base.core.last, buf.last);
           } catch(...) {
-            if (first != last)
-              destroy(base.alloc, first, last);
-            base.deallocate(first, n);
+            base.deallocate_core(buf);;
             throw;
           }
-
-          // Destroy and deallocate the previous data. We still have to
-          // destroy partially formed (moved) objects.
-          base.clear();
-          base.deallocate(base.first, base.capacity());
-
-          // Make the vector point to the new buffer.
-          base.first = first;
-          base.last = last;
-          base.limit = first + n;
+          base.take_core(buf);
           return result;
         }
       }
@@ -449,27 +384,43 @@ namespace origin
       return emplace(pos, value);
     }
 
+  // FIXME: Optimize be removing unnecessary swaps.
   template <typename T>
     auto vector<T>::insert(const_iterator pos, std::size_t n, const T& value) 
       -> iterator
     {
-      std::size_t m = pos - base.first;
-      T* mid = base.first + m;
-      if (size() + n >= capacity()) {
-        vector_base<T> tmp(base.next_capacity(), base.alloc);
-        tmp.move_at_end(base.first, mid);
-        tmp.fill_at_end(n, value);
-        tmp.move_at_end(base.first, mid);
-        base.swap(tmp);
-        return base.first + m;
-      } else {
+      std::size_t m = pos - base.core.first;
+      T* mid = base.core.first + m;
+      if (size() + n <= capacity()) {
+        // There is sufficient capacity to insert without reallocating.
+        // If we're inserting at the end, we can fill uninitialized. Otherwise,
+        // we have to shuffle elements around and then fill in the middle
+        // of the vector.
         if (pos == end()) {
-          base.fill_at_end(n, value);
+          base.core.last = uninitialized_fill_n(base.alloc, end(), n, value);
         } else {
-          base.shift_right(mid, n);
-          // base.fill_at_pos(mid, n, value);
+          vector_shift_right(base, mid, n);
+          fill_n(mid, n, value);
         }
         return mid;
+      } else {
+        // Allocate the new buffer.
+        //
+        // FIXME: Should I be doubling the buffer until I exceed size() + n?
+        // Or is it sufficient to allocate to the precise size?
+        vector_core<T> buf = base.allocate_core(size() + n);
+
+        // Transfer the elements into the new buffer.
+        try {
+          buf.last = uninitialized_move(base.alloc, base.core.first, mid, buf.first);
+          buf.last = uninitialized_fill_n(base.alloc, buf.last, n, value);
+          buf.last = uninitialized_move(base.alloc, mid, base.core.last, buf.last);
+        } catch(...) {
+          base.deallocate_core(buf);
+          throw;
+        }
+        base.take_core(buf);
+        return base.core.first + m;
       }
     }
 
@@ -487,7 +438,6 @@ namespace origin
         return p;
       }
 
-  // TODO: Optimize this function by removing unnecessary swaps.
   template <typename T>
     template <typename I>
       auto vector<T>::insert(const_iterator pos, I first, I last, Requires<Forward_iterator<I>()>*)
@@ -496,20 +446,24 @@ namespace origin
         T* p = const_cast<T*>(pos);
         std::size_t n = distance(first, last);
         if (residual() >= n) {
-          base.range_insert(p, first, last);
-          return p;
+          return vector_range_insert(base, p, first, last);
         } else {
-          vector_base<T> tmp(base.next_capacity(), base.alloc);
+          // Allocate a new buffer of an appropriate size.
+          vector_core<T> buf = base.allocate_core();
+
+          // Transfer the elements of the old base and those in [first, last)
+          // into the new buffer. Note that we move from the old base, but
+          // copy from [first, last).
           try {
-            tmp.move_at_end(base.first, p);
-            tmp.copy_at_end(first, last);
-            tmp.move_at_end(p, base.last);
+            buf.last = uninitialized_move(base.alloc, base.core.first, p, buf.first);
+            buf.last = uninitialized_copy(base.alloc, first, last, buf.last);
+            buf.last = uninitialized_move(base.alloc, p, base.core.last, buf.last);
           } catch(...) {
-            tmp.clear();
+            base.deallocate_core(buf);
             throw;
           }
-          base.swap(tmp);
-          return base.first + n;
+          base.take_core(buf);
+          return base.core.first + n;
         }
       }
 
@@ -531,19 +485,19 @@ namespace origin
   template <typename T>
     auto vector<T>::erase(const_iterator pos) -> iterator
     {
-      assert(pos >= base.first && pos < base.last);
+      assert(pos >= base.core.first && pos < base.core.last);
       T* p = const_cast<T*>(pos);
-      base.shift_left(p);
+      vector_shift_left(base, p);
       return p;
     }
 
   template <typename T>
     auto vector<T>::erase(const_iterator first, const_iterator last) -> iterator
     {
-      assert(first >= base.first && last <= base.last);
+      assert(first >= base.core.first && last <= base.core.last);
       T* f = const_cast<T*>(first);
       T* l = const_cast<T*>(last);
-      base.shift_left(f, l);
+      vector_shift_left(base, f, l);
       return f;
     }
 
@@ -558,11 +512,8 @@ namespace origin
   template <typename T>
     void vector<T>::deflate()
     {
-      if (capacity() != size()) {
-        vector_base<T> tmp(size(), base.alloc);
-        tmp.move_at_end(base);
-        base.swap(tmp);
-      }
+      if (capacity() != size())
+        relocate_vector(base, size());
     }
 
   // Reserve n objects of memory. Note that if n is less than the current 
@@ -570,30 +521,19 @@ namespace origin
   template <typename T>
     void vector<T>::reserve(std::size_t n)
     {
-      if (capacity() < n) {
-        vector_base<T> tmp(n, base.alloc);
-        tmp.move_at_end(base);
-        base.swap(tmp);
-      }
+      if (capacity() < n)
+        relocate_vector(base, n);
     }
 
-  // FIXME: Thiis can be made much, much simpler by writing it in terms of
+  // FIXME: This can be made much, much simpler by writing it in terms of
   // insert and erase. See libstdc++.
   template <typename T>
     void vector<T>::resize(std::size_t n, const T& value)
     {
-      if (n > size()) {
-        if (n > capacity()) {
-          vector_base<T> tmp(n, base.alloc);
-          tmp.move_at_end(base);
-          tmp.fill_at_end(n - size(), value);
-          base.swap(tmp);
-        } else {
-          base.fill_at_end(n - size(), value);
-        }
-      } else if (n < size()) {
-        base.erase_at_end(size() - n);
-      }
+      if (n > size())
+        insert(end(), n, value);
+      else if (n < size());
+        erase(begin() + n, end());
     }
 
 

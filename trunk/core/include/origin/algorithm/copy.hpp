@@ -188,31 +188,31 @@ namespace origin
 
   template <typename I, typename O>
     inline std::pair<I, O>
-    bounded_copy_impl(I first, I last, O result_first, O result_last)
+    bounded_copy_impl(I in_first, I in_last, O out_first, O out_last)
     {
-      while (first != last && result_first != result_last)
-        copy_step(first, result_first);
-      return {first, result_first};
+      while (in_first != in_last && out_first != out_last)
+        copy_step(in_first, out_first);
+      return {in_first, out_first};
     }
 
   template <typename T>
     inline auto
-    bounded_copy_impl(const T* first, const T* last, T* result_first, T* result_last) 
+    bounded_copy_impl(const T* in_first, const T* in_last, T* out_first, T* out_last) 
       -> Requires<Trivial<T>(), std::pair<const T*, T*>>
     {
-      std::size_t n = min(last - first, result_last - result_first);
-      std::memcpy(result_first, first, n * sizeof(T));
-      return {first + n, result_first + n};
+      std::size_t n = min(in_last - in_first, out_last - out_first);
+      std::memcpy(out_first, in_first, n * sizeof(T));
+      return {in_first + n, out_first + n};
     }
 
   template <typename T>
     inline auto
-    bounded_copy_impl(T* first, T* last, T* result_first, T* result_last) 
+    bounded_copy_impl(T* in_first, T* in_last, T* out_first, T* out_last) 
       -> Requires<Trivial<T>(), std::pair<T*, T*>>
     {
-      std::size_t n = min(last - first, result_last - result_first);
-      std::memcpy(result_first, first, n * sizeof(T));
-      return {first + n, result_first + n};
+      std::size_t n = min(in_last - in_first, out_last - out_first);
+      std::memcpy(out_first, in_first, n * sizeof(T));
+      return {in_first + n, out_first + n};
     }
 
 
