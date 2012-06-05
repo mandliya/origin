@@ -5,11 +5,11 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_UTILITY_TYPESTR_HPP
-#define ORIGIN_UTILITY_TYPESTR_HPP
+#ifndef ORIGIN_TYPE_TYPESTR_HPP
+#define ORIGIN_TYPE_TYPESTR_HPP
 
-#include <string>
 #include <cstring>
+#include <string>
 #include <typeinfo>
 
 #if defined(__GNUC__)
@@ -21,7 +21,6 @@ namespace origin
   template <typename... Args> struct typestr_dispatch;
   template <typename T> struct type_to_string;
   template <typename... Args> struct typelist_to_string;
-  
   
 
   // Typestr  
