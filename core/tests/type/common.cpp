@@ -5,7 +5,6 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#include <iostream>
 #include <string>
 
 #include <origin/type.hpp>
