@@ -1,35 +1,107 @@
 // Copyright (c) 2008-2010 Kent State University
-// Copyright (c) 2011 Texas A&M University
+// Copyright (c) 2011-2012 Texas A&M University
 //
 // This file is distributed under the MIT License. See the accompanying file
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_TRAITS_HPP
-#define ORIGIN_TRAITS_HPP
+#ifndef ORIGIN_TYPE_TRAITS_HPP
+#define ORIGIN_TYPE_TRAITS_HPP
 
 #include <type_traits>
-
-#include <origin/utility.hpp>
+#include <utility>
+#include <iosfwd>
 
 namespace std
 {
   template<typename... > class tuple;
-}
+} // namespace std
+
 
 namespace origin
 {
-  // Variadic concept evaluation
-  // The All function can be used to evaluate properties of template parameter
-  // packs in variadic templates. It is true if an only if all arguments are
-  // true. The syntax is:
+  //////////////////////////////////////////////////////////////////////////////
+  // Miscellaneous types
   //
-  //    static_assert(All(C<Args>()...), "")
+  // Various types used throughout Origin.
+  //////////////////////////////////////////////////////////////////////////////
+
+  // Default type
   //
-  // where C is a unary concept.
+  // The default type is a tag class used to indicate the selection of a default
+  // value. This is only used to support class template specialization.
+  struct default_t { };
+  
+
+  // Unspecified type
+  //
+  // The unspecified type is a tag class used to indicate that an argument for a
+  // template parameter has not been specified.
+  struct unspecified_t { };
+  
+
+  // Empty type
+  //
+  // The empty type is an empty, trivial type that is meant to be used as a
+  // placeholder for unspecified types in containers or other data structures.
+  struct empty_t { };
+
+
+  // Streamable<empty_t>
+  //
+  // TODO: Should we actually read and/or write something for this type? It
+  // might be kind of nice.
+  template <typename Char, typename Traits>
+    inline std::basic_ostream<Char, Traits>& 
+    operator<<(std::basic_ostream<Char, Traits>& os, empty_t)
+    { 
+      return os; 
+    }
+
+  template <typename Char, typename Traits>
+    inline std::basic_istream<Char, Traits>& 
+    operator>>(std::basic_istream<Char, Traits>& is, empty_t&)
+    { 
+      return is; 
+    }
+    
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Metaprogramming support
+  //
+  // The following construccts extend the std type traits, providing new 
+  // features, aliases, and functiohns.
+  //////////////////////////////////////////////////////////////////////////////
+
+  // The bool constant is an alias for the type integral_constant<bool, X>.
+  // This type is provided purely for convenience.
+  template <bool B>
+    using boolean_constant = std::integral_constant<bool, B>;
+
+
+  // The requires template is a conditional alias for T, if B is true. If B is
+  // false, the alias results in a substitution failure.
+  template <bool B, typename T = void>
+    using Requires = typename std::enable_if<B, T>::type;
+
+
+  // An alias for T if B is true and F is B false.
+  template <bool B, typename T, typename F>
+    using If = typename std::conditional<B, T, F>::type;
+  
+
+  // Returns true if each boolean argument is true or if no arguments are given.
+  // This function can be used to evaluate a concept or type constraint for all
+  // types in a template parameter pack. For example:
+  //
+  //    static_assert(All(Equality_comparable<Args>()...), "")
+  //
+  // where Equality_comparable is a concept taking a single argument.
+  //
+  // Note that all arguments must be convertible to bool.
   constexpr bool All() { return true; }
     
-  // Note that all Args are expected to have type bool.
+
   template <typename... Args>
     constexpr bool All(bool b, Args... args)
     {
@@ -37,74 +109,147 @@ namespace origin
     }
 
 
+  // Infrastructure for implementing type traits.
+  namespace traits
+  {
+    // Return the first type in the given sequence of arguments. This is
+    // undefined when Args... is empty.
+    template <typename... Args> struct front_type;
 
+    template <typename T, typename... Args>
+      struct front_type<T, Args...>
+      { 
+        using type = T; 
+      };
+
+
+
+    // Returns the last type in a sequence of type arguments. This is
+    // undefined when Args... is empty.
+    template <typename... Args> struct back_type;
+
+    template <typename T>
+      struct back_type<T>
+      { 
+        using type = T;
+      };
+
+    template <typename T, typename... Args>
+      struct back_type<T, Args...> : back_type<Args...>
+      { };
+  } // namespace traits
+
+
+  // An alias to the first type in a non-empty sequence of type arguments.
+  template <typename... Args>
+    using Front_type = typename traits::front_type<Args...>::type;
+
+
+  // An alias to the last type in a non-empty sequence of type arguments.
+  template <typename T, typename... Args>
+    using Back_type = typename traits::back_type<T, Args...>::type;
+    
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // SFINAE support
+  //
+  // The following types and functions are used to support safe type deduction
+  // and type trait implementations in the Origin library.
+  //////////////////////////////////////////////////////////////////////////////
+
+  template <typename... Args> constexpr bool Same();
+  template <typename T, typename U> constexpr bool Different();
 
   // The substitution failure type represents the result of failed name lookup
   // and is used to support queries about the existence or state of expressions
   // that might fail.
   struct subst_failure { };
 
-  // Returns true if the the given type indicates a failed substitution.
+
+  // Returns true if T indicates a substitution failure.
   template <typename T>
-    struct subst_failed: std::false_type
-    { };
+    constexpr bool Subst_failed() { return Same<T, subst_failure>(); }
 
-  template <>
-    struct subst_failed<subst_failure> : std::true_type
-    { };
 
-  // The Subst_failed predicate returns true when the given type indicates
-  // a substitution failure.
+  // Returns true if T does not indicate a substitution failure.
   template <typename T>
-    constexpr bool Subst_failed() { return subst_failed<T>::value; }
-
-    
-  // Returns true if the given type indicates a successful substitution. This
-  // is the case whenever T is not subst_failure.
-  template <typename T>
-    struct subst_succeeded : std::true_type
-    { };
-
-  template <>
-    struct subst_succeeded<subst_failure> : std::false_type
-    { };
+    constexpr bool Subst_succeeded() { return Different<T, subst_failure>(); }
 
 
-  // The Subst_succeeded predicate returns true when its given type argument
-  // does not indicate a substitution failure.
-  template <typename T>
-    constexpr bool Subst_succeeded() { return subst_succeeded<T>::value; }
 
-
-    
+  //////////////////////////////////////////////////////////////////////////////
   // Type relations
+  //
+  // The following type constraints describe relations on types. There are
+  // four:
+  //
+  //    - Same
+  //    - Common
+  //    - Convertible
+  //    - Derived
+  //////////////////////////////////////////////////////////////////////////////
 
 
-  // Identity (alias)
-  // The identity alias refers to its type argument. One use of the identity
-  // alias is preventing perfect forwarding for rvalue parameters. For example:
-  //
-  //    template <typename T>
-  //      void f(Identity<T>&& x) { ... }
-  //
-  // Now the compiler will deduce T as the actual type of X, and not use the
-  // forwarding mechanism to change the deduced type.
-  template <typename T>
-    using Identity = T;
+  // Infrastructure for defining the Same() constraint.
+  namespace traits
+  {
+    // Returns true if all of the types are the same, or if Args... is an
+    // empty sequence of types. Evaluation is of type equality is performed
+    // left-to-right, and the operation will not instantiate arguments after
+    // a non-equal pair is found.
+    template <typename... Args> struct are_same;
+
+    // True for an empty sequence
+    template <>
+      struct are_same<> : std::true_type
+      { };
+
+    // For a single type, this is trivially true.
+    template <typename T> 
+      struct are_same<T> : std::true_type 
+      { };
+
+    // Recursively apply are_same (is_same) to T and Args...
+    // FIXME: Does && properly short-circuit the instantiation, or do I need to
+    // use std::conditional to make sure thta it's done correctly. How do you
+    // test this?
+    template <typename T, typename... Args>
+      struct are_same<T, Args...>
+        : boolean_constant<
+            std::is_same<T, typename front_type<Args...>::type>::value &&
+            are_same<Args...>::value
+          >
+      { };
+  } // namespace traits
 
 
-  // Common Type
+  // Returns true if T is the same as U for all pairs of types T and U in
+  // Args or if Args is an empty type sequence.
+  template <typename... Args>
+    constexpr bool Same()
+    {
+      return traits::are_same<Args...>::value;
+    }
+    
+
+  // Returns true if T is different than U. This expression Different<T, U>()
+  // is equivalent to !Same<T, U>().
+  template <typename T, typename U>
+    constexpr bool Different()
+    {
+      return !Same<T, U>();
+    }
+
+
+  // The common_type trait yields the common type of T and U. 
   //
-  // We only define common type in terms of two types. It can be generalized
-  // to any number of types if we find the need later.
-  
-  // Yields the common type of the T and U.
+  // NOTE: This supercedes the std implementation of common type, which will
+  // can result in compilation failures when the common type of T and U is not
+  // defined. Also note tht this is not in the traits namespace to allow for
+  // easier customization.
   //
-  // NOTE: This supercedes the std implementation of common type, which is
-  // inherently unsafe. Unlike this version, it can't be reliably tested
-  // without causing errors. We provide supplemental specializations of
-  // common type to ensure interoperability with the std::common_type.
+  // FIXME: This needs to be explicitly specialized for std::duration.
   template <typename T, typename U>
     struct common_type
     {
@@ -113,250 +258,258 @@ namespace origin
         static auto check(X&& a, Y&& b) -> decltype(true ? a : b);
 
       static subst_failure check(...);
+
+      using C = decltype(check(std::declval<T>(), std::declval<U>()));
     public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      using type = typename std::remove_const<
+        typename std::remove_reference<C>::type
+      >::type;
     };
-    
-  // FIXME: Add specializations for std::duration.
+
+  // When the type arguments are the same, we can bypass the deduction on
+  // the conditional operator. This should make compilation slightly faster
+  // in those cases.
+  template <typename T>
+    struct common_type<T, T>
+    {
+      using type = typename std::remove_const<
+        typename std::remove_reference<T>::type
+      >::type;
+    };
 
 
-    
-  // The alias yields the common type of T and U if it exists, and 
-  // subst_failure if it does not. Note that the common type of T and U may
-  // not be T or U.
+  // An alias to the common type of T and U if it exists. Note that the common
+  // type of T and U may ne neither T nor U.
   template <typename T, typename U>
     using Common_type = typename common_type<T, U>::type;
 
-  // The Common predicate is true if T and U share a common type.
+
+  // Returns true if the common type of T and U exists.
   template <typename T, typename U>
     constexpr bool Common() { return Subst_succeeded<Common_type<T, U>>(); }
 
-  // Return a value that has the common type of its function arguments. Like
-  // declval, this is only intended to be used in un-evaluated contexts.
-  template <typename T, typename U>
-    Common_type<T, U> commonval(T&& a, U&& b)
-    {
-      return std::declval<Common_type<T, U>>();
-    }
-
-    
     
   // Returns true if T is convertible to U.
   template <typename T, typename U>
     constexpr bool Convertible() { return std::is_convertible<T, U>::value; }
-    
+
+
   // Returns true if T is derived from U.
   template <typename T, typename U>
     constexpr bool Derived() { return std::is_base_of<U, T>::value; }    
 
     
     
-  // Adaptors for standard traits
-  
-  // An alias for the std::enable_if psuedo-trait. Like Boost, we allow the
-  // type argument to default to void. This is useful when writing Requires<>
-  // expressions as function or template arguments.
-  template <bool B, typename T = void>
-    using Requires = typename std::enable_if<B, T>::type;
+    
+  //////////////////////////////////////////////////////////////////////////////   
+  // Type queries and transformations
+  //
+  // The following type traits query a type for classification or property.
+  // Type transformations return a type name.
+  //////////////////////////////////////////////////////////////////////////////
+
+
+  // Infrastructure for defining the identity alias.
+  namespace traits
+  {
+    template <typename T>
+      struct identity
+      {
+        using type = T;
+      };
+  };
+
+
+  // An alias to the type argument. One use of the Identity alias is inhibit
+  // perfect forwarding for rvalue parameters. For example:
+  //
+  //    template <typename T>
+  //      void f(Identity<T>&& x) { ... }
+  //
+  //    A a = ... // some value
+  //    f(a)
+  //
+  // The compiler will deduce T as the type A (resulting in an rvalue reference
+  // to A) instead of forwarding the function argument x as A&.
+  template <typename T>
+    using Identity = typename traits::identity<T>::type;
 
     
-  // An alias for the std;:conditional type trait.
-  template <bool B, typename T, typename F>
-    using If = typename std::conditional<B, T, F>::type;
-  
-    
-    
-    
-  // Return true if T is void, and false otherwise.
+  // Returns true if T is void, and false otherwise.
   template <typename T>
     constexpr bool Void() { return std::is_void<T>::value; }
-    
-    
-    
-  // Boolean expressions
-  // Returns true if and only if Convertible<T,  bool>() is true. This
-  // predciate provides a more coherent way of expressing requirements on
-  // the results of expressions.
-  template <typename T>
-    constexpr bool Boolean() { return Convertible<T, bool>(); }
-    
-    
-    
-  // Integral types
-  // Predicates describing standard (language-defined) integral types.
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Integer types
+  //
+  // The following traits apply to integer types.
+  //  
+  //
+  // FIXME: There is an issue with the classification of bool as an integer type
+  // in that it is neither signed nor unsigned. This can lead to compilation
+  // failures when using the Make_unsigned or Make_signed type traits when bool
+  // is accepted as an argument. A reasonable solution would be to abstract the
+  // language's characterization of Integer types and exclude bool.
+  //////////////////////////////////////////////////////////////////////////////
 
-  // Integral (trait)
+
   // Returns true if T is a signed or unsigned, possibly cv-qualified, bool,
   // char, short, int, long or long long.
-  //
-  // FIXME: The latest standard renamed "integral" to "integer".
   template <typename T>
-    constexpr bool Integral() { return std::is_integral<T>::value; }
-
+    constexpr bool Integer() { return std::is_integral<T>::value; }
   
 
-  // Signed (trait)
   // Returns true if T is a signed type. Note that floating point values
   // are signed.
   template <typename T>
     constexpr bool Signed() { return std::is_signed<T>::value; }
-    
 
 
-  // Unsigned (trait)
   // Returns true if T is an unsigned type.
   template <typename T>
     constexpr bool Unsigned() { return std::is_unsigned<T>::value; }
 
-  
-  
-  // Signed integer (trait)
-  // Returns true if T is a signed integral type.
-  template <typename T>
-    constexpr bool Signed_integer()
-    {
-      return Integral<T>() && Signed<T>();
-    }
-
-
-
-  // Unsigned integer (trait)
-  // Returns true if T is an signed integer type.
-  template <typename T>
-    constexpr bool Unsigned_integer()
-    {
-      return Integral<T>() && Unsigned<T>();
-    }
-
-
-
-  // Extend the make_unsigned trait to work for bool types also. Note that
-  // using this trait with non-integral types will result in compilation errors.
-  template <typename T>
-    struct make_ext_unsigned
-    {
-      using type = typename std::make_unsigned<T>::type;
-    };
-  
-  template <> struct make_ext_unsigned<bool> { using type = bool; };
-  
-  // Guard against invalid instantiations of Make_unsigned.
-  template <typename T, bool Int = Integral<T>()>
-    struct safe_make_unsigned 
-    { 
-      using type = subst_failure; 
-    };
-  
-  template <typename T> 
-    struct safe_make_unsigned<T, true>
-    {
-      using type = typename make_ext_unsigned<T>::type;
-    };
 
   // An alias for the unsigned integral type with the same width as T.
   template <typename T>
-    using Make_unsigned = typename safe_make_unsigned<T>::type;
+    using Make_unsigned = typename std::make_unsigned<T>::type;
 
-
-    
-  // Extend the make_signed trait to work for bool types. A signed bool type 
-  // is just a char.
-  //
-  // FIXME: Maybe Make_signed shouldn't be defined for bool types. Maybe it
-  // should. Check the ordinal libraryto see if I need this or not.
-  template <typename T>
-    struct make_ext_signed
-    {
-      using type = typename std::make_signed<T>::type;
-    };
-  
-  template <> struct make_ext_signed<bool> { using type = char; };
-  
-  // Guard against invalid instantiations of Make_signed.
-  template <typename T, bool Int = Integral<T>()>
-    struct safe_make_signed
-    {
-      using type = subst_failure;
-    };
-    
-  template <typename T>
-    struct safe_make_signed<T, true>
-    {
-      using type = typename make_ext_signed<T>::type;
-    };
 
   // An alias for the signed integral type with the same width as T.
   template <typename T>
-    using Make_signed = typename safe_make_signed<T>::type;
+    using Make_signed = typename std::make_signed<T>::type;
     
   
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Integer types
+  //
+  // The following traits apply to floating types.
+  //////////////////////////////////////////////////////////////////////////////
     
-  // Floating point types.
-    
+  
   // Returns true if T is a float, double, or long double.
   template <typename T>
     constexpr bool Floating_point() { return std::is_floating_point<T>::value; }
 
-    
-    
-  // Arrays
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Array types
+  //
+  // The following traits apply to array types.
+  //////////////////////////////////////////////////////////////////////////////
   
+
   // Return true if T is an array type of type U[N].
   template <typename T>
     constexpr bool Array() { return std::is_array<T>::value; }
 
-  // Return the number of dimensions of the array type T. If T is not an
-  // Array, it has 0 dimensions.
+
+  // Returns the number of dimensions of the array type T. If T is not an
+  // Array, it has 0 dimensions. For example:
+  //
+  //    using A1 = int[3][2];
+  //    static_assert(Rank<A1>() == 2);
+  //  
+  //    using A2 = int[5];
+  //    static_assert(Rank<A2>() == 1);
+  //
+  //    using A3 = int;
+  //    static_assert(Rank<A3>() == 0);
+  //
   template <typename T>
     constexpr unsigned Rank() { return std::rank<T>::value; }
     
-  // Return the extent of the array type T...
+
+  // Returns the extent of the array type T in the Ith dimension. The extent
+  // of an array is the number of subobjects allocated in that dimensions. For
+  // example:
+  //
+  //    using A = int[3][2];
+  //    static_assert(Extent<A, 0> == 3, "");
+  //    static_assert(Extent<A, 1> == 2, "");
+  //
+  // If the dimension I is not given, it defaults to 0.
   template <typename T, unsigned I = 0>
     constexpr std::size_t Extent() { return std::extent<T, I>::value; }
   
+
+  // An alias to the array type T with its outermost extent removed. For
+  // example:
+  //
+  //    using A = int[3][2];
+  //    using B = Remove_extent<A>;
+  //    static_assert(Same<B, int[3]>(), "");
   template <typename T>
     using Remove_extent = typename std::remove_extent<T>::type;
     
+  // An alias to the underlying value type of the array type T. For example:
+  //
+  //    using A = int[3][2];
+  //    using B = Remove_all_extents<A>;
+  //    static_assert(Same<B, int>(), "");
   template <typename T>
     using Remove_all_extents = typename std::remove_all_extents<T>::type;
-  
 
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Pointer types
+  //
+  // The following traits apply to pointer types.
+  //////////////////////////////////////////////////////////////////////////////
     
-  // Pointers
-    
+  
   // Returns true if T is a pointer.
   template <typename T>
     constexpr bool Pointer() { return std::is_pointer<T>::value; }
-    
+  
+
+  // An alias to a pointer-to-T.
   template <typename T>
     using Add_pointer = typename std::add_pointer<T>::type;
     
+
+  // An alias to the underlying type U if T is a pointer-to-U.
   template <typename T>
     using Remove_pointer = typename std::remove_pointer<T>::type;
     
   
-  // References
+  //////////////////////////////////////////////////////////////////////////////
+  // Reference types
+  //
+  // The following traits apply to pointer types.
+  //////////////////////////////////////////////////////////////////////////////
     
-  // Returns true if T is an lvalue reference.
+
+  // Returns true if T is an lvalue reference to some type U.
   template <typename T>
     constexpr bool Lvalue_reference() { return std::is_lvalue_reference<T>::value; }
     
-  // Returns true if T is rvalue reference.
+
+  // Returns true if T is rvalue reference to some type U.
   template <typename T>
     constexpr bool Rvalue_reference() { return std::is_rvalue_reference<T>::value; }
     
-  // Returns true if T is either an lvalue or rvalue reference.
+
+  // Returns true if T is either an lvalue or rvalue reference to some type U.
   template <typename T>
     constexpr bool Reference() { return std::is_reference<T>::value; }
     
+
+  // An alias to an lvalue-reference-to-T.
   template <typename T>
     using Add_lvalue_reference = typename std::add_lvalue_reference<T>::type;
     
+
+  // An alias to an rvalue-reference-to-T.
   template <typename T>
     using Add_rvalue_reference = typename std::add_rvalue_reference<T>::type;
     
+
+  // An alias to a type U if T is a reference-to-T.
   template <typename T>
     using Remove_reference = typename std::remove_reference<T>::type;
 

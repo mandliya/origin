@@ -10,11 +10,21 @@
 
 #include <initializer_list>
 
-#include <origin/traits.hpp>
+#include <origin/type/traits.hpp>
 #include <origin/functional.hpp>
 
 namespace origin
 {
+  // Boolean
+  //
+  // Returns true if and only if Convertible<T,  bool>() is true. This
+  // predciate provides a more coherent way of expressing requirements on
+  // the results of expressions.
+  template <typename T>
+    constexpr bool Boolean() { return Convertible<T, bool>(); }
+    
+    
+
   // Equality comparable (concept)
   // The equality comparable concept defines the syntax and semantics of
   // comparing for value equality.

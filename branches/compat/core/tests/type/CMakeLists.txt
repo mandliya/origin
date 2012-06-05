@@ -5,4 +5,8 @@
 # LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 # and conditions.
 
-add_subdirectory(type)
+origin_run_test(traits_all all.cpp)
+origin_run_test(traits_same same.cpp)
+origin_run_test(traits_sequence sequence.cpp)
+origin_run_test(traits_common common.cpp)
+
