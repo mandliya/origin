@@ -348,6 +348,7 @@ namespace origin
     constexpr bool Void() { return std::is_void<T>::value; }
 
 
+
   //////////////////////////////////////////////////////////////////////////////
   // Integer types
   //
@@ -464,6 +465,60 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
+  // Functions
+  //
+  // The following traits apply to functions.
+  //////////////////////////////////////////////////////////////////////////////
+    
+  
+  // Returns true if T is a function.
+  template <typename T>
+    constexpr bool Function_type()
+    {
+      return std::is_function<T>();
+    }
+
+    
+  // Safely deduce the result type of the expression f(args...).
+  namespace traits
+  {
+    template <typename F, typename... Args>
+      struct get_call_result
+      {
+      private:
+        template <typename X, typename... Y>
+          static auto check(X x, Y&&... y) -> decltype(x(std::forward<Y>(y)...));
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
+      };
+
+    // Actually access the result type.
+    template <typename T>
+      struct result_of
+      {
+        using type = subst_failure;
+      };
+      
+    template <typename F, typename... Args>
+      struct result_of<F(Args...)>
+      {
+        using type = typename get_call_result<F, Args...>::type;
+      };
+  } // namespace traits
+
+    
+  // An alias for the result type of the function type. The function type F
+  // is comprised of the types G(Args...) where G is the type of a callable
+  // object (e.g., function pointer, reference or functor), and Args are the
+  // types of the function arguments.
+  template <typename F>
+    using Result_of = typename traits::result_of<F>::type;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Pointer types
   //
   // The following traits apply to pointer types.
@@ -484,6 +539,7 @@ namespace origin
   template <typename T>
     using Remove_pointer = typename std::remove_pointer<T>::type;
     
+
   
   //////////////////////////////////////////////////////////////////////////////
   // Reference types
@@ -521,9 +577,62 @@ namespace origin
   template <typename T>
     using Remove_reference = typename std::remove_reference<T>::type;
 
-    
 
-  // Member data
+    
+  //////////////////////////////////////////////////////////////////////////////
+  // User-defined types
+  //
+  // These traits describe properties of user-defined types: class types, union
+  // types, and enumerated types.
+  //////////////////////////////////////////////////////////////////////////////
+
+
+  // Returns true if T is a class or struct.
+  template <typename T>
+    constexpr bool Class() { return std::is_class<T>::value; };
+
+    
+  // Returns true if T is a union.
+  template <typename T>
+    constexpr bool Union() { return std::is_union<T>::value; }
+
+    
+  // Returns true if T has no member variables.
+  template <typename T>
+    constexpr bool Empty() { return std::is_empty<T>::value; }
+
+
+  // Returns true if T has at least one virtual method.
+  template <typename T>
+    constexpr bool Polymorphic() { return std::is_polymorphic<T>::value; }
+
+    
+  // Returns true if T has at least one pure virtual method.
+  template <typename T>
+    constexpr bool Abstract() { return std::is_abstract<T>::value; }
+ 
+
+  // Returns true if T is an enum or enum class.
+  template <typename T>
+    constexpr bool Enum()
+    {
+      return std::is_enum<T>::value;
+    }
+
+  
+  // An alias to the integer type that stores the values of the enum T.
+  template <typename T>
+    using Underlying_type = typename std::underlying_type<T>::type;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Member pointers
+  //
+  // The following traits provide queries for pointers to member objects
+  // and member functions.
+  //////////////////////////////////////////////////////////////////////////////
+
 
   // Returns true if T is a pointer to a member variable.
   template <typename T>
@@ -532,13 +641,13 @@ namespace origin
       return std::is_member_object_pointer<T>::value;
     }
 
+
   // Returns true if T is a member function pointer.
   template <typename T>
     constexpr bool Member_function_pointer()
     {
       return std::is_member_function_pointer<T>::value;
     }
-
 
 
   // Infrastructure for accessing a member pointer's pointee and class types.
@@ -590,93 +699,116 @@ namespace origin
   } // namespace traits
 
 
-
-  // Member pointee type (alias)
-  // An alias to a member pointer's pointee type.
+  // An alias to a member pointer's pointee type (the type being pointed to).
   template <typename Ptr>
-    using Member_result_type = 
+    using Member_pointee_type = 
       typename traits::member_pointer_traits<Ptr>::result_type;
 
 
-
-  // Member class type (alias)
   // An alias to a member pointer's class type.
   template <typename Ptr>
     using Member_class_type = 
       typename traits::member_pointer_traits<Ptr>::class_type;
 
 
-
-  // Composite ctaegories
+  //////////////////////////////////////////////////////////////////////////////
+  // Composite categories
+  //
+  // These traits query the composite categories of primary types. Note that
+  // there are other categories (e.g. Reference), but these do not belong to
+  // any more obvious grouping.
+  //
+  //////////////////////////////////////////////////////////////////////////////
     
-  // Returns true if T is an object type. References and function types are
+
+  // Returns true if T is an object type. An object type is any type that can
+  // be placed in a region of memory. Void, reference, and function types are
   // not object types.
   template <typename T>
     constexpr bool Object() { return std::is_object<T>::value; }
     
-  // Returns true if T is a scalar type (i.e,. not compound).
+
+  // Returns true if T is a scalar type. A scalar type is an object type that is
+  // an integer type, floating point type, or pointer. Compound types (classes,
+  // unions, and arrays) are not scalar.
   template <typename T>
     constexpr bool Scalar() { return std::is_scalar<T>::value; }
     
-  // Returns true if T is a compound type (i.e., is comprised of 1 or more 
-  // sub-objects).
+
+  // Returns true if T is a compound type. Compound types are class types, 
+  // union types, and arrays.
   template <typename T>
     constexpr bool Compound() { return std::is_compound<T>::value; }
     
-  // Returns true if T is a built-in type.
+
+  // Returns true if T is a built-in type. 
   template <typename T>
     constexpr bool Fundamental() { return std::is_fundamental<T>::value; }
     
-  // Returns true if T is an arithmetic type (Integral() || Floating_point()).
+
+  // Returns true if T is an arithmetic type. Integer and floating point types
+  // are arithmetic types.
   template <typename T>
     constexpr bool Arithmetic() { return std::is_arithmetic<T>::value; }
     
 
-    
+
+  //////////////////////////////////////////////////////////////////////////////
   // Qualifiers
+  //
+  // The following type traits implement queries and transformations for
+  // const and volatile qualifiers.
+  //////////////////////////////////////////////////////////////////////////////
   
+
   // Returns true if T is const-qualified
   template <typename T>
     constexpr bool Const() { return std::is_const<T>::value; }
-    
+  
+
   // Returns true if T is volatile-qualified
   template <typename T>
     constexpr bool Volatile() { return std::is_volatile<T>::value; }
-    
+  
+
   // Returns true if T is cv-qualified.
   template <typename T>
     constexpr bool Qualified() { return Const<T>() || Volatile<T>(); }
 
+
+  // An alias to const-qualified T (i.e., const T).
   template <typename T>
     using Add_const = typename std::add_const<T>::type;
-    
+
+
+  // An alias to volatile-qualified T (i.e., volatile T).    
   template <typename T>
     using Add_volatile = typename std::add_volatile<T>::type;
     
+
+  // An alias to const volatile qualified T (i.e., const volatile T).
   template <typename T>
     using Add_cv = typename std::add_cv<T>::type;
     
+
+  // An alias to U if T has type const U, otherwise T.
   template <typename T>
     using Remove_const = typename std::remove_const<T>::type;
     
+
+  // An alias to U if T has type volatile U, otherwise T.
   template <typename T>
     using Remove_volatile = typename std::remove_volatile<T>::type;
     
+
+  // An alias to U if T is cv-qualified or T otherwise.
   template <typename T>
     using Remove_cv = typename std::remove_cv<T>::type;
     
-    
 
-  // Remove all qualifiers and reference types and decay arrays and functions
-  // to pointers and function pointers.
+  // Decay an array into a pointer or a function into a function pointer.
   template <typename T>
     using Decay = typename std::decay<T>::type;
-
-
-
-  // Aligned storage
-  template <std::size_t Size, std::size_t Align>
-    using Aligned_storage = typename std::aligned_storage<Size, Align>::type;
 
 
   // Return an unqualified a type name by removing any references and 
@@ -684,16 +816,10 @@ namespace origin
   // of types that are known to be non-value (i.e., qualified) types, 
   // especially overloads that rely on rvalue references for forwarding.
   template <typename T>
-    using Unqualified = Remove_cv<Remove_reference<T>>;
-    
-  
-    
-  // The Forwarded trait returns the value type of a forwarded template
-  // argument. This must be used to remove qualifiers from template arguments
-  // when the function argument is forwarded.
-  template <typename T>
-    using Forwarded = Unqualified<T>;
-    
+    using Make_unqualified = Remove_cv<Remove_reference<T>>;
+
+
+
 
   // Layout and initialization
 
@@ -725,28 +851,6 @@ namespace origin
     
     
     
-  // Classes and unions
-    
-  // Return true if T is a class or struct.
-  template <typename T>
-    constexpr bool Class() { return std::is_class<T>::value; };
-    
-  // Return true if T is a union.
-  template <typename T>
-    constexpr bool Union() { return std::is_union<T>::value; }
-    
-  // Return true if T has no member variables.
-  template <typename T>
-    constexpr bool Empty() { return std::is_empty<T>::value; }
-    
-  // Return true if T has at least one virtual method.
-  template <typename T>
-    constexpr bool Polymorphic() { return std::is_polymorphic<T>::value; }
-    
-  // Return true if T has at least one pure virtual method.
-  template <typename T>
-    constexpr bool Abstract() { return std::is_abstract<T>::value; }
- 
 
   // Class destruction and construction.
   
@@ -913,30 +1017,12 @@ namespace origin
     }
     
     
-  // Enums
-  
-  template <typename T>
-    constexpr bool Enum()
-    {
-      return std::is_enum<T>::value;
-    }
-    
-  template <typename T>
-    using Underlying_type = typename std::underlying_type<T>::type;
- 
-    
-  // Functions
-    
-  // Returns true if T is a function.
-  //
-  // Note that the name of this trait differs from the standard to avoid 
-  // collision with the Function concept.
-  template <typename T>
-    constexpr bool Function_type()
-    {
-      return std::is_function<T>();
-    }
-    
+
+
+  // Aligned storage
+  template <std::size_t Size, std::size_t Align>
+    using Aligned_storage = typename std::aligned_storage<Size, Align>::type;
+
     
 
   // Relational operator traits
@@ -1712,65 +1798,13 @@ namespace origin
       return Subst_succeeded<Subscript_result<T, U>>();
     }
     
-    
-  // Safely deduce the result type of the expression f(args...).
-  //
-  // NOTE: This is not simply the same as result_of. That can fail noisily,
-  // whereas this does not.
-  template <typename F, typename... Args>
-    struct call_result
-    {
-    private:
-      template <typename X, typename... Y>
-        static auto check(X&& x, Y&&... y) -> decltype(x(std::forward<Y>(y)...));
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
-    };
 
-  // Specialization when F is known to be void.
-  template <typename... Args>
-    struct call_result<void, Args...>
-    {
-      using type = void;
-    };
-
-  // An alias fcall the result of t >> u.
-  template <typename F, typename... Args>
-    using Call_result = typename call_result<F, Args...>::type;
-    
-  // Return true if the expression t >> u is valid.
+  // Return true if the expression f(args...).
   template <typename F, typename... Args>
     constexpr bool Has_call()
     {
-      return Subst_succeeded<Call_result<F, Args...>>();
+      return Subst_succeeded<Result_of<F(Args...)>>();
     }
-
-    
-  
-  // A helper class for computing the result type of a function.
-  template <typename X>
-    struct result_of_impl
-    {
-      using type = subst_failure;
-    };
-    
-  template <typename F, typename... Args>
-    struct result_of_impl<F(Args...)>
-    {
-      using type = Call_result<F, Args...>;
-    };
-    
-    
-  
-  // Result_of (type trait)
-  // An alias for the result of the function type F. Note that F must have
-  // the form G(Args...) where G is a callable type and Args... is a sequence
-  // of arguments.
-  template <typename F>
-    using Result_of = typename result_of_impl<F>::type;
-
 
 
   // Infrastracture for deducing the argument types from a function type (e.g.,
