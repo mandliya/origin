@@ -279,7 +279,7 @@ namespace origin
 
 
   // An alias to the common type of T and U if it exists. Note that the common
-  // type of T and U may ne neither T nor U.
+  // type of T and U may be neither T nor U.
   template <typename T, typename U>
     using Common_type = typename common_type<T, U>::type;
 
@@ -289,7 +289,15 @@ namespace origin
     constexpr bool Common() { return Subst_succeeded<Common_type<T, U>>(); }
 
     
+
   // Returns true if T is convertible to U.
+  //
+  // FIXME: Convertibility is not particularly well-defined in the abstract
+  // sense. It convers some forms of construction and casting, but does not
+  // include the notion of assignment. Convertible should be analogous to
+  // Copyable, in that the a value of type U can be constructed over or assigned
+  // to a value of type T and the result of that operation should preserve the
+  // value of the original.
   template <typename T, typename U>
     constexpr bool Convertible() { return std::is_convertible<T, U>::value; }
 

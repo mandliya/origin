@@ -9,4 +9,5 @@ origin_run_test(traits_all all.cpp)
 origin_run_test(traits_same same.cpp)
 origin_run_test(traits_sequence sequence.cpp)
 origin_run_test(traits_common common.cpp)
-
+origin_run_test(traits_convertible convertible.cpp)
+origin_run_test(traits_derived derived.cpp)
