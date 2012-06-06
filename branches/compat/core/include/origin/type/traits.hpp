@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <utility>
 #include <iosfwd>
+#include <iostream>
 
 namespace std
 {
@@ -20,6 +21,11 @@ namespace std
 
 namespace origin
 {
+  template <typename... Args> constexpr bool Same();
+  template <typename T, typename U> constexpr bool Different();
+
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Miscellaneous types
   //
@@ -33,6 +39,7 @@ namespace origin
   struct default_t { };
   
 
+
   // Unspecified type
   //
   // The unspecified type is a tag class used to indicate that an argument for a
@@ -40,12 +47,12 @@ namespace origin
   struct unspecified_t { };
   
 
+
   // Empty type
   //
   // The empty type is an empty, trivial type that is meant to be used as a
   // placeholder for unspecified types in containers or other data structures.
   struct empty_t { };
-
 
   // Streamable<empty_t>
   //
@@ -79,16 +86,19 @@ namespace origin
     using boolean_constant = std::integral_constant<bool, B>;
 
 
+
   // The requires template is a conditional alias for T, if B is true. If B is
   // false, the alias results in a substitution failure.
   template <bool B, typename T = void>
     using Requires = typename std::enable_if<B, T>::type;
 
 
+
   // An alias for T if B is true and F is B false.
   template <bool B, typename T, typename F>
     using If = typename std::conditional<B, T, F>::type;
   
+
 
   // Returns true if each boolean argument is true or if no arguments are given.
   // This function can be used to evaluate a concept or type constraint for all
@@ -100,7 +110,6 @@ namespace origin
   //
   // Note that all arguments must be convertible to bool.
   constexpr bool All() { return true; }
-    
 
   template <typename... Args>
     constexpr bool All(bool b, Args... args)
@@ -122,8 +131,6 @@ namespace origin
         using type = T; 
       };
 
-
-
     // Returns the last type in a sequence of type arguments. This is
     // undefined when Args... is empty.
     template <typename... Args> struct back_type;
@@ -140,9 +147,11 @@ namespace origin
   } // namespace traits
 
 
+
   // An alias to the first type in a non-empty sequence of type arguments.
   template <typename... Args>
     using Front_type = typename traits::front_type<Args...>::type;
+
 
 
   // An alias to the last type in a non-empty sequence of type arguments.
@@ -158,8 +167,7 @@ namespace origin
   // and type trait implementations in the Origin library.
   //////////////////////////////////////////////////////////////////////////////
 
-  template <typename... Args> constexpr bool Same();
-  template <typename T, typename U> constexpr bool Different();
+
 
   // The substitution failure type represents the result of failed name lookup
   // and is used to support queries about the existence or state of expressions
@@ -167,9 +175,11 @@ namespace origin
   struct subst_failure { };
 
 
+
   // Returns true if T indicates a substitution failure.
   template <typename T>
     constexpr bool Subst_failed() { return Same<T, subst_failure>(); }
+
 
 
   // Returns true if T does not indicate a substitution failure.
@@ -181,15 +191,8 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Type relations
   //
-  // The following type constraints describe relations on types. There are
-  // four:
-  //
-  //    - Same
-  //    - Common
-  //    - Convertible
-  //    - Derived
+  // The following type constraints describe relations on types.
   //////////////////////////////////////////////////////////////////////////////
-
 
   // Infrastructure for defining the Same() constraint.
   namespace traits
@@ -233,6 +236,7 @@ namespace origin
     }
     
 
+
   // Returns true if T is different than U. This expression Different<T, U>()
   // is equivalent to !Same<T, U>().
   template <typename T, typename U>
@@ -240,6 +244,7 @@ namespace origin
     {
       return !Same<T, U>();
     }
+
 
 
   // The common_type trait yields the common type of T and U. 
@@ -278,11 +283,11 @@ namespace origin
     };
 
 
+
   // An alias to the common type of T and U if it exists. Note that the common
   // type of T and U may be neither T nor U.
   template <typename T, typename U>
     using Common_type = typename common_type<T, U>::type;
-
 
   // Returns true if the common type of T and U exists.
   template <typename T, typename U>
@@ -302,11 +307,11 @@ namespace origin
     constexpr bool Convertible() { return std::is_convertible<T, U>::value; }
 
 
+
   // Returns true if T is derived from U.
   template <typename T, typename U>
     constexpr bool Derived() { return std::is_base_of<U, T>::value; }    
 
-    
     
     
   //////////////////////////////////////////////////////////////////////////////   
@@ -316,7 +321,6 @@ namespace origin
   // Type transformations return a type name.
   //////////////////////////////////////////////////////////////////////////////
 
-
   // Infrastructure for defining the identity alias.
   namespace traits
   {
@@ -325,7 +329,8 @@ namespace origin
       {
         using type = T;
       };
-  };
+  } // namespace traits
+
 
 
   // An alias to the type argument. One use of the Identity alias is inhibit
@@ -341,6 +346,7 @@ namespace origin
   // to A) instead of forwarding the function argument x as A&.
   template <typename T>
     using Identity = typename traits::identity<T>::type;
+
 
     
   // Returns true if T is void, and false otherwise.
@@ -362,28 +368,23 @@ namespace origin
   // language's characterization of Integer types and exclude bool.
   //////////////////////////////////////////////////////////////////////////////
 
-
   // Returns true if T is a signed or unsigned, possibly cv-qualified, bool,
   // char, short, int, long or long long.
   template <typename T>
     constexpr bool Integer() { return std::is_integral<T>::value; }
   
-
   // Returns true if T is a signed type. Note that floating point values
   // are signed.
   template <typename T>
     constexpr bool Signed() { return std::is_signed<T>::value; }
 
-
   // Returns true if T is an unsigned type.
   template <typename T>
     constexpr bool Unsigned() { return std::is_unsigned<T>::value; }
 
-
   // An alias for the unsigned integral type with the same width as T.
   template <typename T>
     using Make_unsigned = typename std::make_unsigned<T>::type;
-
 
   // An alias for the signed integral type with the same width as T.
   template <typename T>
@@ -415,7 +416,6 @@ namespace origin
   template <typename T>
     constexpr bool Array() { return std::is_array<T>::value; }
 
-
   // Returns the number of dimensions of the array type T. If T is not an
   // Array, it has 0 dimensions. For example:
   //
@@ -430,7 +430,6 @@ namespace origin
   //
   template <typename T>
     constexpr unsigned Rank() { return std::rank<T>::value; }
-    
 
   // Returns the extent of the array type T in the Ith dimension. The extent
   // of an array is the number of subobjects allocated in that dimensions. For
@@ -443,7 +442,6 @@ namespace origin
   // If the dimension I is not given, it defaults to 0.
   template <typename T, unsigned I = 0>
     constexpr std::size_t Extent() { return std::extent<T, I>::value; }
-  
 
   // An alias to the array type T with its outermost extent removed. For
   // example:
@@ -469,15 +467,6 @@ namespace origin
   //
   // The following traits apply to functions.
   //////////////////////////////////////////////////////////////////////////////
-    
-  
-  // Returns true if T is a function.
-  template <typename T>
-    constexpr bool Function_type()
-    {
-      return std::is_function<T>();
-    }
-
     
   // Safely deduce the result type of the expression f(args...).
   namespace traits
@@ -506,8 +495,33 @@ namespace origin
       {
         using type = typename get_call_result<F, Args...>::type;
       };
+
+    // Deduce the argument types from a function type.
+    //
+    // TODO: Extend this trait so that we can deduce argument types from a
+    // class that declares them as associatd type (i.e., first_argument_type,
+    // second_argument_type, etc.).
+    template <typename F>
+      struct get_argument_types
+      {
+        using type = subst_failure;
+      };
+
+    template <typename R, typename... Args>
+      struct get_argument_types<R(Args...)>
+      {
+        using type = std::tuple<Args...>;
+      };
   } // namespace traits
 
+
+
+  // Returns true if T is a function type.
+  template <typename T>
+    constexpr bool Function_type()
+    {
+      return std::is_function<T>();
+    }
     
   // An alias for the result type of the function type. The function type F
   // is comprised of the types G(Args...) where G is the type of a callable
@@ -515,6 +529,12 @@ namespace origin
   // types of the function arguments.
   template <typename F>
     using Result_of = typename traits::result_of<F>::type;
+
+  // Yields a tuple containing Args, the sequence of argument types for a
+  // function type F with the form R(Args...) where R is the result type and
+  // Args are its argument types.
+  template <typename F>
+    using Argument_types = typename traits::get_argument_types<F>::type;
 
 
 
@@ -524,16 +544,13 @@ namespace origin
   // The following traits apply to pointer types.
   //////////////////////////////////////////////////////////////////////////////
     
-  
   // Returns true if T is a pointer.
   template <typename T>
     constexpr bool Pointer() { return std::is_pointer<T>::value; }
   
-
   // An alias to a pointer-to-T.
   template <typename T>
     using Add_pointer = typename std::add_pointer<T>::type;
-    
 
   // An alias to the underlying type U if T is a pointer-to-U.
   template <typename T>
@@ -546,32 +563,26 @@ namespace origin
   //
   // The following traits apply to pointer types.
   //////////////////////////////////////////////////////////////////////////////
-    
 
   // Returns true if T is an lvalue reference to some type U.
   template <typename T>
     constexpr bool Lvalue_reference() { return std::is_lvalue_reference<T>::value; }
-    
 
   // Returns true if T is rvalue reference to some type U.
   template <typename T>
     constexpr bool Rvalue_reference() { return std::is_rvalue_reference<T>::value; }
     
-
   // Returns true if T is either an lvalue or rvalue reference to some type U.
   template <typename T>
     constexpr bool Reference() { return std::is_reference<T>::value; }
     
-
   // An alias to an lvalue-reference-to-T.
   template <typename T>
     using Add_lvalue_reference = typename std::add_lvalue_reference<T>::type;
-    
 
   // An alias to an rvalue-reference-to-T.
   template <typename T>
     using Add_rvalue_reference = typename std::add_rvalue_reference<T>::type;
-    
 
   // An alias to a type U if T is a reference-to-T.
   template <typename T>
@@ -586,40 +597,32 @@ namespace origin
   // types, and enumerated types.
   //////////////////////////////////////////////////////////////////////////////
 
-
   // Returns true if T is a class or struct.
   template <typename T>
     constexpr bool Class() { return std::is_class<T>::value; };
 
-    
   // Returns true if T is a union.
   template <typename T>
     constexpr bool Union() { return std::is_union<T>::value; }
-
     
   // Returns true if T has no member variables.
   template <typename T>
     constexpr bool Empty() { return std::is_empty<T>::value; }
 
-
   // Returns true if T has at least one virtual method.
   template <typename T>
     constexpr bool Polymorphic() { return std::is_polymorphic<T>::value; }
-
     
   // Returns true if T has at least one pure virtual method.
   template <typename T>
     constexpr bool Abstract() { return std::is_abstract<T>::value; }
  
 
+
   // Returns true if T is an enum or enum class.
   template <typename T>
-    constexpr bool Enum()
-    {
-      return std::is_enum<T>::value;
-    }
+    constexpr bool Enum() { return std::is_enum<T>::value; }
 
-  
   // An alias to the integer type that stores the values of the enum T.
   template <typename T>
     using Underlying_type = typename std::underlying_type<T>::type;
@@ -633,28 +636,11 @@ namespace origin
   // and member functions.
   //////////////////////////////////////////////////////////////////////////////
 
-
-  // Returns true if T is a pointer to a member variable.
-  template <typename T>
-    constexpr bool Member_object_pointer()
-    {
-      return std::is_member_object_pointer<T>::value;
-    }
-
-
-  // Returns true if T is a member function pointer.
-  template <typename T>
-    constexpr bool Member_function_pointer()
-    {
-      return std::is_member_function_pointer<T>::value;
-    }
-
-
   // Infrastructure for accessing a member pointer's pointee and class types.
-  // FIXME: Extend these traits with accessors for this pointers of member
-  // functions and (perhaps), their argument tuples.
   namespace traits
   {
+    // TODO: Extend these traits with accessors for this pointers of member
+    // functions and (perhaps), their argument tuples.
     template <typename Memptr>
       struct member_pointer_traits
       {
@@ -699,16 +685,31 @@ namespace origin
   } // namespace traits
 
 
+
+  // Returns true if T is a pointer to a member variable.
+  template <typename T>
+    constexpr bool Member_object_pointer()
+    {
+      return std::is_member_object_pointer<T>::value;
+    }
+
+  // Returns true if T is a member function pointer.
+  template <typename T>
+    constexpr bool Member_function_pointer()
+    {
+      return std::is_member_function_pointer<T>::value;
+    }
+
   // An alias to a member pointer's pointee type (the type being pointed to).
   template <typename Ptr>
     using Member_pointee_type = 
       typename traits::member_pointer_traits<Ptr>::result_type;
 
-
   // An alias to a member pointer's class type.
   template <typename Ptr>
     using Member_class_type = 
       typename traits::member_pointer_traits<Ptr>::class_type;
+
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -720,31 +721,26 @@ namespace origin
   //
   //////////////////////////////////////////////////////////////////////////////
     
-
   // Returns true if T is an object type. An object type is any type that can
   // be placed in a region of memory. Void, reference, and function types are
   // not object types.
   template <typename T>
     constexpr bool Object() { return std::is_object<T>::value; }
-    
 
   // Returns true if T is a scalar type. A scalar type is an object type that is
   // an integer type, floating point type, or pointer. Compound types (classes,
   // unions, and arrays) are not scalar.
   template <typename T>
     constexpr bool Scalar() { return std::is_scalar<T>::value; }
-    
 
   // Returns true if T is a compound type. Compound types are class types, 
   // union types, and arrays.
   template <typename T>
     constexpr bool Compound() { return std::is_compound<T>::value; }
-    
 
   // Returns true if T is a built-in type. 
   template <typename T>
     constexpr bool Fundamental() { return std::is_fundamental<T>::value; }
-    
 
   // Returns true if T is an arithmetic type. Integer and floating point types
   // are arithmetic types.
@@ -759,62 +755,51 @@ namespace origin
   // The following type traits implement queries and transformations for
   // const and volatile qualifiers.
   //////////////////////////////////////////////////////////////////////////////
-  
 
   // Returns true if T is const-qualified
   template <typename T>
     constexpr bool Const() { return std::is_const<T>::value; }
-  
 
   // Returns true if T is volatile-qualified
   template <typename T>
     constexpr bool Volatile() { return std::is_volatile<T>::value; }
-  
 
   // Returns true if T is cv-qualified.
   template <typename T>
     constexpr bool Qualified() { return Const<T>() || Volatile<T>(); }
 
-
   // An alias to const-qualified T (i.e., const T).
   template <typename T>
     using Add_const = typename std::add_const<T>::type;
-
 
   // An alias to volatile-qualified T (i.e., volatile T).    
   template <typename T>
     using Add_volatile = typename std::add_volatile<T>::type;
     
-
   // An alias to const volatile qualified T (i.e., const volatile T).
   template <typename T>
     using Add_cv = typename std::add_cv<T>::type;
-    
 
   // An alias to U if T has type const U, otherwise T.
   template <typename T>
     using Remove_const = typename std::remove_const<T>::type;
     
-
   // An alias to U if T has type volatile U, otherwise T.
   template <typename T>
     using Remove_volatile = typename std::remove_volatile<T>::type;
-    
 
   // An alias to U if T is cv-qualified or T otherwise.
   template <typename T>
     using Remove_cv = typename std::remove_cv<T>::type;
-    
 
   // Decay an array into a pointer or a function into a function pointer.
   template <typename T>
     using Decay = typename std::decay<T>::type;
 
-
-  // Return an unqualified a type name by removing any references and 
-  // CV-qualifiers. This is helpful when concept checking template arguments 
-  // of types that are known to be non-value (i.e., qualified) types, 
-  // especially overloads that rely on rvalue references for forwarding.
+  // Return an unqualified a type name by removing any references and  CV-
+  // qualifiers. This is helpful when concept checking template arguments  of
+  // types that are known to be non-value (i.e., qualified) types,  especially
+  // overloads that rely on rvalue references for forwarding.
   template <typename T>
     using Make_unqualified = Remove_cv<Remove_reference<T>>;
 
@@ -843,10 +828,12 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
 
 
+
   // Returns true if T is a standard layout type
   template <typename T>
     constexpr bool Standard_layout() { return std::is_standard_layout<T>::value; }
     
+
 
   //////////////////////////////////////////////////////////////////////////////
   // Destruction
@@ -856,7 +843,6 @@ namespace origin
   template <typename T>
     constexpr bool Destructible() { return std::is_destructible<T>::value; }
     
-
   // Returns true if T has a trivial destructor.
   //
   // FIXME: GCC does not implement the corresponding type trait. The
@@ -868,7 +854,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T has a destructor that does not propagate exceptions.
   template <typename T>
     constexpr bool Nothrow_destructible()
@@ -876,18 +861,17 @@ namespace origin
       return std::is_nothrow_destructible<T>::value;
     }
     
-
   // Returns true if T has a virtual destructor
   template <typename T>
     constexpr bool Has_virtual_destructor() 
     { 
       return std::has_virtual_destructor<T>::value; 
     }
-    
+
+
 
   //////////////////////////////////////////////////////////////////////////////
   // Construction
-
 
   // Returns true if T has a constructor for Args.
   template <typename T, typename... Args>
@@ -896,7 +880,6 @@ namespace origin
       return std::is_constructible<T, Args...>::value; 
     }
     
-
   // Returns true if T has a trivial constructor for Args. 
   //
   // FIXME: GCC does not implement the corresponding type trait. The
@@ -907,7 +890,6 @@ namespace origin
       // return std::is_trivially_constructible<T, Args...>::value;
       return false;
     }
-    
 
   // Returns true if T has a constructor for Args that does not propagate
   // exceptions.
@@ -916,11 +898,11 @@ namespace origin
     { 
       return std::is_nothrow_constructible<T, Args...>::vlaue; 
     }
-    
+
+
 
   //////////////////////////////////////////////////////////////////////////////
   // Default construction
-
 
   // Returns true if T has a default constructor.
   template <typename T>
@@ -928,7 +910,6 @@ namespace origin
     {
       return std::is_default_constructible<T>::value;
     }
-
     
   // Returns true if T has a trivial default constructor.
   //
@@ -940,7 +921,6 @@ namespace origin
       // return std::is_trivially_default_constructible<T>::value;
       return false;
     }
-    
 
   // Returns true if T can be default constructed, and the constructor does not
   // propagate exceptions.
@@ -950,10 +930,10 @@ namespace origin
       return std::is_nothrow_default_constructible<T>::value;
     }
     
-    
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Copy construction
-
 
   // Returns true if T has a copy constructor.
   template <typename T>
@@ -962,7 +942,6 @@ namespace origin
       return std::is_copy_constructible<T>::value;
     }
     
-
   // Returns true if T has a trivial copy constructor.
   //
   // FIXME: GCC does not implement the corresponding type trait. The 
@@ -974,7 +953,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T has a copy constructor that does not propagate 
   // exceptions.
   template <typename T>
@@ -982,11 +960,11 @@ namespace origin
     {
       return std::is_nothrow_copy_constructible<T>::value;
     }
-
     
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Move construction
-
 
   // Returns true if T has a move constructor.
   template <typename T>
@@ -994,7 +972,6 @@ namespace origin
     {
       return std::is_move_constructible<T>::value;
     }
-
 
   // Returns true if T has a trivial move constructor.
   //
@@ -1007,7 +984,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T has a move constructor that does not propagate 
   // exceptions.
   template <typename T>
@@ -1016,10 +992,10 @@ namespace origin
       return std::is_nothrow_move_constructible<T>::value;
     }
     
-    
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Assignment
-
 
   // Returns true if T has an assignment operator for values of type U.
   template <typename T, typename U>
@@ -1027,7 +1003,6 @@ namespace origin
     {
       return std::is_assignable<T, U>::value;
     }
-
 
   // Returns true if T has a trivial assignment operator for values of type U.    
   //
@@ -1040,7 +1015,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T has an  assignment operator for values of type U that
   // does not propagate exceptions.
   template <typename T, typename U>
@@ -1048,11 +1022,11 @@ namespace origin
     {
       return std::is_nothrow_assignable<T, U>::value;
     }
-    
+
+
 
   //////////////////////////////////////////////////////////////////////////////
   // Move assignement
-
 
   // Returns true if T has a move assignment operator.
   template <typename T>
@@ -1060,7 +1034,6 @@ namespace origin
     {
       return std::is_move_assignable<T>::value;
     }
-  
 
   // Returns true if T has a trivial move assignment oeprator.
   //
@@ -1073,7 +1046,6 @@ namespace origin
       return false;
     }
   
-
   // Returns true if T has a move assignment operator that does not propagate
   // exceptions.
   template <typename T>
@@ -1082,10 +1054,10 @@ namespace origin
       return std::is_nothrow_move_assignable<T>::value;
     }
     
-    
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Copy assignement
-
 
   // Returns true if T has a copy assignment operator.
   template <typename T>
@@ -1094,7 +1066,6 @@ namespace origin
       return std::is_copy_assignable<T>::value;
     }
 
-  
   // Returns true if T has a trivial copy assignment operator.
   //
   // FIXME: GCC does not implement the corresponding type trait. The 
@@ -1106,7 +1077,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T has a copy assignment operator that does not propagate
   // exceptions.    
   template <typename T>
@@ -1114,8 +1084,9 @@ namespace origin
     {
       return std::is_nothrow_copy_assignable<T>::value;
     }
-
     
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Composites
   //
@@ -1136,7 +1107,6 @@ namespace origin
       return false;
     }
 
-
   // Returns true if T is a trivially copyable type. A trivially copyable type
   // is trivially movable, trivially copy constructible, and trivially copy
   // assignable.
@@ -1151,7 +1121,6 @@ namespace origin
       //     && Trivially_copy_assignable<T>();
       return false;
     }
-
 
   // Returns true if T is a trivial type. A trivialy type is trivially
   // destructible, trivially default constructible, and trivally copyable.
@@ -1168,7 +1137,6 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Miscellaneous traits
   //////////////////////////////////////////////////////////////////////////////
-
 
   // An alias to a data type with that can be used as uninitialized storage
   // for an object of size Size and whose alignment requirement is a divisor
@@ -1192,7 +1160,11 @@ namespace origin
   //
   // Note the general convention that t is an object of type T and u is an
   // object of type U.
+  //
+  // Predicates on operators are evaluated in terms of the value type.
+  // Evaluating e.g., Has_plus<T&> will yield the same result as Has_plus<T>.
   //////////////////////////////////////////////////////////////////////////////
+
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1252,7 +1224,6 @@ namespace origin
         using type = decltype(check(std::declval<T>(), std::declval<U>()));
       };
 
-
     // Deduce the result type of the expression t <= u.
     template <typename T, typename U>
       struct get_less_equal_result
@@ -1281,10 +1252,10 @@ namespace origin
   } // namespace traits
 
 
+
   // An alias for the result type of the expression t == u.
   template <typename T, typename U = T>
     using Equal_result = typename traits::get_equal_result<T, U>::type;
-    
 
   // Returns true if the expression t == u is valid.
   template <typename T, typename U = T>
@@ -1294,10 +1265,10 @@ namespace origin
     }
     
 
+
   // An alias for the result type of the expression t != u.
   template <typename T, typename U = T>
     using Not_equal_result = typename traits::get_not_equal_result<T, U>::type;
-    
 
   // Returns true if the expression t != u is valid.
   template <typename T, typename U = T>
@@ -1307,10 +1278,10 @@ namespace origin
     }
 
 
+
   // An alias for the result type of the expressoin t < u.
   template <typename T, typename U = T>
     using Less_result = typename traits::get_less_result<T, U>::type;
-    
 
   // Returns true if the expression t < u is valid.
   template <typename T, typename U = T>
@@ -1320,10 +1291,10 @@ namespace origin
     }
 
 
+
   // An alias for the result type of the expression t > u.
   template <typename T, typename U = T>
     using Greater_result = typename traits::get_greater_result<T, U>::type;
-    
 
   // Returns true if the expression t > u is valid.
   template <typename T, typename U = T>
@@ -1333,11 +1304,11 @@ namespace origin
     }
     
 
+
   // An alias for the result type of the expression  <= u.
   template <typename T, typename U = T>
     using Less_equal_result = 
       typename traits::get_less_equal_result<T, U>::type;
-    
 
   // Returns true if the expression t <= u is valid.
   template <typename T, typename U = T>
@@ -1347,12 +1318,12 @@ namespace origin
     }
 
 
+
   // An alias for the result of t >= u.
   template <typename T, typename U = T>
     using Greater_equal_result = 
       typename traits::get_greater_equal_result<T, U>::type;
     
-
   // Return true if the expression t >= u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_greater_equal()
@@ -1361,52 +1332,125 @@ namespace origin
     }    
     
 
+
   //////////////////////////////////////////////////////////////////////////////
-  // Arithmetic operator traits
+  // Arithmetic operators
 
-  // Safely deduce the result type of the expression t + u.
-  template <typename T, typename U>
-    struct plus_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x + y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
+  namespace traits
+  {
+    // Deduce the result type of the expression t + u.
+    template <typename T, typename U>
+      struct get_plus_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x + y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
 
-  // An alias for the result of t + u.
-  template <typename T, typename U = T>
-    using Plus_result = typename plus_result<T, U>::type;
+    // Deduce the result type of the expression t - u.
+    template <typename T, typename U>
+      struct get_minus_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x - y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t * u.
+    template <typename T, typename U>
+      struct get_multiplies_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x * y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t / u.
+    template <typename T, typename U>
+      struct get_divides_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x / y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
     
-  // Return true if the expression t + u is valid.
+    // Deduce the result type of the expression t % u.
+    template <typename T, typename U>
+      struct get_modulus_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x % y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result of +t.
+    template <typename T>
+      struct get_unary_plus_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(+a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    // Deduce the result of -t.
+    template <typename T>
+      struct get_unary_minus_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(-a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+  } // namespace traits
+
+
+
+  // An alias for the result type of the expression t + u.
+  template <typename T, typename U = T>
+    using Plus_result = typename traits::get_plus_result<T, U>::type;
+    
+  // Returns true if the expression t + u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_plus()
     {
       return Subst_succeeded<Plus_result<T, U>>();
     }
 
-    
-  // Safely deduce the result type of the expression t - u.
-  template <typename T, typename U>
-    struct minus_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x - y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t - u.
+
+  // An alias for the result type of the expression t - u.
   template <typename T, typename U = T>
-    using Minus_result = typename minus_result<T, U>::type;
+    using Minus_result = typename traits::get_minus_result<T, U>::type;
     
-  // Return true if the expression t - u is valid.
+  // Returns true if the expression t - u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_minus()
     {
@@ -1414,47 +1458,23 @@ namespace origin
     }
   
 
-  // Safely deduce the result type of the expression t * u.
-  template <typename T, typename U>
-    struct multiplies_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x * y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t * u.
+  // An alias for the result type of the expression t * u.
   template <typename T, typename U = T>
-    using Multiplies_result = typename multiplies_result<T, U>::type;
+    using Multiplies_result = typename traits::get_multiplies_result<T, U>::type;
     
-  // Return true if the expression t * u is valid.
+  // Returns true if the expression t * u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_multiplies()
     {
       return Subst_succeeded<Multiplies_result<T, U>>();
     }
-
     
-  // Safely deduce the result type of the expression t / u.
-  template <typename T, typename U>
-    struct divides_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x / y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t / u.
+
+  // An alias for the result type of the expression t / u.
   template <typename T, typename U = T>
-    using Divides_result = typename divides_result<T, U>::type;
+    using Divides_result = typename traits::get_divides_result<T, U>::type;
     
   // Return true if the expression t / u is valid.
   template <typename T, typename U = T>
@@ -1462,24 +1482,12 @@ namespace origin
     {
       return Subst_succeeded<Divides_result<T, U>>();
     }
+  
 
-    
-  // Safely deduce the result type of the expression t % u.
-  template <typename T, typename U>
-    struct modulus_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x % y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t % u.
+  // An alias for the result type of the expression t % u.
   template <typename T, typename U = T>
-    using Modulus_result = typename modulus_result<T, U>::type;
+    using Modulus_result = typename traits::get_modulus_result<T, U>::type;
     
   // Return true if the expression t % u is valid.
   template <typename T, typename U = T>
@@ -1489,64 +1497,184 @@ namespace origin
     }
     
 
-  // Safely deduce the result of +t.
-  template <typename T>
-    struct unary_plus_result
-    {
-    private:
-      template <typename X>
-        static auto check(X&& a) -> decltype(+a);
-      
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
 
-  // An alias for the result of +t.
+  // An alias for the result type of the expression +t.
   template <typename T>
-    using Unary_plus_result = typename unary_plus_result<T>::type;
+    using Unary_plus_result = typename traits::get_unary_plus_result<T>::type;
     
-  // Return true if the expression +t is valid.
+  // Returns true if the expression +t is valid.
   template <typename T>
     constexpr bool Has_unary_plus()
     {
       return Subst_succeeded<Unary_plus_result<T>>();
     }
 
-  
-  // Safely deduce the result of -t.
-  template <typename T>
-    struct unary_minus_result
-    {
-    private:
-      template <typename X>
-        static auto check(X&& a) -> decltype(-a);
-      
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
 
-  // An alias for the result of -t.
+
+  // An alias for the result type of the expression -t.
   template <typename T>
-    using Unary_minus_result = typename unary_minus_result<T>::type;
+    using Unary_minus_result = typename traits::get_unary_minus_result<T>::type;
     
-  // Return true if the expression -t is valid.
+  // Returns true if the expression -t is valid.
   template <typename T>
     constexpr bool Has_unary_minus()
     {
       return Subst_succeeded<Unary_plus_result<T>>();
     }
     
-    
-  
-  // Infrastructure for deducing the results of pre- and post- increment and
-  // decrement.
+
+
+  //////////////////////////////////////////////////////////////////////////////    
+  // Compound arithmetic assignment operators
+
   namespace traits
   {
-    // Safely deduce the result of ++t;
+    // Deduce the result type of the expression t += u.
+    template <typename T, typename U>
+      struct get_plus_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x += y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t -= u.
+    template <typename T, typename U>
+      struct get_minus_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x -= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t *= u.
+    template <typename T, typename U>
+      struct get_multiplies_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x *= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t /= u.
+    template <typename T, typename U>
+      struct get_divides_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x /= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t %= u.
+    template <typename T, typename U>
+      struct get_modulus_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x %= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+  } // namespace traits
+    
+
+
+  // An alias for the result type of the exprssion t += u.
+  template <typename T, typename U>
+    using Plus_assign_result = typename 
+      traits::get_plus_assign_result<T, U>::type;
+    
+  // Returns true if the expression t += u is valid.
+  template <typename T, typename U>
+    constexpr bool Has_plus_assign()
+    {
+      return Subst_succeeded<Plus_assign_result<T, U>>();
+    }    
+
+    
+
+  // An alias for the result type of the expression t -= u.
+  template <typename T, typename U>
+    using Minus_assign_result = 
+      typename traits::get_minus_assign_result<T, U>::type;
+    
+  // Returns true if the expression t -= u is valid.
+  template <typename T, typename U>
+    constexpr bool Has_minus_assign()
+    {
+      return Subst_succeeded<Minus_assign_result<T, U>>();
+    }    
+    
+    
+
+  // An alias for the result type of the expression t *= u.
+  template <typename T, typename U>
+    using Multiplies_assign_result = 
+      typename traits::get_multiplies_assign_result<T, U>::type;
+    
+  // Returns true if the expression t *= u is valid.
+  template <typename T, typename U>
+    constexpr bool Has_multiplies_assign()
+    {
+      return Subst_succeeded<Multiplies_assign_result<T, U>>();
+    }    
+    
+    
+
+  // An alias for the result type of the expression t /= u.
+  template <typename T, typename U>
+    using Divides_assign_result = 
+      typename traits::get_divides_assign_result<T, U>::type;
+    
+  // Returns true if the expression t /= u is valid.
+  template <typename T, typename U>
+    constexpr bool Has_divides_assign()
+    {
+      return Subst_succeeded<Divides_assign_result<T, U>>();
+    }    
+    
+    
+  // An alias for the result type of the expression t %= u.
+  template <typename T, typename U>
+    using Modulus_assign_result = 
+      typename traits::get_modulus_assign_result<T, U>::type;
+    
+  // Returns true if the expression t %= u is valid.
+  template <typename T, typename U>
+    constexpr bool Has_modulus_assign()
+    {
+      return Subst_succeeded<Modulus_assign_result<T, U>>();
+    }        
+    
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Increment and decrement
+
+  namespace traits
+  {
+    // Deduce the result of ++t;
     template <typename T>
-      struct pre_increment_result
+      struct get_pre_increment_result
       {
       private:
         template <typename X>
@@ -1556,9 +1684,9 @@ namespace origin
         using type = decltype(check(std::declval<T&>()));
       };
 
-    // Safely deduce the result of t++;
+    // Deduce the result of t++;
     template <typename T>
-      struct post_increment_result
+      struct get_post_increment_result
       {
       private:
         template <typename X>
@@ -1568,9 +1696,9 @@ namespace origin
         using type = decltype(check(std::declval<T&>()));
       };
 
-    // Safely deduce the result of --t;
+    // Deduce the result of --t;
     template <typename T>
-      struct pre_decrement_result
+      struct get_pre_decrement_result
       {
       private:
         template <typename X>
@@ -1581,9 +1709,9 @@ namespace origin
       };
       
     
-    // Safely deduce the result of t--;
+    // Deduce the result of t--;
     template <typename T>
-      struct post_decrement_result
+      struct get_post_decrement_result
       {
       private:
         template <typename X>
@@ -1595,16 +1723,12 @@ namespace origin
   } // namespace traits
 
 
-    
-  // Post-increment result (alias)
-  // An alias for the result of ++t or subst_failure if the expression is
-  // not valid.
+
+  // An alias to the result type of the expression ++t.
   template <typename T>
-    using Pre_increment_result = typename traits::pre_increment_result<T>::type;
+    using Pre_increment_result = 
+      typename traits::get_pre_increment_result<T>::type;
 
-
-
-  // Has pre-increment (trait)
   // Returns true if the expression ++t is valid.
   template <typename T>
     constexpr bool Has_pre_increment()
@@ -1614,15 +1738,11 @@ namespace origin
 
 
 
-  // Post-increment result (alias)
-  // An alias for the result of t++ or subt_failure if the expression is
-  // not valid.
+  // An alias for the result type of the expression t++.
   template <typename T>
-    using Post_increment_result = typename traits::post_increment_result<T>::type;
+    using Post_increment_result = 
+      typename traits::get_post_increment_result<T>::type;
 
-  
-
-  // Has post-increment (trait)
   // Returns true if the expostssion t++ is valid.
   template <typename T>
     constexpr bool Has_post_increment()
@@ -1632,15 +1752,11 @@ namespace origin
 
     
     
-  // Pre-decrement result (alias)
-  // An alias for the result of --t or subst_failure if the expression is
-  // invalid.
+  // An alias for the result type of the expression --t.
   template <typename T>
-    using Pre_decrement_result = typename traits::pre_decrement_result<T>::type;
+    using Pre_decrement_result = 
+      typename traits::get_pre_decrement_result<T>::type;
 
-
-
-  // Has pre-decrement (trait)
   // Returns true if the expression --t is valid.
   template <typename T>
     constexpr bool Has_pre_decrement()
@@ -1650,67 +1766,86 @@ namespace origin
 
 
 
-  // Post-decrement result
-  // An alias for the result of t-- or subst_failure if the expression is
-  // not valid.
+  // An alias for the result type of the expression t--.
   template <typename T>
-    using Post_decrement_result = typename traits::post_decrement_result<T>::type;
+    using Post_decrement_result 
+      = typename traits::get_post_decrement_result<T>::type;
 
-
-
-  // Has post-decrement
   // Returns true if the expostssion t-- is valid.
   template <typename T>
     constexpr bool Has_post_decrement()
     {
       return Subst_succeeded<Post_decrement_result<T>>();
     }
-    
-    
-    
+
+
+
+
+  //////////////////////////////////////////////////////////////////////////////    
   // Logical operators
   
-  // Safely deduce the result type of the expression t && u.
-  template <typename T, typename U>
-    struct and_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x && y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
+  namespace traits
+  {
+    // Deduce the result type of the expression t && u.
+    template <typename T, typename U>
+      struct get_and_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x && y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
 
-  // An alias for the result of t && u.
+
+    // Deduce the result type of the expression t || u.
+    template <typename T, typename U>
+      struct get_or_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x || y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result of !t.
+    template <typename T>
+      struct get_not_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(!a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+  } // namespace traits
+
+
+
+  // An alias for the result type of the expression t && u.
   template <typename T, typename U = T>
-    using And_result = typename and_result<T, U>::type;
+    using And_result = typename traits::get_and_result<T, U>::type;
     
-  // Return true if the expression t && u is valid.
+  // Returns true if the expression t && u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_and()
     {
       return Subst_succeeded<And_result<T, U>>();
     }
     
-    
-  // Safely deduce the result type of the expression t || u.
-  template <typename T, typename U>
-    struct or_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x || y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t || u.
+
+  // An alias for the result type of the experssion t || u.
   template <typename T, typename U = T>
-    using Or_result = typename or_result<T, U>::type;
+    using Or_result = typename traits::get_or_result<T, U>::type;
     
   // Return true if the expression t || u is valid.
   template <typename T, typename U = T>
@@ -1719,23 +1854,11 @@ namespace origin
       return Subst_succeeded<Or_result<T, U>>();
     }
     
-    
-   // Safely deduce the result of !t.
-  template <typename T>
-    struct not_result
-    {
-    private:
-      template <typename X>
-        static auto check(X&& a) -> decltype(!a);
-      
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
 
-  // An alias for the result of !t.
+    
+  // An alias for the result type of the expression !t.
   template <typename T>
-    using Not_result = typename not_result<T>::type;
+    using Not_result = typename traits::get_not_result<T>::type;
     
   // Return true if the expression !t is valid.
   template <typename T>
@@ -1744,76 +1867,126 @@ namespace origin
       return Subst_succeeded<Not_result<T>>();
     }   
 
-    
-  // Binary operations
-  
-  // Safely deduce the result type of the expression t & u.
-  template <typename T, typename U>
-    struct bit_and_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x & y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for the result of t & u.
-  template <typename T, typename U = T>
-    using Bit_and_result = typename bit_and_result<T, U>::type;
+  //////////////////////////////////////////////////////////////////////////////
+  // Binary oeprators
+  
+  namespace traits
+  {
+    // Deduce the result type of the expression t & u.
+    template <typename T, typename U>
+      struct get_bit_and_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x & y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t | u.
+    template <typename T, typename U>
+      struct get_bit_or_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x | y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+
+    // Deduce the result type of the expression t ^ u.
+    template <typename T, typename U>
+      struct get_bit_xor_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x ^ y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
     
-  // Return true if the expression t & u is valid.
+    // Deduce the result type of the expression t << u.
+    template <typename T, typename U>
+      struct get_left_shift_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x << y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t >> u.
+    template <typename T, typename U>
+      struct get_right_shift_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x >> y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
+    // Deduce the result of ~t.
+    template <typename T>
+      struct get_complement_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(~a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+  } // namespace traits
+
+
+
+  // An alias for the result type of the expression t & u.
+  template <typename T, typename U = T>
+    using Bit_and_result = typename traits::get_bit_and_result<T, U>::type;
+    
+  // Returns true if the expression t & u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_bit_and()
     {
       return Subst_succeeded<Bit_and_result<T, U>>();
     }
     
-  // Safely deduce the result type of the expression t | u.
-  template <typename T, typename U>
-    struct bit_or_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x | y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias for bit_or the result of t | u.
+
+  // An alias for the result type of the expression t | u.
   template <typename T, typename U = T>
-    using Bit_or_result = typename bit_or_result<T, U>::type;
+    using Bit_or_result = typename traits::get_bit_or_result<T, U>::type;
     
-  // Return true if the expression t | u is valid.
+  // Returns true if the expression t | u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_bit_or()
     {
       return Subst_succeeded<Bit_or_result<T, U>>();
     }
     
-    
-  // Safely deduce the result type of the expression t ^ u.
-  template <typename T, typename U>
-    struct bit_xor_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x ^ y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias fbit_xor the result of t ^ u.
+
+  // An alias for the result type of the expression t ^ u.
   template <typename T, typename U = T>
-    using Bit_xor_result = typename bit_xor_result<T, U>::type;
+    using Bit_xor_result = typename traits::get_bit_xor_result<T, U>::type;
     
-  // Return true if the expression t ^ u is valid.
+  // Returns true if the expression t ^ u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_bit_xor()
     {
@@ -1821,24 +1994,12 @@ namespace origin
     }
     
     
-  // Safely deduce the result type of the expression t << u.
-  template <typename T, typename U>
-    struct left_shift_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x << y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias fleft_shift the result of t << u.
+  // An alias for the result type of the expression t << u.
   template <typename T, typename U = T>
-    using Left_shift_result = typename left_shift_result<T, U>::type;
+    using Left_shift_result = typename traits::get_left_shift_result<T, U>::type;
     
-  // Return true if the expression t << u is valid.
+  // Returns true if the expression t << u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_left_shift()
     {
@@ -1846,24 +2007,12 @@ namespace origin
     }
     
     
-  // Safely deduce the result type of the expression t >> u.
-  template <typename T, typename U>
-    struct right_shift_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x >> y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
 
-  // An alias fright_shift the result of t >> u.
+  // An alias for the result type of the expression t >> u.
   template <typename T, typename U = T>
-    using Right_shift_result = typename right_shift_result<T, U>::type;
+    using Right_shift_result = typename traits::get_right_shift_result<T, U>::type;
     
-  // Return true if the expression t >> u is valid.
+  // Returns true if the expression t >> u is valid.
   template <typename T, typename U = T>
     constexpr bool Has_right_shift()
     {
@@ -1871,22 +2020,10 @@ namespace origin
     }
     
     
-   // Safely deduce the result of ~t.
-  template <typename T>
-    struct complement_result
-    {
-    private:
-      template <typename X>
-        static auto check(X&& a) -> decltype(~a);
-      
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
 
-  // An alias for the result of ~t.
+  // An alias for the result type of the expression ~t.
   template <typename T>
-    using Complement_result = typename complement_result<T>::type;
+    using Complement_result = typename traits::get_complement_result<T>::type;
     
   // Return true if the expression ~t is valid.
   template <typename T>
@@ -1896,278 +2033,86 @@ namespace origin
     }   
   
 
-  // Address, dereference, subscript, and function call
+  //////////////////////////////////////////////////////////////////////////////
+  // Binary assignment operators
 
-   // Safely deduce the result of &t.
-  template <typename T>
-    struct address_result
-    {
-    private:
-      template <typename X>
-        static auto check(X&& a) -> decltype(&a);
-      
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
-
-  // An alias for the result of &t.
-  template <typename T>
-    using Address_result = typename address_result<T>::type;
-    
-  // Return true if the expression &t is valid.
-  template <typename T>
-    constexpr bool Has_address()
-    {
-      return Subst_succeeded<Address_result<T>>();
-    }   
-    
-    
-
-  // Infrastructure for safely deducing the result of *t.
   namespace traits
   {
-    template <typename T>
-      struct dereference_result
+    // Deduce the result type of the expression t &= u.
+    template <typename T, typename U>
+      struct get_bit_and_assign_result
       {
       private:
-        template <typename X>
-          static auto check(X&& a) -> decltype(*a);
-        
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x &= y);
+          
         static subst_failure check(...);
       public:
-        using type = decltype(check(std::declval<T>()));
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
       };
-  } // namespace traits
 
-  
-
-  // Dereference result (alias)
-  // An alias for the result of *t.
-  template <typename T>
-    using Dereference_result = typename traits::dereference_result<T>::type;
-    
-
-
-  // Dereference (trait)
-  // Return true if the expression *t is valid.
-  template <typename T>
-    constexpr bool Has_dereference()
-    {
-      return Subst_succeeded<Dereference_result<T>>();
-    }
-    
-
-
-  // Safely deduce the result type of the expression t[u].
-  template <typename T, typename U>
-    struct subscript_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x[y]);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>(), std::declval<U>()));
-    };
-
-  // An alias fsubscript the result of t[u].
-  template <typename T, typename U>
-    using Subscript_result = typename subscript_result<T, U>::type;
-    
-  // Return true if the expression t[u] is valid.
-  template <typename T, typename U>
-    constexpr bool Has_subscript()
-    {
-      return Subst_succeeded<Subscript_result<T, U>>();
-    }
-    
-
-  // Return true if the expression f(args...).
-  template <typename F, typename... Args>
-    constexpr bool Has_call()
-    {
-      return Subst_succeeded<Result_of<F(Args...)>>();
-    }
-
-
-  // Infrastracture for deducing the argument types from a function type (e.g.,
-  // F(Args...) or an adapted function object (deriving from a function
-  // adaptor.)
-  //
-  // TODO: Extend this trait so that we can deduce argument types from a
-  // class that declares them as associatd type (i.e., first_argument_type,
-  // second_argument_type, etc.).
-  namespace traits
-  {
-    template <typename Sig>
-      struct get_argument_types
+    // Deduce the result type of the expression t |= u.
+    template <typename T, typename U>
+      struct get_bit_or_assign_result
       {
-        using type = subst_failure;
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x |= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
       };
 
-    template <typename Result, typename... Args>
-      struct get_argument_types<Result(Args...)>
+    // Deduce the result type of the expression t ^= u.
+    template <typename T, typename U>
+      struct get_bit_xor_assign_result
       {
-        using type = std::tuple<Args...>;
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x ^= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
       };
+
+    // Deduce the result type of the expression t <<= u.
+    template <typename T, typename U>
+      struct get_left_shift_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x <<= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
+    // Deduce the result type of the expression t >>= u.
+    template <typename T, typename U>
+      struct get_right_shift_assign_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X& x, Y&& y) -> decltype(x >>= y);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T&>(), std::declval<U>()));
+      };
+
   } // namespace traits
 
 
 
-  // Argument types (alias)
-  // Return the function argument types as a type list.
-  template <typename Sig>
-    using Argument_types = typename traits::get_argument_types<Sig>::type;
-
-
-
-  // Compound assignment
+  // An alias for the result type of the expression t &= u.
+  template <typename T, typename U>
+    using Bit_and_assign_result = 
+      typename traits::get_bit_and_assign_result<T, U>::type;
     
-  // Safely deduce the result type of the expression t += u.
-  template <typename T, typename U>
-    struct plus_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x += y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fplus_assign the result of t += u.
-  template <typename T, typename U>
-    using Plus_assign_result = typename plus_assign_result<T, U>::type;
-    
-  // Return true if the expression t += u is valid.
-  template <typename T, typename U>
-    constexpr bool Has_plus_assign()
-    {
-      return Subst_succeeded<Plus_assign_result<T, U>>();
-    }    
-
-    
-  // Safely deduce the result type of the expression t -= u.
-  template <typename T, typename U>
-    struct minus_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x -= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fminus_assign the result of t -= u.
-  template <typename T, typename U>
-    using Minus_assign_result = typename minus_assign_result<T, U>::type;
-    
-  // Return true if the expression t -= u is valid.
-  template <typename T, typename U>
-    constexpr bool Has_minus_assign()
-    {
-      return Subst_succeeded<Minus_assign_result<T, U>>();
-    }    
-    
-    
-  // Safely deduce the result type of the expression t *= u.
-  template <typename T, typename U>
-    struct multiplies_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x *= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fmultiplies_assign the result of t *= u.
-  template <typename T, typename U>
-    using Multiplies_assign_result = typename multiplies_assign_result<T, U>::type;
-    
-  // Return true if the expression t *= u is valid.
-  template <typename T, typename U>
-    constexpr bool Has_multiplies_assign()
-    {
-      return Subst_succeeded<Multiplies_assign_result<T, U>>();
-    }    
-    
-    
-  // Safely deduce the result type of the expression t /= u.
-  template <typename T, typename U>
-    struct divides_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x /= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fdivides_assign the result of t /= u.
-  template <typename T, typename U>
-    using Divides_assign_result = typename divides_assign_result<T, U>::type;
-    
-  // Return true if the expression t /= u is valid.
-  template <typename T, typename U>
-    constexpr bool Has_divides_assign()
-    {
-      return Subst_succeeded<Divides_assign_result<T, U>>();
-    }    
-    
-    
-  // Safely deduce the result type of the expression t %= u.
-  template <typename T, typename U>
-    struct modulus_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x %= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fmodulus_assign the result of t %= u.
-  template <typename T, typename U>
-    using Modulus_assign_result = typename modulus_assign_result<T, U>::type;
-    
-  // Return true if the expression t %= u is valid.
-  template <typename T, typename U>
-    constexpr bool Has_modulus_assign()
-    {
-      return Subst_succeeded<Modulus_assign_result<T, U>>();
-    }        
-    
-
-  // Safely deduce the result type of the expression t &= u.
-  template <typename T, typename U>
-    struct bit_and_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x &= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
-
-  // An alias fbit_and_assign the result of t &= u.
-  template <typename T, typename U>
-    using Bit_and_assign_result = typename bit_and_assign_result<T, U>::type;
-    
-  // Return true if the expression t &= u is valid.
+  // Returns true if the expression t &= u is valid.
   template <typename T, typename U>
     constexpr bool Has_bit_and_assign()
     {
@@ -2175,24 +2120,13 @@ namespace origin
     }        
 
     
-  // Safely deduce the result type of the expression t |= u.
-  template <typename T, typename U>
-    struct bit_or_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x |= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
 
-  // An alias fbit_or_assign the result of t |= u.
+  // An alias for the result type of the expression t |= u.
   template <typename T, typename U>
-    using Bit_or_assign_result = typename bit_or_assign_result<T, U>::type;
+    using Bit_or_assign_result = 
+      typename traits::get_bit_or_assign_result<T, U>::type;
     
-  // Return true if the expression t |= u is valid.
+  // Returns true if the expression t |= u is valid.
   template <typename T, typename U>
     constexpr bool Has_bit_or_assign()
     {
@@ -2200,24 +2134,13 @@ namespace origin
     }        
 
     
-  // Safely deduce the result type of the expression t ^= u.
-  template <typename T, typename U>
-    struct bit_xor_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x ^= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
 
-  // An alias fbit_xor_assign the result of t ^= u.
+  // An alias for the result type of the expression t ^= u.
   template <typename T, typename U>
-    using Bit_xor_assign_result = typename bit_xor_assign_result<T, U>::type;
+    using Bit_xor_assign_result = 
+      typename traits::get_bit_xor_assign_result<T, U>::type;
     
-  // Return true if the expression t ^= u is valid.
+  // Returns true if the expression t ^= u is valid.
   template <typename T, typename U>
     constexpr bool Has_bit_xor_assign()
     {
@@ -2225,25 +2148,13 @@ namespace origin
     }        
 
     
-    
-  // Safely deduce the result type of the expression t <<= u.
-  template <typename T, typename U>
-    struct left_shift_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x <<= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
 
-  // An alias fleft_shift_assign the result of t <<= u.
+  // An alias for the result type of the expression t <<= u.
   template <typename T, typename U>
-    using Left_shift_assign_result = typename left_shift_assign_result<T, U>::type;
+    using Left_shift_assign_result = 
+      typename traits::get_left_shift_assign_result<T, U>::type;
     
-  // Return true if the expression t <<= u is valid.
+  // Returns true if the expression t <<= u is valid.
   template <typename T, typename U>
     constexpr bool Has_left_shift_assign()
     {
@@ -2251,23 +2162,11 @@ namespace origin
     }        
 
     
-    
-  // Safely deduce the result type of the expression t >>= u.
-  template <typename T, typename U>
-    struct right_shift_assign_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X& x, Y&& y) -> decltype(x >>= y);
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T&>(), std::declval<U>()));
-    };
 
-  // An alias fright_shift_assign the result of t >>= u.
+  // An alias for the result type of the expression t >>= u.
   template <typename T, typename U>
-    using Right_shift_assign_result = typename right_shift_assign_result<T, U>::type;
+    using Right_shift_assign_result = 
+      typename traits::get_right_shift_assign_result<T, U>::type;
     
   // Return true if the expression t >>= u is valid.
   template <typename T, typename U>
@@ -2278,21 +2177,127 @@ namespace origin
 
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Address, dereference, subscript, and function call
+
+  namespace traits
+  {
+    // Deduce the result of the expression &t.
+    template <typename T>
+      struct get_address_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(&a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    // Deduce the result of the expression *t.
+    template <typename T>
+      struct get_dereference_result
+      {
+      private:
+        template <typename X>
+          static auto check(X&& a) -> decltype(*a);
+        
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    // Deduce the result of the exprssion t[u].
+    template <typename T, typename U>
+      struct get_subscript_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x[y]);
+          
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+  } // namespace traits
+
+
+
+  // An alias for the result type of the expression &t.
+  template <typename T>
+    using Address_result = typename traits::get_address_result<T>::type;
+    
+  // Returns true if the expression &t is valid.
+  template <typename T>
+    constexpr bool Has_address()
+    {
+      return Subst_succeeded<Address_result<T>>();
+    }   
+    
+
+
+  // An alias for the result type of the expression *t.
+  template <typename T>
+    using Dereference_result = typename traits::get_dereference_result<T>::type;
+    
+  // Returns true if the expression *t is valid.
+  template <typename T>
+    constexpr bool Has_dereference()
+    {
+      return Subst_succeeded<Dereference_result<T>>();
+    }
+    
+
+
+  // An alias for the result type of the expression t[u].
+  template <typename T, typename U>
+    using Subscript_result = typename traits::get_subscript_result<T, U>::type;
+    
+  // Returns true if the expression t[u] is valid.
+  template <typename T, typename U>
+    constexpr bool Has_subscript()
+    {
+      return Subst_succeeded<Subscript_result<T, U>>();
+    }
+
+    
+
+  // An alias for the result type of the expression f(args...). Note that this
+  // is equivalent to Result_of<F(Args...)> and is provided purely for symmetry
+  // with the other operator traits.
+  template <typename F, typename... Args>
+    using Call_result = Result_of<F(Args...)>;
+
+  // Returns true if the expression f(args...) is valid.
+  template <typename F, typename... Args>
+    constexpr bool Has_call()
+    {
+      return Subst_succeeded<Result_of<F(Args...)>>();
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Common member traits
-  // There are number of common operations foundin the STL and beyond. Members
-  // like x.size(), x.empty(), x.find(), and x.swap() typically optimize
-  // algorithms or properties.
-
-
-
-  // Associated value type
-  // A type T has an associated value type if T::value_type is a valid 
-  // expression. 
+  //
+  // There are number of common member types and functions found in data
+  // structures in the STL such as value_type, difference_type, size(), empty(),
+  // find(), and swap(). We provide traits for dedecting these operations in
+  // this library because they are sometimes needed for describing concepts or
+  // constraining templates.
+  //
+  // In particular, we provide traits for:
+  //    - Associated value types (T::value)
+  //    - Associated difference types (T::difference_type)
+  //    - Associated size types (T::size_type)
+  //
+  //////////////////////////////////////////////////////////////////////////////
 
   // Infrastructure for accessing an associated size type.
   namespace traits
   {
-    // Safely deduce the type expression T::size_type.
+    // Deduce the type expression T::size_type.
     template <typename T>
       struct get_associated_value_type
       {
@@ -2303,38 +2308,8 @@ namespace origin
       public:
         using type = decltype(check(std::declval<T>()));
       };
-  } // namespace traits
 
-
-
-  // Associated value type (alias)
-  // An alias to the associated value type.
-  template <typename T>
-    using Associated_value_type = 
-      typename traits::get_associated_value_type<T>::type;
-
-
-
-  // Associated value type (trait)
-  // Returns true if T has an associated value type.
-  template <typename T>
-    constexpr bool Has_associated_value_type()
-    {
-      return Subst_succeeded<Associated_value_type<T>>();
-    }
-
-
-
-  // Associated difference type
-  // A type T has an associated difference type if T::difference_type is a
-  // valid expression. Note that the name "difference" is a hold-over from the
-  // standard library. The abstraction more closely associated with this
-  // associated type is "distance".
-
-  // Infrastructure for accessing an associated size type.
-  namespace traits
-  {
-    // Safely deduce the type expression T::size_type.
+    // Deduce the type expression T::size_type.
     template <typename T>
       struct get_associated_difference_type
       {
@@ -2345,35 +2320,7 @@ namespace origin
       public:
         using type = decltype(check(std::declval<T>()));
       };
-  } // namespace traits
-
-
-
-  // Associated difference type (alias)
-  // An alias to the associated difference type.
-  template <typename T>
-    using Associated_difference_type = 
-      typename traits::get_associated_difference_type<T>::type;
-
-
-
-  // Associated difference type (trait)
-  // Returns true if T has an associated difference type.
-  template <typename T>
-    constexpr bool Has_associated_difference_type()
-    {
-      return Subst_succeeded<Associated_difference_type<T>>();
-    }
-
-
-
-  // Associated size type
-  // A type T has an associated size type if T::size_type is a valid 
-  // expression.
-
-  // Infrastructure for accessing an associated size type.
-  namespace traits
-  {
+  
     // Safely deduce the type expression T::size_type.
     template <typename T>
       struct get_associated_size_type
@@ -2387,18 +2334,41 @@ namespace origin
       };
   } // namespace traits
 
-  
 
-  // Associated size type (alias)
-  // An alias to the associated size type or subst failure if the expression
-  // T::size_type is invalid.
+
+  // An alias for T::value_type.
+  template <typename T>
+    using Associated_value_type = 
+      typename traits::get_associated_value_type<T>::type;
+
+  // Returns true if T::value_type is a valid type expression.
+  template <typename T>
+    constexpr bool Has_associated_value_type()
+    {
+      return Subst_succeeded<Associated_value_type<T>>();
+    }
+
+
+
+  // An alias for T::difference_type.
+  template <typename T>
+    using Associated_difference_type = 
+      typename traits::get_associated_difference_type<T>::type;
+
+  // Returns true if T::difference_type is a valid type expression.
+  template <typename T>
+    constexpr bool Has_associated_difference_type()
+    {
+      return Subst_succeeded<Associated_difference_type<T>>();
+    }
+
+
+
+  // An alias for T::size_type.
   template <typename T>
     using Associated_size_type = typename traits::get_associated_size_type<T>::type;
 
-  
-
-  // Associated size type (trait)
-  // Returns true if T has an associated size type.
+  // Returns true if T::size_type is a valid type expression.
   template <typename T>
     constexpr bool Has_associated_size_type()
     {
@@ -2415,9 +2385,9 @@ namespace origin
   // Infrastructure for deducing an associated size type.
   namespace traits
   {
-    // Safely get the type returned by the member function x.size().
+    // Deduce get the type of the expression t.size().
     template <typename T>
-      struct member_size_result
+      struct get_member_size_result
       {
       private:
         template <typename X>
@@ -2426,13 +2396,40 @@ namespace origin
       public:
         using type = decltype(check(std::declval<T>()));
       };
+  
+    // Deduce get the type of the expression t.size().
+    template <typename T>
+      struct get_member_empty_result
+      {
+      private:
+        template <typename X>
+          static auto check(X const& x) -> decltype(x.empty());
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    // Deduce get the type of the expression t.find(u).
+    template <typename T, typename U>
+      struct get_member_find_result
+      {
+      private:
+        template <typename X, typename Y>
+          static auto check(X&& x, Y&& y) -> decltype(x.find(y));
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>(), std::declval<U>()));
+      };
+
   } // namespace traits
     
-  // An alias to the result of the expression empty(x).
+
+
+  // An alias for the result type of the expression t.size().
   template <typename T>
-    using Member_size_result = typename traits::member_size_result<T>::type;
+    using Member_size_result = typename traits::get_member_size_result<T>::type;
     
-  // Return true if empty(t) is a valid expression.
+  // Returns true if t.size() is a valid expression.
   template <typename T>
     bool constexpr Has_member_size()
     {
@@ -2441,28 +2438,11 @@ namespace origin
 
 
 
-  // Member empty
-  // These traits determine if x.empty() is a valid expression. Usually if
-  // x.size() is a valid expression, x.empty() will also be a valid expression.
-  // This is not always the case (e.g., counted_range).
-
-  // Safely get the type returned by the member function x.empty().
+  // An alias for the result type of the expression t.empty().
   template <typename T>
-    struct member_empty_result
-    {
-    private:
-      template <typename X>
-        static auto check(X const& x) -> decltype(x.empty());
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<T>()));
-    };
-
-  // An alias to the result of the expression empty(x).
-  template <typename T>
-    using Member_empty_result = typename member_empty_result<T>::type;
+    using Member_empty_result = typename traits::get_member_empty_result<T>::type;
     
-  // Return true if empty(t) is a valid expression.
+  // Returns true if t.empty() is a valid expression.
   template <typename T>
     bool constexpr Has_member_empty()
     {
@@ -2470,29 +2450,12 @@ namespace origin
     }
   
 
-
-  // Member find
-  // These traits determine if the type supports finding a value based on a
-  // key. Typically, containers implementing a member find() will implement
-  // more efficient search techniques than the usual linear search.
-  
-  // Safely get the type associated with the result of t.find(x).
-  template <typename C, typename K>
-    struct member_find_result
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& x, Y&& y) -> decltype(x.find(y));
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<C>(), std::declval<K>()));
-    };
     
-  // An alias to the result of the expression empty(x).
+  // An alias for the result type of the expression t.find(u).
   template <typename C, typename K>
-    using Member_find_result = typename member_find_result<C, K>::type;
+    using Member_find_result = typename traits::get_member_find_result<C, K>::type;
     
-  // Return true if empty(t) is a valid expression.
+  // Returns true if t.find(u) is a valid expression.
   template <typename C, typename K>
     bool constexpr Has_member_find()
     {
