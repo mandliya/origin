@@ -162,7 +162,7 @@ lexer::consume_vertical_ws()
 void 
 lexer::make_eof()
 {
-  tok.sym = nullptr;
+  tok.sym = table->get(sym_eof);
 }
 
 // Return a punctuation token.

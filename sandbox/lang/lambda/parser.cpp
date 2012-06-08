@@ -32,10 +32,12 @@ Variable*
 parser::parse_variable()
 {
   lstring var;
-  if (tok.is_identifier())
+  if (tok.is_identifier()) {
+    consume();
     return unit.make_variable(tok.sym);
-  else
+  } else {
     return nullptr;
+  }
 }
 
 // Parse an expression of the form:
@@ -46,12 +48,14 @@ parser::parse_abstraction()
 {
   if (tok.is(sym_backslash)) {
     consume();
+    std::cout << tok << '\n';
     if (Variable* var = parse_variable()) {
-      consume();
+      // consume();
       if (tok.is(sym_dot)) {
         consume();
+        std::cout << tok << '\n';
         if (Node *term = parse_term()) {
-          consume();
+          // consume();
           return unit.make_abstraction(var, term);
         } else {
           throw std::runtime_error("could not parse abstracted term in abstraction");
@@ -75,10 +79,13 @@ Application*
 parser::parse_application()
 {
   if (Node* left = parse_term()) {
-    if (Node* right = parse_term())
+    // consume();
+    if (Node* right = parse_term()) {
+      // consume();
       return unit.make_application(left, right);
-    else 
+    } else {
       throw std::runtime_error("could not parse argument to application");
+    }
   } else {
     return nullptr;
   }
@@ -93,10 +100,13 @@ parser::parse_bracketed()
   if (tok.is(sym_lparen)) {
     consume();
     if (Node* expr = parse_term()) {
-      if (tok.is(sym_rparen))
+      // consume();
+      if (tok.is(sym_rparen)) {
+        consume();
         return expr;
-      else
+      } else {
         throw std::runtime_error("expecting ')' in bracketed term");
+      }
     } else {
       throw std::runtime_error("could not parse enclosed term");
     }
@@ -105,18 +115,36 @@ parser::parse_bracketed()
   }
 }
 
+inline bool
+void starts_term(const token& tok)
+{
+  return tok.is(sym_identifier) || tok.is(sym_lparen) || tok.is(sym_backslash);
+}
+
+
+
+// FIXME: Still working on this....
 Node*
 parser::parse_term()
 {
-  if (Node* e = parse_bracketed())
-    return e;
-  if (Abstraction* abs = parse_abstraction())
-    return abs;
-  if (Application* app = parse_application())
-    return app;
-  if (Variable* var = parse_variable())
-    return var;
-  else
-    throw std::runtime_error("failure\n");
+  // Parse the left argument of an application.
+  Node* left = nullptr;
+  if (left = parse_bracketed())
+    ;
+  else if (left = parse_abstraction())
+    ;
+  else if (left = parse_variable())
+    ;
+  else {
+    throw std::runtime_error("could not parse argument to excpetion");
+  }
+
+
+  return left;
+
+  // If the next token is anything that could start a term, then we have
+  // to parse this term as an application.
+  // if (starts_term(tok))
+
 }
 
