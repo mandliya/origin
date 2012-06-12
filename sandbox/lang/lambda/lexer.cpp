@@ -1,7 +1,7 @@
 
 #include "lexer.hpp"
 
-lexer::lexer(symbol_table* t, const lstring& buf)
+Lexer::Lexer(symbol_table* t, const String& buf)
   : table{t}
   , first{buf.data()}
   , last{buf.data() + buf.size()}
@@ -10,8 +10,8 @@ lexer::lexer(symbol_table* t, const lstring& buf)
 { }
 
 // Lex the next token out of the buffer, returning it.
-token 
-lexer::operator()()
+Token 
+Lexer::operator()()
 {
   // Pre-lex the token, skipping any initial whitespace and/or comments,
   // advancing to the first non-ws character. Note that we may reach EoF in
@@ -29,21 +29,20 @@ lexer::operator()()
     //
     // Keep a pointer to the start of the symbol so we can reconstruct the
     // string later.
-    const lchar* start = first; 
+    const Char* start = first; 
     switch(*first) {
-    case '(':
-      make_punctuation(sym_lparen);
-      break;
-    case ')':
-      make_punctuation(sym_rparen);
-      break;
-    case '\\':
-      make_punctuation(sym_backslash);
-      break;
-    case '.':
-      make_punctuation(sym_dot);
-      break;
+    case '(':  make_punctuation(Symbol::Lparen);    break;
+    case ')':  make_punctuation(Symbol::Rparen);    break;
+    case '\\': make_punctuation(Symbol::Backslash); break;
+    case '.':  make_punctuation(Symbol::Dot);       break;
+    case ';':  make_punctuation(Symbol::Semicolon); break;
+    case '=':  make_punctuation(Symbol::Equal);     break;
     default: {
+      // NOTE: This will handle keywords gracefully since keywords are hashed
+      // into the same symbol table. Note that we could be much more efficient
+      // about doing this by building a state-machine to recognize keywords
+      // explicitly rather than relying on the symbol table. It's just more
+      // work.
       if (is_identifier())
         make_identifer(start, first);
       else
@@ -59,30 +58,30 @@ lexer::operator()()
 
 // Returns true when we reach the end of file.
 bool 
-lexer::is_eof() const { return first == last; }
+Lexer::is_eof() const { return first == last; }
 
 // Returns true if the currenct character compares equal to c.
 bool 
-lexer::is_char(char c) const { return !is_eof() && (*first == c); }
+Lexer::is_char(char c) const { return !is_eof() && (*first == c); }
 
 // Returns true if the current character is a letter. 
 bool 
-lexer::is_letter() const { return !is_eof() && isalpha(*first); }
+Lexer::is_letter() const { return !is_eof() && isalpha(*first); }
 
 // Returns true if the current character is a digit.
 bool 
-lexer::is_digit() const { return !is_eof() && isdigit(*first); }
+Lexer::is_digit() const { return !is_eof() && isdigit(*first); }
 
 // Returns true if c is either a letter or digit. If it is, assign that
 // character to c and advance.
 bool 
-lexer::is_alphanumeric() const { return !is_eof() && isalnum(*first); }
+Lexer::is_alphanumeric() const { return !is_eof() && isalnum(*first); }
 
 // An identifier (variable) in the untyped lambda calculus is a string
 // of alphanumeric characters that cannot start with a digit. An underscore
 // may be used in any position.
 bool 
-lexer::is_identifier()
+Lexer::is_identifier()
 {
   if (is_letter() || is_char('_')) {
     ++first;
@@ -104,7 +103,7 @@ lexer::is_identifier()
 
 // Consume whitespace and return true if any whitespace was consumed.
 bool 
-lexer::consume_ws()
+Lexer::consume_ws()
 {
   bool result;
   while (!is_eof() && (consume_horizontal_ws() || consume_vertical_ws()))
@@ -114,7 +113,7 @@ lexer::consume_ws()
 
 // Recognize and consume horizontal whitespace (' ' or tab).
 bool 
-lexer::consume_horizontal_ws() 
+Lexer::consume_horizontal_ws() 
 { 
   switch (*first) {
   case ' ':
@@ -135,7 +134,7 @@ lexer::consume_horizontal_ws()
 //
 // FIXME: Sometimes I need to know about the end of line!
 bool 
-lexer::consume_vertical_ws()
+Lexer::consume_vertical_ws()
 {
   switch(*first) {
   case '\r':
@@ -160,9 +159,9 @@ lexer::consume_vertical_ws()
 
 // Return the eof token.
 void 
-lexer::make_eof()
+Lexer::make_eof()
 {
-  tok.sym = table->get(sym_eof);
+  tok.sym = table->get(Symbol::Eof);
 }
 
 // Return a punctuation token.
@@ -170,7 +169,7 @@ lexer::make_eof()
 // FIXME: This will, in the future, require that we know the length of
 // the punctuator. For now, all tokens are length 1, so its easy.
 void 
-lexer::make_punctuation(symbol_kind kind)
+Lexer::make_punctuation(Symbol::Kind kind)
 {
   tok.loc = loc;
   tok.sym = table->get(kind);
@@ -181,16 +180,16 @@ lexer::make_punctuation(symbol_kind kind)
 // Enter the given substring as an identifier in the table. If the identifier
 // already exists, return the current string.
 void 
-lexer::make_identifer(const lchar* first, const lchar* last)
+Lexer::make_identifer(const Char* first, const Char* last)
 {
   tok.loc = loc;
-  tok.sym = table->put(sym_identifier, first, last);
+  tok.sym = table->put(Symbol::Identifier, first, last);
   first += tok.spelling().size();
   loc.column += tok.spelling().size();
 }
 
 void 
-lexer::make_error()
+Lexer::make_error()
 {
   tok.loc = loc;
   tok.sym = table->get(first, first + 1);

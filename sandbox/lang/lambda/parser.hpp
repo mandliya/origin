@@ -5,46 +5,89 @@
 #include "lexer.hpp"
 #include "syntax.hpp"
 
-// Paser
+
+// Parser
 //
 // The parser is responsible for parsing the untyped lambda expression syntax.
 // The grammar follows:
 //
-//    t ::= x       // variable
-//          \x.t    // abstraction
-//          t t     // application
-//          (e)     // bracketed expression
+//    program := nothing 
+//             | statements
 //
-// For the sake of simplity, we assume that a variable can be any identifier
-// of the for [a-zA-Z].
+// Statements:
 //
+//    statements := statement 
+//                | statement statements
+//
+//    statement := decl-statement
+//               | eval-statement
+//
+//    eval-declaration := variable = expression;
+//
+//    eval-statement := eval expression;
+//
+// A declaration binds the variable name in the global context. In those
+// respects, it could be thought of as a top-level let expression. An evaluation
+// evaluates the expression in the current context, writing the results to
+// the output register.
+//
+// Expressions in the language are:
+//
+//    exprexssion := abstraction 
+//                 | application
+//
+//    abstraction := \ variable . expression
+//
+//    application := primary application 
+//                 | primary
+//
+//    primary := (expression) 
+//             | variable
+//
+//    var := identifier
+//
+// In this language, an expression corresponds to a Term in the AST. This will
+// not be true for all lambda calculus-based languages. 
+//
+// Note that declarations
 //
 // NOTE: I think I see how to implement tentative parsing. If we copy the
 // current lex state (position, location, etc.), then we could restore that
 // at a later time. I think that this is going to be closely related to the
 // recursive lexing/parsing discussed in the lexer header.
-class parser
+class Parser
 {
 public:
-  parser(lexer& lex);
+  Parser(Lexer& lex);
 
   bool operator()();
 
   // Parsing infrastructure
-  // FIXME: Make a function that compares and consumes at the same time.
-  void consume();
+  Token consume();
+  Token match(Symbol::Kind kind);
 
-  Variable* parse_variable();
+  // Grammar
+  Term* parse_program();
+
+  // Statements
+  Statement* parse_statement();
+  Declaration* parse_declaration();
+  Evaluation* parse_evaluation();
+
+  // Expression
+  Term* parse_expression();
+  Term* parse_compound();
+  Term* parse_primary();
+  Term* parse_application();
   Abstraction* parse_abstraction();
-  Application* parse_application();
-  Node* parse_bracketed();
-  Node* parse_term();
+  Variable* parse_variable();
 
 private:
-  lexer& lex;
-  token tok;
+  Lexer& lex;
+  Token tok;
 
-  Unit unit;
+  Context cxt;
+  Node* program;
 };
 
 #endif

@@ -11,13 +11,13 @@
 //
 // TODO: Implement support for files. Probably just a pointer or reference to a
 // file object for the time being.
-struct location
+struct Location
 {
-  location() 
+  Location() 
     : line{-1}, column{-1} 
   { }
 
-  location(int l, int c)
+  Location(int l, int c)
     : line{l}, column{c}
   { }
 
@@ -31,7 +31,7 @@ struct location
 // Write the location to the output stream.
 template <typename C, typename T>
   inline std::basic_ostream<C, T>& 
-  operator<<(std::basic_ostream<C, T>& os, const location& loc)
+  operator<<(std::basic_ostream<C, T>& os, const Location& loc)
   {
     return os << loc.line << ":" << loc.column;
   }

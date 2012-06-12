@@ -14,40 +14,44 @@
 // The token class represents an instannce of a token in the language. Each
 // token stores the parsed kind, its source location and a reference to its
 // text in a symbol table.
-//
-// Invariants:
-//    this->sym != nullptr
-struct token
+struct Token
 {
-  token() 
+  Token() 
   : loc{}, sym{nullptr}
     { }
   
-  token(location l, symbol* sym) 
+  Token(Location l, Symbol* sym) 
     : loc{l}, sym{nullptr} 
   { }
 
+  // Returns true if the token represents a symbol in the language.
+  explicit operator bool() const
+  {
+    return sym != nullptr && !sym->is_eof() && !sym->is_error();
+  }
+
   // Return the location of the token.
-  const location& locus() const { return loc; }
+  const Location& locus() const { return loc; }
 
-  // Returns the token's symbol kind.
-  symbol_kind kind() const { return sym->kind; }
-
-  // Returns true if the token is of the specified kind.
-  bool is(symbol_kind k) { return kind() == k; }
-
-  // Returns true ift he token is an identifier.
-  bool is_identifier() const { return ::is_identifier(kind()); }
 
   // Returns a string containing the name of the symbol kind. This function is
   // primarily intended for debugging.
-  std::string name() const { return sym->name(); }
+  String name() const { return sym->name(); }
+
+  // Returns the token's symbol kind.
+  Symbol::Kind kind() const { return sym->kind; }
+
+  // Queries
+  bool is(Symbol::Kind k) { return sym->is(k); }
+  bool is_identifier() const { return sym->is_identifier(); }
+
 
   // Returns a string containing the spelling of the symbol.
-  const std::string& spelling() const { return sym->spelling; }
+  const String& spelling() const { return sym->spelling; }
 
-  location loc;
-  symbol* sym;
+
+  Location loc;
+  Symbol* sym;
 };
 
 
@@ -55,7 +59,7 @@ struct token
 // Write information about the token to the output stream.
 template <typename C, typename T>
   inline std::basic_ostream<C, T>& 
-  operator<<(std::basic_ostream<C, T>& os, const token& tok)
+  operator<<(std::basic_ostream<C, T>& os, const Token& tok)
   {
     os << '('; 
     os << tok.locus() << ": " << tok.name() << ": "  << tok.spelling();

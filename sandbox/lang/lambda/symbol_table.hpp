@@ -32,30 +32,30 @@ class symbol_table
   // I want to lookup e.g., "(" as either a sym_lparen or the string "(", and
   // I want the symbol corresponding to either lookup to be the same. 
 
-  using Kind_map = std::unordered_map<symbol_kind, symbol*, symbol_kind_hash>;
-  using String_map = std::unordered_map<lstring, symbol*>;
+  using Kind_map = std::unordered_map<Symbol::Kind, Symbol*, symbol_kind_hash>;
+  using String_map = std::unordered_map<String, Symbol*>;
 public:
 
   // Get the symbol associated with the given token kind.
-  symbol* get(symbol_kind kind);
-  symbol* get(symbol_kind kind) const;
+  Symbol* get(Symbol::Kind kind);
+  Symbol* get(Symbol::Kind kind) const;
 
 
   // Get the symbol associated with the given string. 
-  symbol* get(const lstring& str);
-  symbol* get(const lstring& str) const;
+  Symbol* get(const String& str);
+  Symbol* get(const String& str) const;
 
   // Create a symbol for the given symbol kind. There must not already be a
   // a symbol associated with this symbol kind.
-  symbol *put(symbol_kind kind, const lstring str);
+  Symbol *put(Symbol::Kind kind, const String str);
 
 
   // Get the symbol associated with the given range of characters.
-  symbol* get(const lchar* first, const lchar* last);
-  symbol* get(const lchar* first, const lchar* last) const;
+  Symbol* get(const Char* first, const Char* last);
+  Symbol* get(const Char* first, const Char* last) const;
 
   // Insert the character range [first, last) into the table.
-  symbol* put(symbol_kind kind, const lchar* first, const lchar* last);
+  Symbol* put(Symbol::Kind kind, const Char* first, const Char* last);
 
 private:
   Kind_map kinds;

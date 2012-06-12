@@ -21,19 +21,20 @@
 // the first and last pointers, and the current location), in addition to the
 // glboal lexing state. If recursive parsing is syntax driven, then the parser
 // would simply need to keep a stack of lexers.
-struct lexer
+class Lexer
 {
-  lexer(symbol_table* t, const lstring& buf);
+public:
+  Lexer(symbol_table* t, const String& buf);
 
 
   // Lex the next token out of the buffer, returning it.
-  token operator()();
+  Token operator()();
 
 
   // Observers
 
   // Returns the current location.
-  location get_location() const { return loc; }
+  Location get_location() const { return loc; }
 
   // Returns the current line number.
   int get_line() const { return loc.line; }
@@ -68,17 +69,17 @@ struct lexer
   // current symbol table.
 
   void make_eof();
-  void make_punctuation(symbol_kind kind);
-  void make_identifer(const lchar* first, const lchar* last);
+  void make_punctuation(Symbol::Kind kind);
+  void make_identifer(const Char* first, const Char* last);
   void make_error();
 
 
   symbol_table* table;  // The primary symbol table
-  const lchar* first;   // An iterator to the first input character
-  const lchar* last;    // An iterator past the last input character
+  const Char* first;    // An iterator to the first input character
+  const Char* last;     // An iterator past the last input character
 
-  token tok;            // The current token
-  location loc;         // The current location
+  Token tok;            // The current token
+  Location loc;         // The current location
 };
 
 #endif

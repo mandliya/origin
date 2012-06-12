@@ -4,7 +4,24 @@
 
 #include <list>
 
+#include "location.hpp"
 #include "symbol.hpp"
+
+
+// There are several layers of the AST design:
+//
+// Common infrastructure -- a set of classes expected to be common to all
+// languages or a family of languages. This inclues the node interface and
+// associated helper classes.
+//
+// Language interaface -- a set of node classes that conform to the set of
+// terms defined by the language. These are purely interface classess.
+//
+// Language implementation -- a set of node classes that implement the
+// language interface, often by deriving and implementing a set of interfaces.
+//
+// Note that the Unit class is both infrastructure and language implementaiton
+// since it combines factories for the different implementations.
 
 
 // The node class is the base class of the abstract syntax tree. This class
@@ -15,10 +32,14 @@ struct Node
 {
   enum Kind
   {
-    unit,
-    variable,
-    abstraction,
-    application
+    // Terms
+    Variable_node,
+    Abstraction_node,
+    Application_node,
+
+    // Statements
+    Declaration_node,
+    Evaluation_node,
   };
 
   Node(Kind k) : kind{k} { }
@@ -29,18 +50,34 @@ struct Node
   virtual Node* const* end() const = 0;
 
   Kind kind;
+  Location loc;
 };
+
+
+// Returns a pointer type the node U, typed as the node T.
+template <typename T, typename U>
+  inline T* as(U* node)
+  {
+    return dynamic_cast<T*>(node);
+  }
+
+template <typename T, typename U>
+  inline const T* as(const U* node)
+  {
+    return dynamic_cast<const T*>(node);
+  }
+
 
 
 // The nullary node defines the base interface for all nullary nodes. 
 //
 // Note that the class contains an empty array so that the n->nodes member
 // will always be a valid expression.
-template <Node::Kind K>
-  struct Nullary_node : Node
+template <typename Base>
+  struct Nullary_node : Base
   {
-    Nullary_node()
-      : Node{K}
+    Nullary_node() 
+      : Base()
     { }
 
     virtual Node* const* begin() const { return nodes; }
@@ -52,17 +89,20 @@ template <Node::Kind K>
 
 // The unary node class defines the base interface for all unary nodes. The
 // child node may be accessed using the child() function.
-template <Node::Kind K>
-  struct Unary_node : Node
+template <typename Base>
+  struct Unary_node : Base
   {
     Unary_node(Node* child)
-      : Node{K}, nodes {child}
+      : Base(), nodes{child}
     { }
 
     Node* child() const { return nodes[0]; }
 
+    Node* first() const { return nodes[0]; }
+
     virtual Node* const* begin() const { return nodes; }
     virtual Node* const* end() const { return nodes + 1; }
+
 
     Node* nodes[1];
   };
@@ -71,15 +111,18 @@ template <Node::Kind K>
 // The binary node class defines the basic interface for all binary nodes.
 // The left and right operands of the node are accessible using the left()
 // and right() member functions.
-template <Node::Kind K>
-  struct Binary_node : Node
+template <typename Base>
+  struct Binary_node : Base
   {
     Binary_node(Node* left, Node* right)
-      : Node{K}, nodes {left, right}
+      : Base(), nodes{left, right}
     { }
 
     Node* left() const { return nodes[0]; }
     Node* right() const { return nodes[1]; }
+
+    Node* first() const { return nodes[0]; }
+    Node* second() const { return nodes[1]; }
 
     virtual Node* const* begin() const { return nodes; }
     virtual Node* const* end() const { return nodes + 2; }
@@ -88,74 +131,187 @@ template <Node::Kind K>
   };
 
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Language interface
+
+// Terms
+// There are three terms in the untyped lambda calculus: variables, 
+// abstractions, and applications.
+//
+// FIXME: The abstract class could be called Expression, not Term.
+
+
+// All nodes in the language are terms.
+struct Term : Node 
+{
+  Term(Kind kind) : Node(kind) { }
+};
+
+// A variable is a term that refers to a name in the environment.
+struct Variable : Term
+{
+  Variable() : Term(Variable_node) { }
+
+  virtual const String& name() const = 0;
+};
+
+// An application (function application) applies a function (the first argument)
+// to an argument (the second argument).
+struct Application : Term
+{
+  Application() : Term(Application_node) { }
+
+  virtual Term* func() const = 0;
+  virtual Term* arg() const = 0;
+};
+
+struct Abstraction : Term
+{
+  Abstraction() : Term(Abstraction_node) { }
+
+  virtual Variable* var() const = 0;
+  virtual Term* term() const = 0;
+};
+
+
+
+// Statements
+// Statements are distinct from terms in the current design since they trivially
+// manipulate the context. We do not currently have formal semantics associated 
+// with them.
+
+// The base statement class
+struct Statement : Node
+{
+  Statement(Node::Kind kind) : Node(kind) { }
+};
+
+
+// A declaration associates a variable with a given term in the program.
+//
+// This might more appropriately be called a Definition.
+struct Declaration : Statement
+{
+  Declaration() : Statement(Declaration_node) { }
+
+  virtual Variable* var() const = 0;
+  virtual Term* def() const = 0;
+};
+
+// An evaluation represents an evaluation request.
+struct Evaluation : Statement
+{
+  Evaluation() : Statement(Evaluation_node) { }
+
+  virtual Term* term() const = 0;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Language implementation
+
+// FIXME: For some reason, the design using templates is giving me problems
+// allocating objects -- the abstract methods aren't being linked together
+// correctly.
+
+
 // A variable is a leaf node that refers to a name.
 //
 // FIXME: that we're just referring to the underlying symbols since we don't
 // have any more advanced kinds of naming. Eventually, I think we'll have a
 // Name hierarchy like IPR. If we had a Name abstraction, we could also rewrite
 // the lexical name with a De Bruijn name also. 
-struct Variable 
-  : Nullary_node<Node::variable>
+struct Variable_impl : Nullary_node<Variable>
 {
-  Variable(symbol* name)
-    : Nullary_node<Node::variable>{}, name{name}
+  Variable_impl(Symbol* sym)
+    : Nullary_node<Variable>() , sym{sym}
   { }
 
-  symbol* name;
+  virtual const String& name() const { return sym->spelling; }
+
+  Symbol* sym;
 };
 
 
-// An abstraction is a term parameterized by a variable, written "\x.t" where
-// x is the variable abstracted over the term t.
-//
-// Note that var is technically introduced into scope for the duration of
-// the lambda expression. If we were looking at the associatd scope of the
-// abstraction, it would only include var.
-struct Abstraction 
-  : Binary_node<Node::abstraction>
+// An abstraction...
+struct Abstraction_impl : Binary_node<Abstraction>
 {
-  Abstraction(Variable* var, Node* term)
-    : Binary_node<Node::abstraction>{var, term}
+  Abstraction_impl(Variable* var, Term* term)
+    : Binary_node<Abstraction>(var, term)
   { }
 
-  Variable* var() const { return static_cast<Variable*>(nodes[0]); }
-  Node* term() const { return nodes[1]; }
+  virtual Variable* var() const { return static_cast<Variable*>(nodes[0]); }
+  virtual Term* term() const { return static_cast<Term*>(nodes[1]); }
 };
 
 
-// An application of two tems is writen "t t" and corresponds to function
-// application.
-using Application = Binary_node<Node::application>;
+// Application...
+struct Application_impl : Binary_node<Application>
+{
+  Application_impl(Term* left, Term* right)
+    : Binary_node<Application>(left, right)
+  { }
 
+  virtual Term* func() const { return static_cast<Term*>(nodes[0]); }
+  virtual Term* arg() const { return static_cast<Term*>(nodes[1]); }
+};
+
+
+// Declaration
+struct Declaration_impl : Binary_node<Declaration>
+{
+  Declaration_impl(Variable* var, Term* term)
+    : Binary_node<Declaration>(var, term)
+  { }
+
+  virtual Variable* var() const { return as<Variable>(first()); }
+  virtual Term* def() const { return as<Term>(second()); }
+};
+
+// Evaluation
+struct Evaluation_impl : Unary_node<Evaluation>
+{
+  Evaluation_impl(Term* term)
+    : Unary_node<Evaluation>(term)
+  { }
+
+  virtual Term* term() const { return as<Term>(first()); }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Factories and context
 
 
 // The node factory is responsible for the allocation of all nodes. Each 
 // different kind of node is maintained in a list of nodes.
-struct node_factory
+struct term_factory
 {
-  Variable* make_variable(symbol* sym);
-  Abstraction* make_abstraction(Variable* var, Node* term);
-  Application* make_application(Node* left, Node* right);
+  Variable_impl* make_variable(Symbol* sym);
+  Abstraction_impl* make_abstraction(Variable* var, Term* term);
+  Application_impl* make_application(Term* left, Term* right);
 
-  std::list<Variable> var;
-  std::list<Abstraction> abs;
-  std::list<Application> app;
+  std::list<Variable_impl> var;
+  std::list<Abstraction_impl> abs;
+  std::list<Application_impl> app;
 };
 
-// The unit node represents an entire program (the program node), and provides
-// factory interfaces for the creation of all other node types.
-class Unit 
-  : public Unary_node<Node::unit>
-  , public node_factory
+struct stmt_factory
 {
-  using Node_base = Unary_node<Node::unit>;
-public:
-  Unit()
-    : Unary_node<Node::unit>{nullptr}
-  { }
+  Declaration_impl* make_declaration(Variable* var, Term* def);
+  Evaluation_impl* make_evaluation(Term* term);
 
-  Node* program() const { return nodes[0]; }
-  void set_program(Node* node) { nodes[0] = node; }
+  std::list<Declaration_impl> decls;
+  std::list<Evaluation_impl> evals;
+};
+
+
+// The Context class provides the primary interface for constructing and
+// maintianing an AST. It provides factories for allocating nodes and accessing
+// language intrinsics.
+class Context : public term_factory
+              , public stmt_factory
+{
 };
 
 #endif

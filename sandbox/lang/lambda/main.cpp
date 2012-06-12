@@ -16,38 +16,33 @@ int main()
   symbol_table sym;
 
   // Register pseudo symbols
-  sym.put(sym_eof, "<eof>");
-  sym.put(sym_error, "<error>");
+  sym.put(Symbol::Eof, "<eof>");
+  sym.put(Symbol::Error, "<error>");
 
   // Register punctuation
-  sym.put(sym_lparen, "(");
-  sym.put(sym_rparen, ")");
-  sym.put(sym_backslash, "\\");
-  sym.put(sym_dot, ".");
+  sym.put(Symbol::Lparen, "(");
+  sym.put(Symbol::Rparen, ")");
+  sym.put(Symbol::Backslash, "\\");
+  sym.put(Symbol::Dot, ".");
+  sym.put(Symbol::Semicolon, ";");
+  sym.put(Symbol::Equal, "=");
+
+  // Keywords
+  sym.put(Symbol::Eval, "eval");
+  sym.put(Symbol::Let, "let");
 
 
   // Read the input buffer.
-  lstring buf;
+  String buf;
   while (1) {
-    lchar txt[1024];
+    Char txt[1024];
     cin.read(txt, 1024);
     buf.append(txt, txt + cin.gcount());
     if (!cin)
       break;
   }
 
-  lexer l{&sym, buf};
-
-  /*
-  while (1) {
-    token tok = l();
-    if (!tok.sym)
-      break;
-    else
-      std::cout << tok << '\n';
-  }
-  */
-
-  parser p{l};
+  Lexer l{&sym, buf};
+  Parser p{l};
   p();
 }

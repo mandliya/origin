@@ -6,57 +6,150 @@
 
 using namespace std;
 
-parser::parser(lexer& lex)
+
+// Helper functions
+namespace 
+{
+  // Returns true if the given token indicates the start of a term: a variable,
+  // left paren, or backslash.
+  inline bool
+  starts_term(Token& tok)
+  {
+    return tok.is(Symbol::Identifier) 
+        || tok.is(Symbol::Lparen) 
+        || tok.is(Symbol::Backslash);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Parser
+
+// TODO: Write a match function that tests the current token for some property
+// and a) advances if the property is satisifed, but b) returns a copy of the
+// initial token.
+
+Parser::Parser(Lexer& lex)
   : lex(lex), tok{}
 { }
 
 // Consume the current token, moving to the next.
-void
-parser::consume()
+Token
+Parser::consume()
 {
+  Token tmp{tok};
   tok = lex();
+  return tmp;
 }
+
+// If the current token matches the given symbol kind, then consume the
+// current token, returning a copy of it. If the symbol does not match, return
+// an empty token.
+Token
+Parser::match(Symbol::Kind kind)
+{
+  if (tok.is(kind))
+    return consume();
+  else
+    return {};
+}
+
 
 // The main entry point into the parser. Initialize the current token and
 // parse a term: the basic entry point into an untyped lambda calculus
 // program.
 bool
-parser::operator()()
+Parser::operator()()
 {
-  consume();
-  parse_term();
+  program = parse_program();
+  return program != nullptr;
 }
 
-// Parse a variable expression.
-Variable*
-parser::parse_variable()
+
+// program := nothing | expression
+Term*
+Parser::parse_program()
 {
-  lstring var;
-  if (tok.is_identifier()) {
-    consume();
-    return unit.make_variable(tok.sym);
+  if (tok)
+    return parse_expression();
+  else
+    return nullptr;
+}
+
+// statement := declaration | evaluation
+//
+// Note that the "eval" keyword isn't strictly necessary, but I think I'd need
+// to look ahead to avoid it for a ":=" 
+Statement*
+Parser::parse_statement()
+{
+  if (Evaluation* eval = parse_evaluation())
+    return eval;
+  if (Declaration* decl = parse_declaration())
+    return decl;
+  else
+    throw std::runtime_error("error parsing statement");
+}
+
+Evaluation* 
+Parser::parse_evaluation()
+{
+  if (Token eval = match(Symbol::Eval)) {
+    Term* term = parse_expression();
+    return cxt.make_evaluation(term);
   } else {
     return nullptr;
   }
 }
 
-// Parse an expression of the form:
-//
-//    \ <var> . <term>
-Abstraction*
-parser::parse_abstraction()
+Declaration*
+Parser::parse_declaration()
 {
-  if (tok.is(sym_backslash)) {
-    consume();
-    std::cout << tok << '\n';
+  if (Variable* var = parse_variable()) {
+    if (Token eq = match(Symbol::Equal)) {
+      if (Term* term = parse_expression())
+        return cxt.make_declaration(var, term);
+      else
+        throw std::runtime_error("expecting expression after '='");
+    } else {
+      throw std::runtime_error("expecting '=' after variable");
+    }
+  } else {
+    return nullptr;
+  }
+}
+
+
+// expression := abstraction | application
+Term*
+Parser::parse_expression()
+{
+  if (Term* abs = parse_abstraction())
+    return abs;
+  if (Term* app = parse_application())
+    return app;
+}
+
+// primary := (expression) | variable
+Term*
+Parser::parse_primary()
+{
+  if (tok.is(Symbol::Lparen))
+    return parse_compound();
+  if (tok.is_identifier())
+    return parse_variable();
+  else
+    throw std::runtime_error("expected primary expression");
+}
+
+// abstraction := \variable.expression
+Abstraction*
+Parser::parse_abstraction()
+{
+  if (Token slash = match(Symbol::Backslash)) {
     if (Variable* var = parse_variable()) {
-      // consume();
-      if (tok.is(sym_dot)) {
-        consume();
-        std::cout << tok << '\n';
-        if (Node *term = parse_term()) {
-          // consume();
-          return unit.make_abstraction(var, term);
+      if (Token dot = match(Symbol::Dot)) {
+        if (Term* expr = parse_expression()) {
+          return cxt.make_abstraction(var, expr);
         } else {
           throw std::runtime_error("could not parse abstracted term in abstraction");
         }
@@ -71,80 +164,48 @@ parser::parse_abstraction()
   }
 }
 
-
-// Parse an expression of the form:
+// application := application primary | primary
 //
-//    <term> <term>
-Application*
-parser::parse_application()
+// Note that this production may result in either an Application or a Term.
+Term*
+Parser::parse_application()
 {
-  if (Node* left = parse_term()) {
-    // consume();
-    if (Node* right = parse_term()) {
-      // consume();
-      return unit.make_application(left, right);
-    } else {
-      throw std::runtime_error("could not parse argument to application");
-    }
-  } else {
-    return nullptr;
+  Term* left = parse_primary();
+  while (left) {
+    if (Term* right = parse_primary())
+      left = cxt.make_application(left, right);
   }
-}
-
-// Parse an expression of the form:
-//
-//    ( <term> )
-Node*
-parser::parse_bracketed()
-{
-  if (tok.is(sym_lparen)) {
-    consume();
-    if (Node* expr = parse_term()) {
-      // consume();
-      if (tok.is(sym_rparen)) {
-        consume();
-        return expr;
-      } else {
-        throw std::runtime_error("expecting ')' in bracketed term");
-      }
-    } else {
-      throw std::runtime_error("could not parse enclosed term");
-    }
-  } else {
-    return nullptr;
-  }
-}
-
-inline bool
-void starts_term(const token& tok)
-{
-  return tok.is(sym_identifier) || tok.is(sym_lparen) || tok.is(sym_backslash);
-}
-
-
-
-// FIXME: Still working on this....
-Node*
-parser::parse_term()
-{
-  // Parse the left argument of an application.
-  Node* left = nullptr;
-  if (left = parse_bracketed())
-    ;
-  else if (left = parse_abstraction())
-    ;
-  else if (left = parse_variable())
-    ;
-  else {
-    throw std::runtime_error("could not parse argument to excpetion");
-  }
-
-
   return left;
-
-  // If the next token is anything that could start a term, then we have
-  // to parse this term as an application.
-  // if (starts_term(tok))
-
 }
 
+
+Term*
+Parser::parse_compound()
+{
+  // FIXME: I think that we've already compared for the lparen by the time
+  // we get to this point. I should have a primitive called "expect" that
+  // asserts the property, and returns the token.
+  if (Token left = match(Symbol::Lparen)) {
+    if (Term* term = parse_expression()) {
+      if (Token right = match(Symbol::Rparen))
+        return term;
+      else
+        throw std::runtime_error("expecting ')' after expression");
+    } else {
+      throw std::runtime_error("expecting expression after ')'");
+    }
+  } else {
+    return nullptr;
+  }
+}
+
+// Parse a variable expression.
+Variable*
+Parser::parse_variable()
+{
+  // FIXME: See comments for parse_compound.
+  if (Token id = match(Symbol::Identifier))
+    return cxt.make_variable(tok.sym);
+  else
+    return nullptr;
+}
