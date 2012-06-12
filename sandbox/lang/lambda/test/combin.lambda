@@ -1,0 +1,5 @@
+
+I = \x. x;
+S = \x. \y. \z. x z (y z);
+K = \x. \y. x;
+Y = \f. (\x.f (x x)) (\x. f (x x));

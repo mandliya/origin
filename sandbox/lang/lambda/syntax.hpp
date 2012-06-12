@@ -2,11 +2,13 @@
 #ifndef SYNTAX_HPP
 #define SYNTAX_HPP
 
+#include <vector>
 #include <list>
 
 #include "location.hpp"
 #include "symbol.hpp"
 
+struct Visitor;
 
 // There are several layers of the AST design:
 //
@@ -48,6 +50,8 @@ struct Node
   // Returns the a range of child node pointers.  
   virtual Node* const* begin() const = 0;
   virtual Node* const* end() const = 0;
+
+  virtual void accept(Visitor& vis) = 0;
 
   Kind kind;
   Location loc;
@@ -131,6 +135,33 @@ template <typename Base>
   };
 
 
+// A multi-node contains a sequence of nodes of the specified type.
+template <typename Base, typename Node>
+  struct Multi_node : Base
+  {
+    using Node_list = std::vector<Node*>;
+
+    template <typename I>
+      Multi_node(I first, I last)
+        : Base(), nodes{first, last}
+      { }
+
+    template <typename R>
+      Multi_node(const R& range)
+        : Multi_node(std::begin(range), std::end(range))
+      { }
+
+    Multi_node(std::initializer_list<Node*> list)
+      : Multi_node(list.begin(), list.end())
+    { }
+
+    virtual Node* const* begin() const { return nodes.data(); }
+    virtual Node* const* end() const { return nodes.data() + nodes.size(); }
+
+    Node_list nodes;
+  };
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Language interface
@@ -153,6 +184,8 @@ struct Variable : Term
 {
   Variable() : Term(Variable_node) { }
 
+  virtual void accept(Visitor& vis);
+
   virtual const String& name() const = 0;
 };
 
@@ -164,11 +197,17 @@ struct Application : Term
 
   virtual Term* func() const = 0;
   virtual Term* arg() const = 0;
+
+  virtual void accept(Visitor& vis);
 };
 
+
+// An abstraction (lambda experssion)...
 struct Abstraction : Term
 {
   Abstraction() : Term(Abstraction_node) { }
+
+  virtual void accept(Visitor& vis);
 
   virtual Variable* var() const = 0;
   virtual Term* term() const = 0;
@@ -195,6 +234,8 @@ struct Declaration : Statement
 {
   Declaration() : Statement(Declaration_node) { }
 
+  virtual void accept(Visitor& vis);
+
   virtual Variable* var() const = 0;
   virtual Term* def() const = 0;
 };
@@ -203,6 +244,8 @@ struct Declaration : Statement
 struct Evaluation : Statement
 {
   Evaluation() : Statement(Evaluation_node) { }
+
+  virtual void accept(Visitor& vis);
 
   virtual Term* term() const = 0;
 };
@@ -279,39 +322,24 @@ struct Evaluation_impl : Unary_node<Evaluation>
   virtual Term* term() const { return as<Term>(first()); }
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////
-// Factories and context
 
 
-// The node factory is responsible for the allocation of all nodes. Each 
-// different kind of node is maintained in a list of nodes.
-struct term_factory
+struct Visitor
 {
-  Variable_impl* make_variable(Symbol* sym);
-  Abstraction_impl* make_abstraction(Variable* var, Term* term);
-  Application_impl* make_application(Term* left, Term* right);
+  virtual void visit_node(Node* node);
 
-  std::list<Variable_impl> var;
-  std::list<Abstraction_impl> abs;
-  std::list<Application_impl> app;
-};
+  virtual void visit_statement(Statement* stmt);
+  virtual void visit_declaration(Declaration* decl) ;
+  virtual void visit_evaluation(Evaluation* eval);
 
-struct stmt_factory
-{
-  Declaration_impl* make_declaration(Variable* var, Term* def);
-  Evaluation_impl* make_evaluation(Term* term);
-
-  std::list<Declaration_impl> decls;
-  std::list<Evaluation_impl> evals;
+  virtual void visit_term(Term* term);
+  virtual void visit_variable(Variable* var);
+  virtual void visit_abstraction(Abstraction* abs);
+  virtual void visit_application(Application* app);
 };
 
 
-// The Context class provides the primary interface for constructing and
-// maintianing an AST. It provides factories for allocating nodes and accessing
-// language intrinsics.
-class Context : public term_factory
-              , public stmt_factory
-{
-};
 
 #endif

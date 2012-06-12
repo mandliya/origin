@@ -7,8 +7,9 @@
 #include "lexer.hpp"
 #include "parser.hpp"
 
-using namespace std;
+#include "sexpr.hpp"
 
+using namespace std;
 
 int main()
 {
@@ -27,11 +28,6 @@ int main()
   sym.put(Symbol::Semicolon, ";");
   sym.put(Symbol::Equal, "=");
 
-  // Keywords
-  sym.put(Symbol::Eval, "eval");
-  sym.put(Symbol::Let, "let");
-
-
   // Read the input buffer.
   String buf;
   while (1) {
@@ -42,7 +38,17 @@ int main()
       break;
   }
 
-  Lexer l{&sym, buf};
-  Parser p{l};
-  p();
+  // Set up program context.
+  Context cxt;
+  
+  // Configure the lexer for the input.
+  Lexer lex{sym, buf};
+
+  // Build a parser for the context.
+  Parser parse{cxt, lex};
+  
+  // Parse and print.
+  parse();
+  for (auto s : cxt.stmts)
+    cout << sexpr(s);
 }

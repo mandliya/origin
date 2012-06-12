@@ -26,11 +26,10 @@ Symbol::name() const
     case Symbol::Backslash: return "backslash";
     case Symbol::Dot: return "dot";
     case Symbol::Semicolon: return "semicolon";
-
-    case Symbol::Eval: return "eval";
-    case Symbol::Let: return "let";
+    case Symbol::Equal: return "equal";
 
     case Symbol::Identifier: return "identifier";
+    default: assert(false);
   }
 }
 

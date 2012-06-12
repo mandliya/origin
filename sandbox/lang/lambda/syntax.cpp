@@ -1,40 +1,100 @@
 
+#include <cassert>
+
 #include "syntax.hpp"
 
 
-template <typename List, typename... Args>
-  auto emplace_node(List& list, Args&&... args) -> decltype(&list.back())
-  {
-    list.emplace_back(std::forward<Args>(args)...);
-    return &list.back();
+void
+Variable::accept(Visitor& vis)
+{
+  vis.visit_variable(this);
+}
+
+void
+Abstraction::accept(Visitor& vis)
+{
+  vis.visit_abstraction(this);
+}
+
+void
+Application::accept(Visitor& vis)
+{
+  vis.visit_application(this);
+}
+
+void
+Declaration::accept(Visitor& vis)
+{
+  vis.visit_declaration(this);
+}
+
+void
+Evaluation::accept(Visitor& vis)
+{
+  vis.visit_evaluation(this);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void
+Visitor::visit_node(Node* node)
+{
+  if (Statement* stmt = as<Statement>(node))
+    visit_statement(stmt);
+  if (Term* term = as<Term>(node))
+    visit_term(term);
+}
+
+
+void
+Visitor::visit_statement(Statement* stmt) 
+{
+  switch (stmt->kind) {
+    case Node::Declaration_node:
+      visit_declaration(as<Declaration>(stmt));
+      break;
+    case Node::Evaluation_node:
+      visit_evaluation(as<Evaluation>(stmt));
+      break;
+    default:
+      assert(false);
   }
-
-Variable_impl*
-term_factory::make_variable(Symbol* sym)
-{
-  return emplace_node(var, sym);
 }
 
-Abstraction_impl*
-term_factory::make_abstraction(Variable* var, Term* term)
+void
+Visitor::visit_declaration(Declaration*)
+{ }
+
+void
+Visitor::visit_evaluation(Evaluation*)
+{ }
+
+void
+Visitor::visit_term(Term* term)
 {
-  return emplace_node(abs, var, term);
+  switch (term->kind) {
+    case Node::Variable_node:
+      visit_variable(as<Variable>(term));
+      break;
+    case Node::Abstraction_node:
+      visit_abstraction(as<Abstraction>(term));
+      break;
+    case Node::Application_node:
+      visit_application(as<Application>(term));
+      break;
+    default:
+      assert(false);
+  }
 }
 
-Application_impl*
-term_factory::make_application(Term* left, Term* right)
-{
-  return emplace_node(app, left, right);
-}
+void
+Visitor::visit_variable(Variable* var)
+{ }
 
-Declaration_impl*
-stmt_factory::make_declaration(Variable* var, Term* def)
-{
-  return emplace_node(decls, var, def);
-}
+void
+Visitor::visit_abstraction(Abstraction* abs)
+{ }
 
-Evaluation_impl*
-stmt_factory::make_evaluation(Term* term)
-{
-  return emplace_node(evals, term);
-}
+void
+Visitor::visit_application(Application* app)
+{ }

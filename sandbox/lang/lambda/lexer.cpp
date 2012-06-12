@@ -1,8 +1,12 @@
 
+#include <iostream>
+
 #include "lexer.hpp"
 
-Lexer::Lexer(symbol_table* t, const String& buf)
-  : table{t}
+using namespace std;
+
+Lexer::Lexer(symbol_table& t, const String& buf)
+  : table(t)
   , first{buf.data()}
   , last{buf.data() + buf.size()}
   , tok{}
@@ -50,8 +54,25 @@ Lexer::operator()()
     }
     }
   }
-
   return tok;
+}
+
+// Return the nth token ahead of the current position. Note tht if n == 0, then
+// this returns the current token, but does not advance the lexer.
+//
+// This is not a particularly efficient lookahead implementataion, although
+// I'm not entirely sure how to make them faster.
+Token
+Lexer::operator()(int n)
+{
+  const Char* pos = first;
+  Token result = tok;
+  while (n != 0 && result) {
+    result = operator()();
+    --n;
+  }
+  first = pos;
+  return result;
 }
 
 // Lexing support
@@ -161,7 +182,7 @@ Lexer::consume_vertical_ws()
 void 
 Lexer::make_eof()
 {
-  tok.sym = table->get(Symbol::Eof);
+  tok.sym = table.get(Symbol::Eof);
 }
 
 // Return a punctuation token.
@@ -172,7 +193,7 @@ void
 Lexer::make_punctuation(Symbol::Kind kind)
 {
   tok.loc = loc;
-  tok.sym = table->get(kind);
+  tok.sym = table.get(kind);
   ++first;
   ++loc.column;
 }
@@ -183,7 +204,7 @@ void
 Lexer::make_identifer(const Char* first, const Char* last)
 {
   tok.loc = loc;
-  tok.sym = table->put(Symbol::Identifier, first, last);
+  tok.sym = table.put(Symbol::Identifier, first, last);
   first += tok.spelling().size();
   loc.column += tok.spelling().size();
 }
@@ -192,7 +213,7 @@ void
 Lexer::make_error()
 {
   tok.loc = loc;
-  tok.sym = table->get(first, first + 1);
+  tok.sym = table.get(first, first + 1);
   ++first;
   ++loc.column;
 }

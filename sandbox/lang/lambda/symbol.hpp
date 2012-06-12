@@ -44,7 +44,6 @@ public:
     // Miscellaneous
     Eof,          // End of file
     Error,        // Not a valid symbol
-    Comment,      // A comment
 
     // Punctuation and operators
     Lparen,       // )
@@ -53,10 +52,6 @@ public:
     Dot,          // .
     Semicolon,    // ;
     Equal,        // =
-
-    // Keywords
-    Eval,         // eval
-    Let,          // let (unused for now)
 
     // Symbol classes
     Identifier    // [a-zA-Z_][a-zA-Z0-9_]

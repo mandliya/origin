@@ -17,4 +17,6 @@ add_executable(lambda
                symbol_table.cpp
                lexer.cpp
                parser.cpp
-               syntax.cpp)
+               syntax.cpp
+               context.cpp
+               sexpr.cpp)

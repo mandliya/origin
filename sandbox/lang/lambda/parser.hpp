@@ -4,7 +4,7 @@
 
 #include "lexer.hpp"
 #include "syntax.hpp"
-
+#include "context.hpp"
 
 // Parser
 //
@@ -24,7 +24,7 @@
 //
 //    eval-declaration := variable = expression;
 //
-//    eval-statement := eval expression;
+//    eval-statement := expression;
 //
 // A declaration binds the variable name in the global context. In those
 // respects, it could be thought of as a top-level let expression. An evaluation
@@ -58,7 +58,7 @@
 class Parser
 {
 public:
-  Parser(Lexer& lex);
+  Parser(Context& cxt, Lexer& lex);
 
   bool operator()();
 
@@ -67,7 +67,7 @@ public:
   Token match(Symbol::Kind kind);
 
   // Grammar
-  Term* parse_program();
+  void parse_program();
 
   // Statements
   Statement* parse_statement();
@@ -82,12 +82,12 @@ public:
   Abstraction* parse_abstraction();
   Variable* parse_variable();
 
+  Context& context() { return cxt; }
+
 private:
   Lexer& lex;
+  Context& cxt;
   Token tok;
-
-  Context cxt;
-  Node* program;
 };
 
 #endif

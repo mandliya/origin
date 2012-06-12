@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "parser.hpp"
+#include "sexpr.hpp"
 
 using namespace std;
 
@@ -28,8 +29,8 @@ namespace
 // and a) advances if the property is satisifed, but b) returns a copy of the
 // initial token.
 
-Parser::Parser(Lexer& lex)
-  : lex(lex), tok{}
+Parser::Parser(Context& cxt, Lexer& lex)
+  : lex(lex), cxt(cxt), tok{}
 { }
 
 // Consume the current token, moving to the next.
@@ -60,42 +61,51 @@ Parser::match(Symbol::Kind kind)
 bool
 Parser::operator()()
 {
-  program = parse_program();
-  return program != nullptr;
+  // Move to the first token.
+  consume();
+
+  // Try to parse a program.
+  try {
+    parse_program();
+  } catch(runtime_error& err) {
+    std::cout << "error: " << err.what() << '\n';
+    return false;
+  }
+  return true;
 }
 
 
 // program := nothing | expression
-Term*
+void
 Parser::parse_program()
 {
-  if (tok)
-    return parse_expression();
-  else
-    return nullptr;
+  while (tok) {
+    if (Statement* stmt = parse_statement())
+      cxt.add_statement(stmt);
+    else
+      break;
+  }
 }
 
 // statement := declaration | evaluation
-//
-// Note that the "eval" keyword isn't strictly necessary, but I think I'd need
-// to look ahead to avoid it for a ":=" 
 Statement*
 Parser::parse_statement()
 {
-  if (Evaluation* eval = parse_evaluation())
-    return eval;
-  if (Declaration* decl = parse_declaration())
-    return decl;
+  Token la = lex(1);
+  if (la.is(Symbol::Equal))
+    return parse_declaration();
   else
-    throw std::runtime_error("error parsing statement");
+    return parse_evaluation();
 }
 
 Evaluation* 
 Parser::parse_evaluation()
 {
-  if (Token eval = match(Symbol::Eval)) {
-    Term* term = parse_expression();
-    return cxt.make_evaluation(term);
+  if (Term* term = parse_expression()) {
+    if (Token semi = match(Symbol::Semicolon))
+      return cxt.make_evaluation(term);
+    else
+      throw std::runtime_error("expecting ';' after expression");
   } else {
     return nullptr;
   }
@@ -106,10 +116,14 @@ Parser::parse_declaration()
 {
   if (Variable* var = parse_variable()) {
     if (Token eq = match(Symbol::Equal)) {
-      if (Term* term = parse_expression())
-        return cxt.make_declaration(var, term);
-      else
+      if (Term* term = parse_expression()) {
+        if (Token semi = match(Symbol::Semicolon))
+          return cxt.make_declaration(var, term);
+        else
+          throw std::runtime_error("expecting ';' after expression");
+      } else {
         throw std::runtime_error("expecting expression after '='");
+      }
     } else {
       throw std::runtime_error("expecting '=' after variable");
     }
@@ -138,7 +152,7 @@ Parser::parse_primary()
   if (tok.is_identifier())
     return parse_variable();
   else
-    throw std::runtime_error("expected primary expression");
+    return nullptr;
 }
 
 // abstraction := \variable.expression
@@ -171,9 +185,11 @@ Term*
 Parser::parse_application()
 {
   Term* left = parse_primary();
-  while (left) {
+  while (1) {
     if (Term* right = parse_primary())
       left = cxt.make_application(left, right);
+    else
+      break;
   }
   return left;
 }
@@ -205,7 +221,7 @@ Parser::parse_variable()
 {
   // FIXME: See comments for parse_compound.
   if (Token id = match(Symbol::Identifier))
-    return cxt.make_variable(tok.sym);
+    return cxt.make_variable(id.sym);
   else
     return nullptr;
 }

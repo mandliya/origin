@@ -24,12 +24,14 @@
 class Lexer
 {
 public:
-  Lexer(symbol_table* t, const String& buf);
+  Lexer(symbol_table& t, const String& buf);
 
 
   // Lex the next token out of the buffer, returning it.
   Token operator()();
 
+  // Return the nth lookahead token.
+  Token operator()(int n);
 
   // Observers
 
@@ -74,7 +76,7 @@ public:
   void make_error();
 
 
-  symbol_table* table;  // The primary symbol table
+  symbol_table& table;  // The primary symbol table
   const Char* first;    // An iterator to the first input character
   const Char* last;     // An iterator past the last input character
 
