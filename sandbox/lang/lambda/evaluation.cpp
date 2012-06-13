@@ -6,6 +6,13 @@
 #include "sexpr.hpp"
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Substitution
+
+
+// Substitute the term subst for var in the given term.
+Term* substitute(Context& cxt, Variable* x, Term* s, Term* t);
+
 
 // Implements the substitution rule:
 //
@@ -15,55 +22,91 @@
 // in which the substitution occurs. The specific rules are:
 //
 //    [x -> s]x        = s
-//    [x -> s]y        = y                       if y != x
-//    [x -> s](\y. t1) = { \y.t1                 if y = x
-//                         \y. [x->s]t1          if y != x and y not in FV(s)
+//    [x -> s]y        = y    if y != x
+//    [x -> s](\y. t)  = {
+//      \y. t                 if y = x
+//      \y. [x->s]t           if y != x and y not in FV(s)
+//    }
 //    [x -> s](t1 t2)  = ([x -> s]t1 [x ->s]t2)
 //
 // Note that 's' is the substituted term.
 struct Subst_visitor : Visitor
 {
-  Subst_visitor(Variable* x, Term* s)
-    : var{x}, subst{s}, result{nullptr}
+  Subst_visitor(Context& cxt, Variable* x, Term* s)
+    : cxt(cxt), x{x}, s{s}, result{nullptr}
   { }
 
-  Term* operator()(Term* term);
-
   void visit_variable(Variable* var);
+  void visit_abstraction(Abstraction* abs);
+  void visit_application(Application* app);
 
-  Variable* var;
-  Term* subst;
+  Context& cxt;
+  Variable* x;
+  Term* s;
   Term* result;
 };
-
-Term* 
-Subst_visitor::operator()(Term* term)
-{
-  visit_term(term);
-  return result;
-}
 
 
 // Implements the subsituttion:
 //
-//    [x -> s]x        = s
-//    [x -> s]y        = y    if y != x
+//    [x -> s]x = s
+//    [x -> s]y = y    if y != x
 //
 // We preserve the term if the variable does not match.
 void 
-Subst_visitor::visit_variable(Variable* term)
+Subst_visitor::visit_variable(Variable* y)
 {
-  if (term->symbol() == var->symbol())
-    result = subst;
+  if (y->symbol() == x->symbol())
+    result = s;
   else
-    result = term;
+    result = y;
 }
 
-// Substitute the term subst for var in the given term.
-Term* substitute(Variable* var, Term* subst, Term* term)
+// Substitute var for the term in abs, but only if the introduced variable
+// does not have the same name as the variable x being replaced.
+//
+//    [x -> s](\y. t)  = {
+//      \y. t                 if y = x
+//      \y. [x->s]t           if y != x and y not in FV(s)
+//    }
+void
+Subst_visitor::visit_abstraction(Abstraction* abs)
 {
-  Subst_visitor vis(var, subst);
-  return vis(term);
+  Variable* y = abs->var();
+  Term* t = abs->term();
+
+  // FIXME: This does not actually check that y is not in the set of free 
+  // variables of s.
+  if (y->symbol() == x->symbol())
+    result = abs;
+  else
+    result = cxt.make_abstraction(y, substitute(cxt, x, s, t));
+}
+
+// Substitute s for x in the terms t1 and t2.
+//
+//    [x -> s](t1 t2)  = ([x -> s]t1 [x ->s]t2)
+//
+void
+Subst_visitor::visit_application(Application* app)
+{
+  Term* t1 = app->func();
+  Term* t2 = app->arg();
+  result = cxt.make_application(substitute(cxt, x, s, t1), 
+                                substitute(cxt, x, s, t2));
+}
+
+// Substitute the term subst for var in the given term. That is, implement
+// the transfomration:
+//
+//    [x -> s]t
+//
+// With t being an arbitrary term.
+Term* substitute(Context& cxt, Variable* x, Term* s, Term* t)
+{
+  Subst_visitor v{cxt, x, s};
+  t->accept(v);
+  return v.result;
 }
 
 
@@ -153,7 +196,7 @@ template <typename Reduce>
     Term* a = app->arg();
 
     if (Abstraction* abs = as<Abstraction>(f)) {
-      Term* subst = substitute(abs->var(), a, abs->term());
+      Term* subst = substitute(cxt, abs->var(), a, abs->term());
       return reduce(cxt, subst);
     } else {
       return app;
