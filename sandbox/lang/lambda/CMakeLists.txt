@@ -19,4 +19,5 @@ add_executable(lambda
                parser.cpp
                syntax.cpp
                context.cpp
+               evaluation.cpp
                sexpr.cpp)

@@ -34,17 +34,23 @@ struct Node
 {
   enum Kind
   {
+    // Misc
+    Program_node,
+
     // Terms
     Variable_node,
     Abstraction_node,
     Application_node,
 
     // Statements
-    Declaration_node,
+    Definition_node,
     Evaluation_node,
   };
 
-  Node(Kind k) : kind{k} { }
+  Node(Kind k) 
+    : kind{k}, loc{}
+  { }
+  
   virtual ~Node() { }
 
   // Returns the a range of child node pointers.  
@@ -60,17 +66,47 @@ struct Node
 
 // Returns a pointer type the node U, typed as the node T.
 template <typename T, typename U>
-  inline T* as(U* node)
+  inline T* 
+  as(U* node)
   {
     return dynamic_cast<T*>(node);
   }
 
 template <typename T, typename U>
-  inline const T* as(const U* node)
+  inline const T* 
+  as(const U* node)
   {
     return dynamic_cast<const T*>(node);
   }
 
+// Returns true if node has dynamic type T.
+template <typename T, typename U>
+  inline bool 
+  is(const U* node)
+  {
+    return as<T>(node) != nullptr;
+  }
+
+
+// The Node_range class is a helper class that adapts a range node pointers
+// into iterators of a derived node class.
+//
+// T must be derived from Node.
+template <typename T>
+  struct Node_range
+  {
+    using iterator = T* const*;
+
+    Node_range(Node* const* f, Node* const* l)
+      : first{f}, last{l}
+    { }
+
+    iterator begin() const { return reinterpret_cast<iterator>(first); }
+    iterator end() const { return reinterpret_cast<iterator>(last); }
+
+    Node* const* first;
+    Node* const* last;
+  };
 
 
 // The nullary node defines the base interface for all nullary nodes. 
@@ -135,11 +171,16 @@ template <typename Base>
   };
 
 
+
 // A multi-node contains a sequence of nodes of the specified type.
-template <typename Base, typename Node>
+template <typename Base, typename T>
   struct Multi_node : Base
   {
-    using Node_list = std::vector<Node*>;
+    using Node_list = std::vector<T*>;
+
+    Multi_node() 
+      : Base(), nodes{}
+    { }
 
     template <typename I>
       Multi_node(I first, I last)
@@ -151,12 +192,24 @@ template <typename Base, typename Node>
         : Multi_node(std::begin(range), std::end(range))
       { }
 
-    Multi_node(std::initializer_list<Node*> list)
+    Multi_node(std::initializer_list<T*> list)
       : Multi_node(list.begin(), list.end())
     { }
 
-    virtual Node* const* begin() const { return nodes.data(); }
-    virtual Node* const* end() const { return nodes.data() + nodes.size(); }
+
+    // Add a node to the list.
+    void add_node(T* node) { nodes.push_back(node); }
+
+    // Begin and end.
+    virtual Node* const* begin() const 
+    { 
+      return reinterpret_cast<Node* const*>(nodes.data());
+    }
+    
+    virtual Node* const* end() const 
+    { 
+      return reinterpret_cast<Node* const*>(nodes.data() + nodes.size()); 
+    }
 
     Node_list nodes;
   };
@@ -166,14 +219,27 @@ template <typename Base, typename Node>
 ////////////////////////////////////////////////////////////////////////////////
 // Language interface
 
+// The program node represents a lambda calculus program.
+struct Program;
+
+// There are only a few kinds of statements in the language.
+struct Statement;
+struct Definition;
+struct Evaluation;
+
+// Lambda calculus has a very limited set of expressions.
+struct Term;
+struct Variable;
+struct Application;
+struct Abstraction;
+
+
 // Terms
 // There are three terms in the untyped lambda calculus: variables, 
 // abstractions, and applications.
-//
-// FIXME: The abstract class could be called Expression, not Term.
 
 
-// All nodes in the language are terms.
+// All expressions in the language are terms.
 struct Term : Node 
 {
   Term(Kind kind) : Node(kind) { }
@@ -186,6 +252,7 @@ struct Variable : Term
 
   virtual void accept(Visitor& vis);
 
+  virtual Symbol* symbol() const = 0;
   virtual const String& name() const = 0;
 };
 
@@ -230,9 +297,9 @@ struct Statement : Node
 // A declaration associates a variable with a given term in the program.
 //
 // This might more appropriately be called a Definition.
-struct Declaration : Statement
+struct Definition : Statement
 {
-  Declaration() : Statement(Declaration_node) { }
+  Definition() : Statement(Definition_node) { }
 
   virtual void accept(Visitor& vis);
 
@@ -248,6 +315,21 @@ struct Evaluation : Statement
   virtual void accept(Visitor& vis);
 
   virtual Term* term() const = 0;
+};
+
+
+// Miscellaneous
+
+// The program encapsulates a sequence of statements.
+struct Program : Node
+{
+  Program() : Node(Program_node) { }
+
+  virtual void accept(Visitor& vis);
+
+  virtual void add_statement(Statement* stmt) = 0;
+
+  virtual Node_range<Statement> statements() const = 0;
 };
 
 
@@ -271,6 +353,7 @@ struct Variable_impl : Nullary_node<Variable>
     : Nullary_node<Variable>() , sym{sym}
   { }
 
+  virtual Symbol* symbol() const { return sym; }
   virtual const String& name() const { return sym->spelling; }
 
   Symbol* sym;
@@ -301,11 +384,11 @@ struct Application_impl : Binary_node<Application>
 };
 
 
-// Declaration
-struct Declaration_impl : Binary_node<Declaration>
+// Definition
+struct Definition_impl : Binary_node<Definition>
 {
-  Declaration_impl(Variable* var, Term* term)
-    : Binary_node<Declaration>(var, term)
+  Definition_impl(Variable* var, Term* term)
+    : Binary_node<Definition>(var, term)
   { }
 
   virtual Variable* var() const { return as<Variable>(first()); }
@@ -322,16 +405,33 @@ struct Evaluation_impl : Unary_node<Evaluation>
   virtual Term* term() const { return as<Term>(first()); }
 };
 
+// Program
+struct Program_impl : Multi_node<Program, Statement>
+{
+  Program_impl()
+    : Multi_node<Program, Statement>()
+  { }
+
+  virtual void add_statement(Statement* stmt) { add_node(stmt); }
+
+  virtual Node_range<Statement> statements() const { return {begin(), end()}; }
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////
+// Visitor
 
-
+// The visitor class defines the abstract interface for visiting an AST.
+//
+// TODO: This is only partially thought out at best, and needs serious work.
 struct Visitor
 {
   virtual void visit_node(Node* node);
 
+  virtual void visit_program(Program* prog);
+
   virtual void visit_statement(Statement* stmt);
-  virtual void visit_declaration(Declaration* decl) ;
+  virtual void visit_definition(Definition* decl) ;
   virtual void visit_evaluation(Evaluation* eval);
 
   virtual void visit_term(Term* term);

@@ -8,20 +8,6 @@
 using namespace std;
 
 
-// Helper functions
-namespace 
-{
-  // Returns true if the given token indicates the start of a term: a variable,
-  // left paren, or backslash.
-  inline bool
-  starts_term(Token& tok)
-  {
-    return tok.is(Symbol::Identifier) 
-        || tok.is(Symbol::Lparen) 
-        || tok.is(Symbol::Backslash);
-  }
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Parser
 
@@ -81,7 +67,7 @@ Parser::parse_program()
 {
   while (tok) {
     if (Statement* stmt = parse_statement())
-      cxt.add_statement(stmt);
+      cxt.program()->add_statement(stmt);
     else
       break;
   }
@@ -93,7 +79,7 @@ Parser::parse_statement()
 {
   Token la = lex(1);
   if (la.is(Symbol::Equal))
-    return parse_declaration();
+    return parse_definition();
   else
     return parse_evaluation();
 }
@@ -111,16 +97,25 @@ Parser::parse_evaluation()
   }
 }
 
-Declaration*
-Parser::parse_declaration()
+Definition*
+Parser::parse_definition()
 {
+  // Make sure we don't re-define terms.
+  if (Definition* def = cxt.find_term(tok.sym)) {
+    // FIXME: Emit the location of the last definition.
+    throw runtime_error("symbol '" + tok.spelling() + "'' already defined");
+  }
+
   if (Variable* var = parse_variable()) {
     if (Token eq = match(Symbol::Equal)) {
       if (Term* term = parse_expression()) {
-        if (Token semi = match(Symbol::Semicolon))
-          return cxt.make_declaration(var, term);
-        else
+        if (Token semi = match(Symbol::Semicolon)) {
+          Definition* def = cxt.make_definition(var, term);
+          cxt.define_term(def);
+          return def;
+        } else {
           throw std::runtime_error("expecting ';' after expression");
+        }
       } else {
         throw std::runtime_error("expecting expression after '='");
       }
@@ -148,7 +143,7 @@ Term*
 Parser::parse_primary()
 {
   if (tok.is(Symbol::Lparen))
-    return parse_compound();
+    return parse_nested();
   if (tok.is_identifier())
     return parse_variable();
   else
@@ -196,7 +191,7 @@ Parser::parse_application()
 
 
 Term*
-Parser::parse_compound()
+Parser::parse_nested()
 {
   // FIXME: I think that we've already compared for the lparen by the time
   // we get to this point. I should have a primitive called "expect" that

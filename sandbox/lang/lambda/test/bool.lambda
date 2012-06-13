@@ -2,10 +2,9 @@ tru = \t. \f. t;
 fls = \t. \f. f;
 
 test = \l. \m. \n. l m n;
-and  = \m. \n. m (n tru fls) fls
-or   = \m. \n. m tru (n tru fls)
-not  = \m. m fls tru
-
+and  = \m. \n. m (n tru fls) fls;
+or   = \m. \n. m tru (n tru fls);
+not  = \m. m fls tru;
 
 
 test tru v w;

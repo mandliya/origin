@@ -10,21 +10,21 @@ Sexpr_printer::Sexpr_printer(ostream& os)
 { }
 
 void 
-Sexpr_printer::visit_declaration(Declaration* decl)
+Sexpr_printer::visit_definition(Definition* decl)
 {
-  os << '(' << "decl" << ' ';
+  os << '(' << "def" << ' ';
   visit_variable(decl->var());
   os << ' ';
   visit_term(decl->def());
-  os << ')' << '\n';
+  os << ')';
 }
 
 void 
 Sexpr_printer::visit_evaluation(Evaluation* eval)
 {
-  os << '(' << "eval" << ' ';
+  os << '(';
   visit_term(eval->term());
-  os << ')' << '\n';
+  os << ')';
 }
 
 void 

@@ -26,8 +26,8 @@ term_factory::make_application(Term* left, Term* right)
   return emplace_node(app, left, right);
 }
 
-Declaration_impl*
-stmt_factory::make_declaration(Variable* var, Term* def)
+Definition_impl*
+stmt_factory::make_definition(Variable* var, Term* def)
 {
   return emplace_node(decls, var, def);
 }
@@ -38,3 +38,17 @@ stmt_factory::make_evaluation(Term* term)
   return emplace_node(evals, term);
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+
+Definition*
+Context::find_term(Symbol* sym) const
+{
+  return map.find(sym);
+}
+
+void
+Context::define_term(Definition* def)
+{
+  map.define(def->var()->symbol(), def);
+}

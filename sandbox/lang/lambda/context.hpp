@@ -5,6 +5,7 @@
 #include <list>
 
 #include "syntax.hpp"
+#include "identifier_table.hpp"
 
 // The node factory is responsible for the allocation of all nodes. Each 
 // different kind of node is maintained in a list of nodes.
@@ -19,12 +20,13 @@ struct term_factory
   std::list<Application_impl> app;
 };
 
+// The stmt factory provides an interface for accessing....
 struct stmt_factory
 {
-  Declaration_impl* make_declaration(Variable* var, Term* def);
+  Definition_impl* make_definition(Variable* var, Term* def);
   Evaluation_impl* make_evaluation(Term* term);
 
-  std::list<Declaration_impl> decls;
+  std::list<Definition_impl> decls;
   std::list<Evaluation_impl> evals;
 };
 
@@ -32,19 +34,25 @@ struct stmt_factory
 // The Context class provides the primary interface for constructing and
 // maintianing an AST. It provides factories for allocating nodes and accessing
 // language intrinsics.
-//
-// FIXME: Currently, the context owns the list of statements. This is probably
-// not correct; there should be a Program multi-node that owns the list of
 class Context : public term_factory
               , public stmt_factory
 {
+  using Definition_map = identifier_table<Definition>;
 public:
-  using Statement_list = std::list<Statement*>;
+  // Returns the program embodied in the context.
+  Program*       program()       { return &prog; }
+  const Program* program() const { return &prog; }
 
-  // Add a statement.
-  void add_statement(Statement* s) { stmts.push_back(s); }
 
-  Statement_list stmts;
+  // Returns the definition associated with the symbol, or none.
+  Definition* find_term(Symbol* sym) const;
+
+  // Register the definition with its defining symbol..
+  void define_term(Definition* def);
+
+private:
+  Program_impl prog;
+  Definition_map map;
 };
 
 #endif

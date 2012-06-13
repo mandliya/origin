@@ -6,7 +6,7 @@
 #include "symbol.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
-
+#include "evaluation.hpp"
 #include "sexpr.hpp"
 
 using namespace std;
@@ -41,6 +41,7 @@ int main()
   // Set up program context.
   Context cxt;
   
+
   // Configure the lexer for the input.
   Lexer lex{sym, buf};
 
@@ -49,6 +50,22 @@ int main()
   
   // Parse and print.
   parse();
-  for (auto s : cxt.stmts)
-    cout << sexpr(s);
+
+  Program* prog = cxt.program();
+
+  for (auto s : prog->statements()) {
+    if(Evaluation* eval = as<Evaluation>(s)) {
+      Term* term = eval->term();
+      
+      // Try a bunch of different strategies
+      Term* bn = call_by_name(cxt, term);
+      Term* bv = call_by_value(cxt, term);
+      Term* no = reduce_normal_order(cxt, term);
+      
+      cout << sexpr(term) << '\n';
+      cout << "=bn=> " << sexpr(bn) << '\n';
+      cout << "=bv=> " << sexpr(bv) << '\n';
+      cout << "=no=> " << sexpr(bv) << '\n';
+    }
+  }
 }

@@ -2,6 +2,8 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
+#include <stack>
+
 #include "lexer.hpp"
 #include "syntax.hpp"
 #include "context.hpp"
@@ -71,12 +73,12 @@ public:
 
   // Statements
   Statement* parse_statement();
-  Declaration* parse_declaration();
+  Definition* parse_definition();
   Evaluation* parse_evaluation();
 
   // Expression
   Term* parse_expression();
-  Term* parse_compound();
+  Term* parse_nested();
   Term* parse_primary();
   Term* parse_application();
   Abstraction* parse_abstraction();

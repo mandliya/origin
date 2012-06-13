@@ -23,9 +23,9 @@ Application::accept(Visitor& vis)
 }
 
 void
-Declaration::accept(Visitor& vis)
+Definition::accept(Visitor& vis)
 {
-  vis.visit_declaration(this);
+  vis.visit_definition(this);
 }
 
 void
@@ -33,6 +33,13 @@ Evaluation::accept(Visitor& vis)
 {
   vis.visit_evaluation(this);
 }
+
+void
+Program::accept(Visitor& vis)
+{
+  vis.visit_program(this);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -43,15 +50,20 @@ Visitor::visit_node(Node* node)
     visit_statement(stmt);
   if (Term* term = as<Term>(node))
     visit_term(term);
+  if (Program* prog = as<Program>(node))
+    visit_program(prog);
 }
 
+void
+Visitor::visit_program(Program* prog)
+{ }
 
 void
 Visitor::visit_statement(Statement* stmt) 
 {
   switch (stmt->kind) {
-    case Node::Declaration_node:
-      visit_declaration(as<Declaration>(stmt));
+    case Node::Definition_node:
+      visit_definition(as<Definition>(stmt));
       break;
     case Node::Evaluation_node:
       visit_evaluation(as<Evaluation>(stmt));
@@ -62,7 +74,7 @@ Visitor::visit_statement(Statement* stmt)
 }
 
 void
-Visitor::visit_declaration(Declaration*)
+Visitor::visit_definition(Definition*)
 { }
 
 void
