@@ -73,14 +73,16 @@ public:
 
   // Statements
   Statement* parse_statement();
-  Definition* parse_definition();
+  Definition* parse_definition(Token id);
   Evaluation* parse_evaluation();
+  Evaluation* parse_evaluation(Token id);
 
   // Expression
   Term* parse_expression();
   Term* parse_nested();
   Term* parse_primary();
   Term* parse_application();
+  Term* parse_application(Term* left);
   Abstraction* parse_abstraction();
   Variable* parse_variable();
 

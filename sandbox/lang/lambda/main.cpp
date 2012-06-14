@@ -62,10 +62,10 @@ int main()
       Term* bv = call_by_value(cxt, term);
       Term* no = reduce_normal_order(cxt, term);
       
-      cout << sexpr(term) << '\n';
-      cout << "=bn=> " << sexpr(bn) << '\n';
-      cout << "=bv=> " << sexpr(bv) << '\n';
-      cout << "=no=> " << sexpr(bv) << '\n';
+      cout << "init: " << sexpr(term) << '\n';
+      cout << "bn ==> " << sexpr(bn) << '\n';
+      cout << "bv ==> " << sexpr(bv) << '\n';
+      cout << "no ==> " << sexpr(no) << '\n';
     }
   }
 }

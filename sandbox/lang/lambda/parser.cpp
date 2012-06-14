@@ -77,11 +77,23 @@ Parser::parse_program()
 Statement*
 Parser::parse_statement()
 {
+  if (tok.is(Symbol::Identifier)) {
+    Token id = consume();
+    if (tok.is(Symbol::Equal))
+      return parse_definition(id);
+    else
+      return parse_evaluation(id);
+  } else {
+    return parse_evaluation();
+  }
+
+  /*
   Token la = lex(1);
   if (la.is(Symbol::Equal))
     return parse_definition();
   else
     return parse_evaluation();
+  */
 }
 
 Evaluation* 
@@ -97,34 +109,45 @@ Parser::parse_evaluation()
   }
 }
 
+// Parse an evaluation statement that starts with the given id. This means
+// we could either be parsing a variable or an application.
+Evaluation* 
+Parser::parse_evaluation(Token id)
+{
+  Term* left = cxt.make_variable(id.sym);
+  Term* term = parse_application(left);
+  return cxt.make_evaluation(term);
+}
+
+// Try to parse a definition.
 Definition*
-Parser::parse_definition()
+Parser::parse_definition(Token id)
 {
   // Make sure we don't re-define terms.
-  if (Definition* def = cxt.find_term(tok.sym)) {
+  if (Definition* def = cxt.find_term(id.sym)) {
     // FIXME: Emit the location of the last definition.
     throw runtime_error("symbol '" + tok.spelling() + "'' already defined");
   }
 
-  if (Variable* var = parse_variable()) {
-    if (Token eq = match(Symbol::Equal)) {
-      if (Term* term = parse_expression()) {
-        if (Token semi = match(Symbol::Semicolon)) {
-          Definition* def = cxt.make_definition(var, term);
-          cxt.define_term(def);
-          return def;
-        } else {
-          throw std::runtime_error("expecting ';' after expression");
-        }
+  Variable* var = cxt.make_variable(id.sym);
+  if (Token eq = match(Symbol::Equal)) {
+    if (Term* term = parse_expression()) {
+      if (Token semi = match(Symbol::Semicolon)) {
+        Definition* def = cxt.make_definition(var, term);
+        cxt.define_term(def);
+        return def;
       } else {
-        throw std::runtime_error("expecting expression after '='");
+        throw std::runtime_error("expecting ';' after expression");
       }
     } else {
-      throw std::runtime_error("expecting '=' after variable");
+      throw std::runtime_error("expecting expression after '='");
     }
   } else {
-    return nullptr;
+    throw std::runtime_error("expecting '=' after variable");
   }
+
+  // This should not be a reachable location.
+  throw runtime_error("internal compiler error");
 }
 
 
@@ -180,6 +203,14 @@ Term*
 Parser::parse_application()
 {
   Term* left = parse_primary();
+  return parse_application(left);
+}
+
+// A helper function for parsing the remainder of a sequence of applications.
+// The left-most term has already been parsed.
+Term*
+Parser::parse_application(Term* left)
+{
   while (1) {
     if (Term* right = parse_primary())
       left = cxt.make_application(left, right);
@@ -188,7 +219,6 @@ Parser::parse_application()
   }
   return left;
 }
-
 
 Term*
 Parser::parse_nested()
@@ -220,3 +250,4 @@ Parser::parse_variable()
   else
     return nullptr;
 }
+
