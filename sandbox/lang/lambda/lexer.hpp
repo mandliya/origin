@@ -2,6 +2,8 @@
 #ifndef LEXER_HPP
 #define LEXER_HPP
 
+#include <iterator>
+
 #include "symbol.hpp"
 #include "symbol_table.hpp"
 #include "token.hpp"
@@ -24,14 +26,12 @@
 class Lexer
 {
 public:
-  Lexer(symbol_table& t, const String& buf);
+  Lexer(symbol_table& t, Istream& s);
 
 
   // Lex the next token out of the buffer, returning it.
   Token operator()();
 
-  // Return the nth lookahead token.
-  Token operator()(int n);
 
   // Observers
 
@@ -51,7 +51,9 @@ public:
   bool is_letter() const;
   bool is_digit() const;
   bool is_alphanumeric() const;
-  bool is_identifier();
+  
+  bool match_identifier(String& id);
+  bool match_integer(String& num);
 
 
   // Comments
@@ -72,13 +74,19 @@ public:
 
   void make_eof();
   void make_punctuation(Symbol::Kind kind);
-  void make_identifer(const Char* first, const Char* last);
+  void make_identifer(const String& id);
   void make_error();
 
 
+private:
+  // Stream control
+  Char peek() const { return is.peek(); }
+  Char get() { return is.get(); }
+  void advance() { (void)get(); }
+public:
+
   symbol_table& table;  // The primary symbol table
-  const Char* first;    // An iterator to the first input character
-  const Char* last;     // An iterator past the last input character
+  Istream& is;          // The input source
 
   Token tok;            // The current token
   Location loc;         // The current location

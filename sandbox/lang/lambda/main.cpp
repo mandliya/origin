@@ -28,6 +28,7 @@ int main()
   sym.put(Symbol::Semicolon, ";");
   sym.put(Symbol::Equal, "=");
 
+  /*
   // Read the input buffer.
   String buf;
   while (1) {
@@ -37,13 +38,22 @@ int main()
     if (!cin)
       break;
   }
+  */
 
   // Set up program context.
   Context cxt;
-  
 
   // Configure the lexer for the input.
-  Lexer lex{sym, buf};
+  Lexer lex{sym, cin};
+
+  /*
+  // Dump the token stream.
+  Token tok = lex();
+  while (tok) {
+    cout << tok << '\n';
+    tok = lex();
+  }
+  */
 
   // Build a parser for the context.
   Parser parse{cxt, lex};

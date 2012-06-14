@@ -4,6 +4,17 @@
 
 #include <functional>
 #include <string>
+#include <iosfwd>
+
+////////////////////////////////////////////////////////////////////////////////
+// Strings and Streams
+//
+// The following typedefs lift the underlying definition of strings and 
+// characters from the lexer and parser. The entire system can be changed to
+// support wide strings (or not) by changing the type of String.
+//
+// TODO: Refactor this to a separate header (system.hpp?).
+
 
 // The String type describes the type of underlying character string used
 // throughout the implementation.
@@ -15,7 +26,16 @@ using String = std::string;
 // The type of characters contained by String.
 using Char = typename String::value_type;
 
+// Streams.
+//
+// FIXME: I'm going to have to replace cin/cout with functions that return
+// references to Istream and Ostream.
+using Istream = std::basic_istream<Char>;
+using OStream = std::basic_ostream<Char>;
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Symbols
 
 
 // Symbol
