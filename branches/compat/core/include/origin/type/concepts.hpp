@@ -8,217 +8,353 @@
 #ifndef ORIGIN_CONCEPTS_HPP
 #define ORIGIN_CONCEPTS_HPP
 
-#include <initializer_list>
-
 #include <origin/type/traits.hpp>
-#include <origin/functional.hpp>
 
 namespace origin
 {
-  // Boolean
+  // Implementation
+  namespace concepts 
+  {
+    template <typename T, typename U> is_equality_comparable;
+    template <typename T, typename U> is_weakly_ordered;
+  
+  } // namsepace concepts
+
+  // Declarations
+  template <typename T> constexpr Boolean();
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Boolean                                                    concepts.boolean
   //
-  // Returns true if and only if Convertible<T,  bool>() is true. This
-  // predciate provides a more coherent way of expressing requirements on
-  // the results of expressions.
+  // A type T is Boolean if it can be used in a Boolean context; That is, T
+  // must be convertible to bool. For example:
+  //
+  //    Boolean<int>()    // returns true
+  //    Boolean<void*>()  // returns true
+  //    Boolean<string>() // returns false.
+  // 
+  // This concept is primarily defined as a more concise way of writing
+  // Convertible<T, bool>.
   template <typename T>
     constexpr bool Boolean() { return Convertible<T, bool>(); }
-    
-    
 
-  // Equality comparable (concept)
-  // The equality comparable concept defines the syntax and semantics of
-  // comparing for value equality.
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Equality                                                        concepts.eq
   //
-  // Note that when parameterized over two type arguments, the requirements of
-  // the concept are different.
-  template <typename T, typename U>
-    struct Equality_comparable_concept
-    {
-      static constexpr bool check()
-      {
-        return Common<T, U>() 
-            && Equality_comparable<T>()
-            && Equality_comparable<U>()
-            && Equality_comparable<Common_type<T, U>>()
-            && Has_equal<T, U>()     && Boolean<Equal_result<T, U>>()
-            && Has_equal<U, T>()     && Boolean<Equal_result<U, T>>()
-            && Has_not_equal<T, U>() && Boolean<Equal_result<T, U>>()
-            && Has_not_equal<U, T>() && Boolean<Equal_result<T, U>>();
-        }
-    };
-  
-  template <typename T>
-    struct Equality_comparable_concept<T, T>
-    {
-      static constexpr bool check()
-      {
-        return Has_equal<T>()     && Boolean<Equal_result<T>>()
-            && Has_not_equal<T>() && Boolean<Not_equal_result<T>>();
-      }
-    };
-    
-  // Returns true if the values of T (and U) can be compared for value equality.
-  template <typename T, typename U>
+  // FIXME: Give a semantic description of notions of equality.
+  //
+  // Note that it is inusfficient to define == as only an equivalence relation.
+  // Two equivalent values may be substituted in programs, yielding different
+  // results.
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Equality Comparable                         concepts.eq.equality_comparable
+  //
+  // The equality comparable determines if objects of a given type (or set of
+  // types) can be compared for equality (==) or differentiated (!=). There are
+  // two overloads of this concept.
+  //
+  //    Equality_comparable<T>()
+  //    Equality_comparable<T, U>()
+  // 
+  // The unary concept determines if objects of type T can be compared using
+  // == and !=. The semantics of the == operator is that it implement the
+  // equality relation (see [concepts.eq]); it must be an equivalence relation
+  // that returns true when one argument can be substituted for the other in
+  // regular programs. The != operator must be the complement of the equality
+  // relation.
+  //
+  // The first overload returns true when T satisfies the syntactic requirements
+  // of equality comparison. For example:
+  //
+  //    Equality_comparable<int>()           // returns true
+  //    Equality_comparable<runtime_error>() // returns false
+  //
+  // The binary concept defines cross-type equality comparison. If T and U are
+  // different types, then T and U must be individually equality comparable, T
+  // and U must have a common type, C, that is also equality comparable, and
+  // objects of type T and U must be symmetrically equality comparable using ==
+  // and !=. The results of those comparisons must be the same as converting
+  // each argument to the common type before comparing. See Common_type for more
+  // information about cross-type concepts.
+  //
+  // This overload returns true when T and U satisfy the syntactic requirements
+  // of cross-type equality comparison. For example:
+  //
+  //    Equality_comparable<int, long>()           // returns true
+  //    Equality_comparable<string, const char*>() // returns true
+  //    Equality_comparable<string, int>()         // returns false
+  //
+  // When the arguments T and U are the same, the binary concept is equivalent
+  // to the unary concept. That is:
+  //
+  //    Equality_comparable<T, T>() <=> Equality_comparable<T>()
+  //
+  template <typename T, typename U = T>
     constexpr bool Equality_comparable()
     {
-      return Equality_comparable_concept<T, U>::check();
+      return Equality_comparable_concept<T, U>::value;
     }
 
-} // namespace origin
 
 
-
-// Equality comparison (adaptation)
-// If T has no members, then T's value cannot be distinguished from its type.
-// Effectively, T represents a single value.
-template <typename T>
-  inline auto operator==(const T& a, const T& b) 
-    -> origin::Requires<origin::Empty<T>(), bool>
-  {
-    return true;
-  }
-
-template <typename T>
-  inline auto operator!=(const T& a, const T& b) 
-    -> origin::Requires<origin::Empty<T>(), bool>
-  {
-    return true;
-  }
-
-
-
-namespace origin {
-
-  // Weakly ordered (concept)
-  // A type is weakly ordered if it defines the standard relational operators
-  // <, >, <=, and >= with the usual meaning. In particular < must be a strict
-  // weak order.
+  //////////////////////////////////////////////////////////////////////////////
+  // Ordering                                                       concepts.ord
   //
-  // The concept is extended for heterogeneous types. In order for two types
-  // to be weak-order comparable, they must both be weakly ordered and
-  // symmetrically comparable. (i.e., if a < b is valid, b < a must also be
-  // valid).
-  template <typename T, typename U>
-    struct Weakly_ordered_concept
-    {
-      static constexpr bool check()
-      {
-        return Common<T, U>()
-            && Totally_ordered<T>()
-            && Totally_ordered<T>()
-            && Totally_ordered<Common_type<T, U>>()
-            && Has_less<T, U>()          && Boolean<Less_result<T, U>>()
-            && Has_less<U, T>()          && Boolean<Less_result<U, T>>()
-            && Has_greater<T, U>()       && Boolean<Greater_result<T, U>>()
-            && Has_greater<U, T>()       && Boolean<Greater_result<U, T>>()
-            && Has_less_equal<T, U>()    && Boolean<Less_equal_result<T, U>>()
-            && Has_less_equal<U, T>()    && Boolean<Less_equal_result<U, T>>()
-            && Has_greater_equal<T, U>() && Boolean<Greater_equal_result<T, U>>()
-            && Has_greater_equal<U, T>() && Boolean<Greater_equal_result<U, T>>();
-      }
-    };
+  // There are two ordering concepts in Origin: weak ordering and total
+  // ordering. Both require the definition of the relational operators <, >,
+  // <=, and >=. Additionally, the incomparability relation is also associated
+  // with ordering. Two ordered values a and b are incomparable when
+  //
+  //    !(a < b) && !(a < b)
+  //
+  // The semantics of the ordering are primarily associated with the < operator.
+  // For specifics, refer to [concepts.weakly_ordered] and
+  // [concepts.totally_ordered]. The definitions of >, <=, and >= can be derived
+  // from < in the usual way:
+  //
+  //    a > b  <=> b < a
+  //    a <= b <=> !(b < a)
+  //    a >= b <=> !(a < b)
+  //
+  // Note that there is no partially ordered concept for types. The reason for
+  // this is that we expect all relational operators to be total operations in
+  // the sense that all well-formed values of the type can be compared. There
+  // is, however, a partial ordering property that can be used to describe 
+  // specific relations.
 
-  // Specialization for the unary type.
-  template <typename T>
-    struct Weakly_ordered_concept<T, T>
-    {
-      static constexpr bool check()
-      {
-        return Has_less<T>()          && Boolean<Less_result<T>>()
-            && Has_greater<T>()       && Boolean<Greater_result<T>>()
-            && Has_less_equal<T>()    && Boolean<Less_equal_result<T>>()
-            && Has_greater_equal<T>() && Boolean<Greater_equal_result<T>>();
-      }
-    };
 
-  // Returns true if T (and U) are weakly ordered.
-  template <typename T, typename U>
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Weakly Ordered                                            concepts.ord.weak
+  //
+  // The weakly ordered concept determines if a type (or pair of types) can be
+  // compared using the relational operators <, >, <=, and >=. There are two
+  // overloads of the weakly ordered concept.
+  //
+  //    Weakly_ordered<T>()
+  //    Weakly_ordered<T, U>()
+  //
+  // The unary overload determines if a type T is is weakly ordered. A weakly
+  // ordered type defines the standard relational operators <, >, <=, and >=
+  // where < defines a strict weak order and the other operators have the usual
+  // meaning. A strict weak order is a relation that is irreflexive, asymmetric,
+  // and transitive, and incomparability is an equivalence relation.
+  //
+  // This overload returns true when T satisfies the syntactic requirements of
+  // weakly ordered types. For example:
+  //
+  //    Weakly_ordered<int>()       // returns true
+  //    Weakly_ordered<type_info>() // returns false (no operator <)
+  //
+  // Note that weakly ordered types are rarely defined in practice. If one can
+  // define an ordering over values, then one can generally define a reasonable
+  // equality operator. The weakly ordered concept is 
+  //
+  // The binary overload checks if T and U are cross-type weakly ordered. That
+  // is, T and U must be individually weakly or totally ordered, T and U must
+  // share a common type C, which is also weakly or totally ordered, and objects
+  // of type T and U must be symmetrically comparable using <, >, <= and >=. See
+  // Common_type for more information cross-type concepts.
+  //
+  // This overload returns true when the syntactic requirements for cross-type
+  // weak ordering are satisfied. For example:
+  //
+  //    Weakly_ordered<int, long>()           // returns true
+  //    Weakly_ordered<string, const char*>() // returns true
+  //    Weakly_ordered<string, int>()         // returns false
+  //
+  // When the type areguments T and U are the same, the binary concept is
+  // equivalent to the unary concept:
+  //
+  //    Weakly_ordered<T, T>() <=> Weakly_ordered<T>()
+  //
+  template <typename T, typename U = T>
     constexpr bool Weakly_ordered()
     {
       return Weakly_ordered_concept<T, U>::check();
     }
-  
 
 
-  // Totally ordered (concept)
-  // A type T is totally ordered if it is equality comparable and weakly
-  // ordered such that the equivalence of incomparable values is the same as
-  // equality.
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Totally Ordered                                          concepts.ord.total
+  //
+  // There are two overloads of the totally ordered concept.
+  //
+  //    Totally_ordered<T>
+  //    Totally_ordered<T, U>
+  //
+  // The unary overload determines if a type T is is totally ordered. A totally
+  // ordered type is both weakly ordered and equality comparable where the
+  // incomparability relation is the same as the equality operator. That is:
+  //
+  //    !(a < b) && !(b < a) <=> a == b
+  //
+  // This overload returns true when T satisfies the syntactic requirements of
+  // totally ordered types. For example:
+  //
+  //    Totally_ordered<int>()       // returns true
+  //    Totally_ordered<type_info>() // returns false (no operator <)
+  //
+  // The binary overload checks if T and U are cross-type weakly ordered. That
+  // is, T and U must be individually weakly or totally ordered, T and U must
+  // share a common type C, which is also weakly or totally ordered, and objects
+  // of type T and U must be symmetrically comparable using <, >, <= and >=. See
+  // Common_type for more information cross-type concepts.
+  //
+  // This overload returns true when the syntactic requirements for cross-type
+  // weak ordering are satisfied. For example:
+  //
+  //    Weakly_ordered<int, long>()           // returns true
+  //    Weakly_ordered<string, const char*>() // returns true
+  //    Weakly_ordered<string, int>()         // returns false
   template <typename T, typename U>
     constexpr bool Totally_ordered()
     {
       return Equality_comparable<T, U>() && Weakly_ordered<T, U>();
     }
-    
 
 
-  // Movable (concept)
-  // Return true if T is movable. A movable type is both destructible,
-  // move constructible and mvoe assignable. Note that movable types may not be
-  // copyable.
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Object concepts                                                concepts.obj
+  //
+  // The concepts in this section describe properties of types that define
+  // objects. This is a small hierarchy of concepts that builds on a number of
+  // initialization and assignment type traits. It includes:
+  //
+  //    Movable
+  //    Copyable
+  //    Semiregular
+  //    Regular
+  //
+  // The reason that we refer to these as "object" concepts is that they 
+  // describe properties of types used to initialize (and destroy and compare)
+  // objects.
+  //
+  // Note that the "trivial" type traits can be seen as semantic refinements
+  // of these concepts. That is, a trivially movable is a refinement of movable,
+  // trivially copyable is a refinement of copyable, and trivial is a refinement
+  // of semiregular.
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Movable                                                concepts.obj.movable
+  //
+  // A type T is movable if it is desctructible and can be both move constructed
+  // and move assigned. Note that a type is still movable even if the
+  // constructor and assignment operator actually perform copies. 
+  //
+  // The function returns true if T satisfies the syntactic requirements of
+  // movability.
+  //
+  //    Movable<int>()          // returns true
+  //    Movable<string>()       // returns true 
+  //    Movable<decltype([]{})> // returns false (not move assignable)
+  //
   template <typename T>
     constexpr bool Movable()
     {
-      return Destructible<T>() && Move_constructible<T>() && Move_assignable<T>();
+      return Destructible<T>() 
+          && Move_constructible<T>() 
+          && Move_assignable<T>();
     };
     
   
-  // FIXME: The Copyable, Semiregular, and Regular concepts need to be
-  // Re-aligned. Copyable should be the new Semiregular. Semiregular should
-  // be the new Regular (copyable and equality comparable). Regular should be
-  // semiregular and totally ordered.
-  
-  
     
-  // Movable (concept).
-  // Return true if T is copyable. A copyable type is both copy constructible
-  // and assignable. Note that copyable types are also inherently Movable.
+  //////////////////////////////////////////////////////////////////////////////
+  // Copyable                                              concepts.obj.copyable
+  //
+  // A type T is copyable if it is movable and can be both copy constructed and 
+  // copy assigned. 
+  //
+  // The function returns true if T satisfies the syntactic requirements of
+  // copyability.
+  //
+  //    Copyable<int>()          // returns true
+  //    Copyable<string>()       // returns true 
+  //    Copyable<decltype([]{})> // returns false (not copy assignable)
+  //
   template <typename T>
     constexpr bool Copyable()
     {
-      return Movable<T>() && Copy_constructible<T>() && Copy_assignable<T>();
+      return Movable<T>() 
+          && Copy_constructible<T>() 
+          && Copy_assignable<T>();
     }
     
     
   
-  // Semiregular (concept)
-  // A semiregular type approximates regular data types in that they can
-  // construct objects, be copied and moved, and destroyed, but they may not
-  // be equality comparable. However, semiregular types are required to
-  // implement the most basic form of equality: copy-equality. That is, a copy
-  // must be equal to its original. However, that equality may not be true
-  // value equality.
+  //////////////////////////////////////////////////////////////////////////////
+  // Semiregular                                        concepts.obj.semiregular
   //
-  // Semiregular types are not required to be default constructible. That
-  // requirement invalidates a number of useful adaptor types (e.g., iterator 
-  // and range adaptors).
+  // A semiregular type T is copyable and default constructible. Semiregular
+  // types are those that can be used in general ways: we can use them to 
+  // declare variables or arrays and pass them by value (i.e., copy) or move
+  // them. For example, the following class is semiregular:
+  //
+  //    struct Person 
+  //    {
+  //      string first;
+  //      string last;
+  //      int id;
+  //    };
+  //
+  // The destructor, default constructor, move constructor, copy constructor,
+  // and move assignment oeprator, and copy assignment operator are all
+  // implicitly generated, but are non-trivial. Note that the class would still
+  // be Semiregular if the members were private, as long as the required
+  // operations were still publicly accessible.
+  //
+  // The notion of semiregularity of a type generalizes the notion of trivial
+  // types in the language. A trivial type is one that trivially copyable (has
+  // a trivial copy constructor and copy assignment operator) and trivially
+  // default constructible.
+  //
+  // The function returns true when T satisfies the syntactic requirements of
+  // semiregularity.
   template <typename T>
     constexpr bool Semiregular()
     {
-      return Copyable<T>();
+      return Copyable<T>() && Default_constructible<T>();
     }
-    
 
 
-  // Regular (concept)
-  // A regular type is default constructible, copyable, and equality
-  // comparable.
-  // FIXME: Isn't this also Default_constructible? I thinks so.
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Regular                                                concepts.obj.regular
+  //
+  // A regular type T is semiregular and equality comparable. 
+  //
+  // The function returns true when T is regular.
+  //
+  // TODO: Finish documenting regular types.
   template <typename T>
     constexpr bool Regular()
     {
-      return Default_constructible<T>()
-          && Copyable<T>()
-          && Equality_comparable<T>();
+      return Semiregular<T>() && Equality_comparable<T>();
     }
     
-    
-    
-  // TODO: The standard includes a specialized version of the Regular concepts
-  // called Trivial concepts. We should have Trivially_copyable and Trivial
-  // as specializations of Copyable and Regular.
-    
-    
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Ordered                                                concepts.obj.ordered
+  //
+  // A type T is ordered if it is regular and totally ordered.
+  //
+  // TODO: Finish documenting this ordered types.
+  template <typename T>
+    constexpr bool Ordered()
+    {
+      return Regular<T>() && Totally_ordered<T>();
+    }
+
+
 
   // Function concepts
   // The following concept classes, predicates, and aliases implement 
@@ -743,6 +879,67 @@ namespace origin {
       return Input_streamable<T, U>() && Output_streamable<T, U>();
     }
 
+
+  // Implementation
+  namespace concepts
+  {
+    // Returns true if T and U are cross-type equality comparable.
+    template <typename T, typename U>
+      struct is_equality_comparable
+        : boolean_constant<
+              Common<T, U>() 
+           && Equality_comparable<T>()
+           && Equality_comparable<U>()
+           && Equality_comparable<Common_type<T, U>>()
+           && Has_equal<T, U>()     && Boolean<Equal_result<T, U>>()
+           && Has_equal<U, T>()     && Boolean<Equal_result<U, T>>()
+           && Has_not_equal<T, U>() && Boolean<Equal_result<T, U>>()
+           && Has_not_equal<U, T>() && Boolean<Equal_result<T, U>>()
+          >
+      { };
+    
+    // Returns true if T is equality comparable.
+    template <typename T>
+      struct is_equality_comparable<T, T>
+        : boolean_constant<
+              Has_equal<T>()     && Boolean<Equal_result<T>>()
+           && Has_not_equal<T>() && Boolean<Not_equal_result<T>>()
+          >
+      { };
+
+
+
+    // Returns true if T and U are cross-type weakly ordered.
+    template <typename T, typename U>
+      struct is_weakly_ordered
+        : boolean_constant<
+              Common<T, U>()
+           && Totally_ordered<T>()
+           && Totally_ordered<T>()
+           && Totally_ordered<Common_type<T, U>>()
+           && Has_less<T, U>()          && Boolean<Less_result<T, U>>()
+           && Has_less<U, T>()          && Boolean<Less_result<U, T>>()
+           && Has_greater<T, U>()       && Boolean<Greater_result<T, U>>()
+           && Has_greater<U, T>()       && Boolean<Greater_result<U, T>>()
+           && Has_less_equal<T, U>()    && Boolean<Less_equal_result<T, U>>()
+           && Has_less_equal<U, T>()    && Boolean<Less_equal_result<U, T>>()
+           && Has_greater_equal<T, U>() && Boolean<Greater_equal_result<T, U>>()
+           && Has_greater_equal<U, T>() && Boolean<Greater_equal_result<U, T>>()
+          >
+      { };
+
+    // Returns true if T is weakly ordered.
+    template <typename T>
+      struct Weakly_ordered_concept<T, T>
+        : boolean_constant<
+              Has_less<T>()          && Boolean<Less_result<T>>()
+           && Has_greater<T>()       && Boolean<Greater_result<T>>()
+           && Has_less_equal<T>()    && Boolean<Less_equal_result<T>>()
+           && Has_greater_equal<T>() && Boolean<Greater_equal_result<T>>()
+          >
+      { };
+
+  } // namespace concepts
 
 } // namespace origin
 
