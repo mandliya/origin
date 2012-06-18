@@ -15,8 +15,4 @@ endif(DEFINED $ENV{ORIGIN_ROOT})
 list(APPEND CMAKE_MODULE_PATH ${ORIGIN_ROOT}/cmake)
 include(Origin)
 
-
 add_subdirectory(core)
-add_subdirectory(data)
-add_subdirectory(graph)
-subdirs(math)
