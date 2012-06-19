@@ -176,7 +176,7 @@ namespace origin
   template <typename T, typename U = T>
     constexpr bool Weakly_ordered()
     {
-      return Weakly_ordered_concept<T, U>::check();
+      return is_weakly_ordered<T, U>::value;
     }
 
 
@@ -272,7 +272,7 @@ namespace origin
   // Copyable                                              concepts.obj.copyable
   //
   // A type T is copyable if it is movable and can be both copy constructed and 
-  // copy assigned. 
+  // copy assigned.
   //
   // The function returns true if T satisfies the syntactic requirements of
   // copyability.
@@ -281,6 +281,12 @@ namespace origin
   //    Copyable<string>()       // returns true 
   //    Copyable<decltype([]{})> // returns false (not copy assignable)
   //
+  // Template parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //    True if and only if T satisfies the syntactic requirements of the
+  //    Copyable concept.
   template <typename T>
     constexpr bool Copyable()
     {
@@ -317,8 +323,12 @@ namespace origin
   // a trivial copy constructor and copy assignment operator) and trivially
   // default constructible.
   //
-  // The function returns true when T satisfies the syntactic requirements of
-  // semiregularity.
+  // Template parameters:
+  //    T -- the type being tested for semiregularity.
+  //
+  // Returns:
+  //    True if and only if T satisfies the syntactic requirements of the
+  //    Semiregular concept.
   template <typename T>
     constexpr bool Semiregular()
     {
@@ -330,11 +340,18 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Regular                                                concepts.obj.regular
   //
-  // A regular type T is semiregular and equality comparable. 
+  // A regular type T is semiregular and equality comparable. Regular types
+  // are the basis of a large number of abstractions - in particular, those that
+  // can be used as (if they represented) values. For example, every built-in
+  // type is regular, and so are all standard container types (assuming that
+  // their contained value types are also regular).
   //
-  // The function returns true when T is regular.
+  // Template parameters:
+  //    T -- the type being tested for regularity.
   //
-  // TODO: Finish documenting regular types.
+  // Returns:
+  //    True if and only if T satisfies the syntactic requirements of the
+  //    Regular concept.
   template <typename T>
     constexpr bool Regular()
     {
@@ -345,9 +362,16 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Ordered                                                concepts.obj.ordered
   //
-  // A type T is ordered if it is regular and totally ordered.
+  // A type T is ordered if it is regular and totally ordered. This concept
+  // is primarily provided as a convenience for describing higher level 
+  // abstractions. 
   //
-  // TODO: Finish documenting this ordered types.
+  // Template parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //    True if and only if T satisfies the syntactic requirements of the
+  //    Ordered concept.
   template <typename T>
     constexpr bool Ordered()
     {
@@ -356,19 +380,39 @@ namespace origin
 
 
 
-  // Function concepts
-  // The following concept classes, predicates, and aliases implement 
-  // facilities for checking function types.
-  
-    
-    
-  // Function (concept)
-  // A function type is one that can be called with a sequence of arguments,
-  // and producing some (possibly void) result. In general, functions are
-  // not required to be equality preserving.
+  //////////////////////////////////////////////////////////////////////////////
+  // Functions                                                     concepts.func
   //
-  // The result type of a function can be accessed using the Result_of type
-  // trait (e.g., Result_of<F(Args...)>).
+  // A function is an object that can be called, taking a sequence of arguments
+  // and returning some result (possibly none). There are a number of concepts
+  // describing the kinds of functions in the STL.
+  //
+  // - Function
+  // - Regular function
+  // - Predicate
+  // - Relation
+  // - Unary operation
+  // - Binary operation
+      
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Function                                             concepts.func.function
+  //
+  // A function type, F, is one that can be called with a sequence of arguments,
+  // Args. Every function has an associated result type that can be deduced
+  // using Result_of<F(Args...)>.
+  //
+  // Note that functions are not required to be equality preserving. There are
+  // no constraints on the effects of the function.
+  //
+  // Template parameters:
+  //    F -- The function being tested
+  //    Args -- A sequence of argument types over which F might be called
+  //
+  // Returns:
+  //    True if and only if F can be called with a sequence of arguments whose
+  //    types are given by the type parameter pack Args.
   template <typename F, typename... Args>
     constexpr bool Function()
     {
@@ -377,12 +421,27 @@ namespace origin
     
 
 
-  // Regular Function (concept)
-  // A regular function is a Function that is also equality preserving. This 
-  // is a purely semantic refinement of Function, so the two are statically 
-  // synonymous.
+  //////////////////////////////////////////////////////////////////////////////
+  // Regular Function                                      concepts.func.regular
   //
-  // FIXME: Should it be the 
+  // A regular function is an equality preserving function. That is, equal
+  // inputs reliably yield equal outputs. More formally: if a and b are
+  // equivalent expressions (have the same observable effects), then:
+  //
+  //    a <=> b => f(a) <=> f(b)
+  //
+  // Evaluating a regular function, f, over the equivalent expressions, a and b,
+  // will yield equivalent computations.
+  //
+  // The result of a regular function cannot be void.
+  //
+  // Template parameters:
+  //    - F    -- The function being tested
+  //    - Args -- A sequence of argument types over which F might be called
+  //
+  // Returns:
+  //    True if and only if F can be called with a sequence of arguments whose
+  //    types are given by the type parameter pack Args.
   template <typename F, typename... Args>
     constexpr bool Regular_function()
     {
@@ -391,61 +450,65 @@ namespace origin
 
 
 
-  // Predicates
+  //////////////////////////////////////////////////////////////////////////////
+  // Predicate                                           concepts.func.predicate
+  //
   // A predicate is a regular function whose result type is convertible to
   // bool.
+  //
+  // Template parameters:
+  //    - P    -- The predicate being tested
+  //    - Args -- A sequence of argument types over which P might be called
+  //
+  // Returns:
+  //    True if and only if P can be called with a sequence of arguments whose
+  //    types are given by the type parameter pack Args, and if the result of 
+  //    of the function is Boolean.
   template <typename P, typename... Args>
     constexpr bool Predicate()
     {
-      return Function<P, Args...>() && Convertible<Result_of<P(Args...)>, bool>();
+      return Function<P, Args...>() && Boolean<Result_of<P(Args...)>>();
     }
     
     
     
-  // Relations
-  // A Relation is a binary Predicate with a homogenous domain (i.e., the
-  // argument types are the same). This can be generalized to different types
-  // that share a common type.
-
+  //////////////////////////////////////////////////////////////////////////////
+  // Relation                                             concepts.func.relation
+  //
+  // A relation is a binary bredicate over a set of values. There are two
+  // overloads of this concept:
+  //
+  //    Relation<R, T>()
+  //    Relation<R, T, U>()
+  //
+  // The first overload determines if R is a relation with the homogenous
+  // domain T. The second is a generalization, allowing the domain to be
+  // heterogenous. However, when the domain is heterogeneous, the types t and
+  // U must share a common type.
+  //
+  // Template parameters:
+  //    R -- The relation being tested
+  //    T -- The domain of the relation
+  //    U -- If given, the heterogeneous domain type along with T
+  //
+  // Returns:
+  //    True if R is a relation taking arguments arguments of type T (and U, if
+  //    specified).
   template <typename R, typename T, typename U = T>
-    struct Relation_concept
-    {
-      static constexpr bool check()
-      {
-        return Common<T, U>()
-            && Relation<R, Common_type<T, U>>()
-            && Relation<R, T>()
-            && Relation<R, U>()
-            && Predicate<R, T, U>()
-            && Predicate<R, U, T>();
-      }
-    };
-    
-  template <typename R, typename T>
-    struct Relation_concept<R, T, T>
-    {
-      static constexpr bool check()
-      {
-        return Predicate<R, T, T>();
-      }
-    };
-    
-  // Returns true if R is a Relation on T x U.
-  template <typename R, typename T, typename U>
     constexpr bool Relation()
     {
-      return Relation_concept<R, T, U>::check();
+      return is_relation<R, T, U>::value;
     }
 
 
 
-  // Relation properties
+  //////////////////////////////////////////////////////////////////////////////
+  // Relational Properties                              properties.func.relation
+  //
   // The followwing predicates are used to write preconditions in generic
   // algorithms or other data structures. Note that because these properties
-  // cannot be evaluated at runtime, they simply return true.
-  //
-  // FIXME: Can these actually evaluate properties of functions? Probably
-  // not -- at least not without some kind of improved runtime support.
+  // cannot be evaluated at runtime, they simply return true. They are primarily
+  // used to indicate a symbolic property.
 
   // Evaluates whether r is an equivalence relation. Always returns true.
   template <typename R>
@@ -465,21 +528,78 @@ namespace origin
 
 
 
-  // Generator (concept)
-  // a generator is a nullary function that returns values of a specified
-  // type. Generators are typically non-regular functions, since they are often
-  // used to generate different values on subsequent calls. Random value
-  // generators are examples of generating functions.
-  // 
-  // Note that a nullary regular function is called a "constant function" and
-  // is also a kind a generator.
-  template <typename F>
+  //////////////////////////////////////////////////////////////////////////////
+  // Generator                                           concepts.func.generator
+  //
+  // a generator is a nullary function (taking no arguments) that returns values
+  // of a specified type. Generators are typically non-regular functions, since
+  // they are often used to generate different values on subsequent calls.
+  // Random value generators are examples of generating functions. 
+  //
+  // Template parameters:
+  //    G -- The function being tested
+  //
+  // Returns:
+  //    True if and only if G can be called with no arguments, and has a 
+  //    non-void result type.
+  template <typename G>
     constexpr bool Generator()
     {
-      return Function<F>();
+      return Function<G>() && !Void<Result_of<G()>>();
     }
 
-    
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Operations                                                     concepts.ops
+  //
+  // An operation is a regular function that takes one or more arguments of
+  // its domain type and returns a value of the same type. The domain and
+  // codomain types are the same.
+  //
+  // Operation concepts are prefixed with their arity because of overloads of
+  // the binary operation concept.
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Unary Operation                                          concepts.ops.unary
+  //
+  // Template parameters:
+  //    Op -- The operation being tested
+  //    T  -- The domain type of Op
+  //
+  // Returns:
+  //    True if and only if Op can be called with a single argument of type T
+  //    and the result type of Op is also T.
+  //
+  // TODO: Describe this concept.
+  template <typename Op, typename T>
+    constexpr bool Unary_operation()
+    {
+      return Regular_function<Op, T>() && Same<Result_of<Op(T)>, T>();
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Binary Operations                                       concepts.ops.binary
+  //
+  // Template parameters:
+  //    Op -- The operation being tested
+  //    T  -- The domain type of Op
+  //    U  -- If given, the heteregenous domain type (along with T) of Op
+  //
+  // Returns:
+  //    True if and only if Op can be called with arguments of type T and U,
+  //    and the result type of Op is Common_type<T, U>.
+  //
+  // TODO: Describe this concept.
+  template <typename Op, typename T, typename U = T>
+    constexpr bool Binary_operation()
+    {
+      return concepts::is_binary_operation<Op, T, U>::value;
+    }
+
 
   // Concepts for common associated types
 
@@ -930,12 +1050,48 @@ namespace origin
 
     // Returns true if T is weakly ordered.
     template <typename T>
-      struct Weakly_ordered_concept<T, T>
+      struct is_weakly_ordered<T, T>
         : boolean_constant<
               Has_less<T>()          && Boolean<Less_result<T>>()
            && Has_greater<T>()       && Boolean<Greater_result<T>>()
            && Has_less_equal<T>()    && Boolean<Less_equal_result<T>>()
            && Has_greater_equal<T>() && Boolean<Greater_equal_result<T>>()
+          >
+      { };
+
+
+    // Returns true if R is a cross-type relation over (T, U).
+    template <typename R, typename T, typename U>
+      struct is_relation
+        : boolean_constant<
+              Common<T, U>()
+           && Relation<R, T>()
+           && Relation<R, U>()
+           && Relation<R, Common_type<T, U>>()
+           && Predicate<R, T, U>()
+           && Predicate<R, U, T>()
+          >
+      { };
+
+    // Returns true if R is a relation over T.
+    template <typename R, typename T>
+      struct is_relation<R, T, T>
+        : boolean_constant<Predicate<R, T, T>()>
+      { };
+
+
+    // Returns true if Op is a binary operation over T and U.
+    template <typename R, typename T, typename U>
+      struct is_binary_operation
+        : boolean_constant<
+              Common<T, U>()
+           && Relation<R, T>()
+           && Relation<R, U>()
+           && Relation<R, Common_type<T, U>>()
+           && Regular_function<R, T, U>() 
+           && Same<Result_of<R(T, U)>, Common_type<T, U>>()
+           && Regular_function<R, U, T>()
+           && Same<Result_of<R(U, T)>, Common_type<U, T>>()
           >
       { };
 
