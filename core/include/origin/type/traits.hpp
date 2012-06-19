@@ -21,43 +21,94 @@ namespace std
 
 namespace origin
 {
+  // Implementation
+  namespace traits
+  {
+    template <typename... Args> struct front_type;
+    template <typename... Args> struct back_type;
+
+    template <typename... Args> struct are_same;
+  } // namespace traits
+
+
+  // Declarations
   template <typename... Args> constexpr bool Same();
   template <typename T, typename U> constexpr bool Different();
 
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Miscellaneous types
+  // Miscellaneous Types                                              types.misc
   //
-  // Various types used throughout Origin.
-  //////////////////////////////////////////////////////////////////////////////
+  // A collection of miscellaneous types used in various libraries. These are
+  // small, often empty types that represent different kinds of conceptual
+  // placeholders.
 
-  // Default type
+  
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Default Type                                             types.misc.default
   //
   // The default type is a tag class used to indicate the selection of a default
-  // value. This is only used to support class template specialization.
+  // value. This is only used to support class template specialization. In the
+  // following example, the default_t type is used to create a polymorphic
+  // specialization for a function object.
+  //
+  //    template <typename T = default_t>
+  //      struct negate 
+  //      {
+  //        bool operator()(const T& x) const { return -x; }
+  //      };
+  //
+  //    template <>
+  //      struct negate<default_t>
+  //      {
+  //        template <typename T>
+  //          bool operator()(const T& x) const { return -x; }
+  //      };
+  //
+  // Here, default_t is used as a placeholder for an unspecified type argument
+  // on which the class can be specialized.
   struct default_t { };
   
 
 
-  // Unspecified type
+  //////////////////////////////////////////////////////////////////////////////
+  // Unspecified Type                                     types.misc.unspecified
   //
   // The unspecified type is a tag class used to indicate that an argument for a
   // template parameter has not been specified.
+  //
+  // TODO: Find a good example of this class.
   struct unspecified_t { };
   
 
 
-  // Empty type
+  //////////////////////////////////////////////////////////////////////////////
+  // Unspecified Type                                           types.misc.empty
   //
   // The empty type is an empty, trivial type that is meant to be used as a
   // placeholder for unspecified types in containers or other data structures.
+  // For example:
+  //
+  //    template <typename V = empty_t, typename E = empty_t>
+  //      class adjacency_list;
+  //
+  // The declaration specifies that the default user-defined vertex and edge
+  // data types are empty; no data has been specified. The data structure or its
+  // internal structures may be specialized on this type to omit additional
+  // storage requirements.
+  //
+  // The empty class is both input and output streamable. However, reading and
+  // writing an object of this type does not modify the input or output stream.
+  // In other words, the empty value has no textual representation.
+  //
+  // NOTE: The textual representation of empty_t may change.
   struct empty_t { };
 
-  // Streamable<empty_t>
-  //
-  // TODO: Should we actually read and/or write something for this type? It
-  // might be kind of nice.
+  // Streamable
+
+  // Write an empty value to os.
   template <typename Char, typename Traits>
     inline std::basic_ostream<Char, Traits>& 
     operator<<(std::basic_ostream<Char, Traits>& os, empty_t)
@@ -65,6 +116,7 @@ namespace origin
       return os; 
     }
 
+  // Read an empty value from is.
   template <typename Char, typename Traits>
     inline std::basic_istream<Char, Traits>& 
     operator>>(std::basic_istream<Char, Traits>& is, empty_t&)
@@ -74,11 +126,12 @@ namespace origin
     
 
   //////////////////////////////////////////////////////////////////////////////
-  // Metaprogramming support
+  // Metaprogramming                                                  types.meta
   //
   // The following construccts extend the std type traits, providing new 
-  // features, aliases, and functiohns.
-  //////////////////////////////////////////////////////////////////////////////
+  // features, aliases, and functiohn.
+
+
 
   // The bool constant is an alias for the type integral_constant<bool, X>.
   // This type is provided purely for convenience.
@@ -100,15 +153,26 @@ namespace origin
   
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // All                                                          types.meta.all
+  //
   // Returns true if each boolean argument is true or if no arguments are given.
   // This function can be used to evaluate a concept or type constraint for all
   // types in a template parameter pack. For example:
   //
   //    static_assert(All(Equality_comparable<Args>()...), "")
   //
-  // where Equality_comparable is a concept taking a single argument.
+  // Here, Equality_comparable is a concept taking a single argument. The
+  // algorithm requires that all type arguments are convertible to bool.
   //
-  // Note that all arguments must be convertible to bool.
+  // Template parameters:
+  //    Args -- A sequence of types that must be convertible to bool.
+  //
+  // Arguments:
+  //    args -- A sequence of boolean values.
+  //
+  // Returns:
+  //    True if all args are true.
   constexpr bool All() { return true; }
 
   template <typename... Args>
@@ -118,55 +182,48 @@ namespace origin
     }
 
 
-  // Infrastructure for implementing type traits.
-  namespace traits
-  {
-    // Return the first type in the given sequence of arguments. This is
-    // undefined when Args... is empty.
-    template <typename... Args> struct front_type;
-
-    template <typename T, typename... Args>
-      struct front_type<T, Args...>
-      { 
-        using type = T; 
-      };
-
-    // Returns the last type in a sequence of type arguments. This is
-    // undefined when Args... is empty.
-    template <typename... Args> struct back_type;
-
-    template <typename T>
-      struct back_type<T>
-      { 
-        using type = T;
-      };
-
-    template <typename T, typename... Args>
-      struct back_type<T, Args...> : back_type<Args...>
-      { };
-  } // namespace traits
 
 
 
-  // An alias to the first type in a non-empty sequence of type arguments.
+  //////////////////////////////////////////////////////////////////////////////
+  // Front Type                                                 types.meta.front
+  //
+  // The front type alias refers to the first type in the template parameter
+  // pack Args. For example:
+  //
+  //    Front_type<char, short, int> n; // decltype(n) is char
+  //
+  // The alias is undefined when sizeof...(Args) == 0.
+  //
+  // Template parameters:
+  //    Args -- A non-empty sequence of type arguments
   template <typename... Args>
     using Front_type = typename traits::front_type<Args...>::type;
 
 
 
-  // An alias to the last type in a non-empty sequence of type arguments.
+  //////////////////////////////////////////////////////////////////////////////
+  // Back Type                                                   types.meta.back
+  //
+  // The back type alias refers to the last type in the template parameter
+  // pack Args. For example:
+  //
+  //    Back_type<char, short, int> n; // decltype(c) is int
+  //
+  // The alias is undefined when sizeof...(Args) == 0.
+  //
+  // Template parameters:
+  //    Args -- A non-empty sequence of type arguments
   template <typename T, typename... Args>
     using Back_type = typename traits::back_type<T, Args...>::type;
     
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // SFINAE support
+  // SFINAE                                                    types.meta.sfinae
   //
   // The following types and functions are used to support safe type deduction
-  // and type trait implementations in the Origin library.
-  //////////////////////////////////////////////////////////////////////////////
-
+  // and type trait implementations in the Origin library. 
 
 
   // The substitution failure type represents the result of failed name lookup
@@ -175,11 +232,9 @@ namespace origin
   struct subst_failure { };
 
 
-
   // Returns true if T indicates a substitution failure.
   template <typename T>
     constexpr bool Subst_failed() { return Same<T, subst_failure>(); }
-
 
 
   // Returns true if T does not indicate a substitution failure.
@@ -189,46 +244,29 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Type relations
+  // Type Relations                                                    types.rel
   //
-  // The following type constraints describe relations on types.
+  // Origin defines four relations on types:
+  //
+  //    - Same
+  //    - Different
+  //    - Common
+  //    - Convertible
+  //    - Derived
+  //
+  // Note that the Same and Common type traits are generalized for a set of
+  // types. 
+
+
+
   //////////////////////////////////////////////////////////////////////////////
-
-  // Infrastructure for defining the Same() constraint.
-  namespace traits
-  {
-    // Returns true if all of the types are the same, or if Args... is an
-    // empty sequence of types. Evaluation is of type equality is performed
-    // left-to-right, and the operation will not instantiate arguments after
-    // a non-equal pair is found.
-    template <typename... Args> struct are_same;
-
-    // True for an empty sequence
-    template <>
-      struct are_same<> : std::true_type
-      { };
-
-    // For a single type, this is trivially true.
-    template <typename T> 
-      struct are_same<T> : std::true_type 
-      { };
-
-    // Recursively apply are_same (is_same) to T and Args...
-    // FIXME: Does && properly short-circuit the instantiation, or do I need to
-    // use std::conditional to make sure thta it's done correctly. How do you
-    // test this?
-    template <typename T, typename... Args>
-      struct are_same<T, Args...>
-        : boolean_constant<
-            std::is_same<T, typename front_type<Args...>::type>::value &&
-            are_same<Args...>::value
-          >
-      { };
-  } // namespace traits
-
-
+  // Same Type                                                    types.rel.same
+  //
   // Returns true if T is the same as U for all pairs of types T and U in
   // Args or if Args is an empty type sequence.
+  //
+  // Template Parameters:
+  //    Args -- A sequence of type arguments
   template <typename... Args>
     constexpr bool Same()
     {
@@ -237,8 +275,14 @@ namespace origin
     
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Different type                                               types.rel.same
+  //
   // Returns true if T is different than U. This expression Different<T, U>()
   // is equivalent to !Same<T, U>().
+  //
+  // Template parameters
+  //    T, U -- A pair of type arguments
   template <typename T, typename U>
     constexpr bool Different()
     {
@@ -247,7 +291,36 @@ namespace origin
 
 
 
-  // The common_type trait yields the common type of T and U. 
+  //////////////////////////////////////////////////////////////////////////////
+  // Common type                                                types.rel.common
+  //
+  // The common type trait yields the common type of T and U. The common type
+  // of two types is...
+  //
+  // TODO: Finish writing documentation of common type.
+  //
+  // The common type of a type and itself is itself. That is:
+  //
+  //    Common_type<T, T> // is T
+  //
+  // Note common type is a query on the value types of T and U. Reference and
+  // cv-qualifiers are not considered when computing the common type. For 
+  // example:
+  //
+  //    Common_type<const T, T&> // is T
+  //
+  // Specializing the common type relation is most easily accomplished by making
+  // one type convertible to another (but not vice versa). For example the type
+  // const char* can be converted to string, but the opposite is not true. In
+  // some cases, conversions are ambiguous or they are partial functions. The
+  // std::duration class template is a good example of this. In such cases, it
+  // is necessary to specialize the common_type trait.
+  //
+  // There are three components to the common type facility:
+  //
+  // - common_type -- The underlying type trait
+  // - Common_type -- An alias for the common type
+  // - Common -- Implements the common type relation
   //
   // NOTE: This supercedes the std implementation of common type, which will
   // can result in compilation failures when the common type of T and U is not
@@ -255,6 +328,14 @@ namespace origin
   // easier customization.
   //
   // FIXME: This needs to be explicitly specialized for std::duration.
+  //
+  // FIXME: Write this in terms of Args...
+
+
+  // The common_type trait yields the common type of T and U.
+  //
+  // Template parameters:
+  //    T, U -- a pair of type arguments
   template <typename T, typename U>
     struct common_type
     {
@@ -271,9 +352,8 @@ namespace origin
       >::type;
     };
 
-  // When the type arguments are the same, we can bypass the deduction on
-  // the conditional operator. This should make compilation slightly faster
-  // in those cases.
+  // Specialization for the case when T == U. This should speed up compilation
+  // by short-circuiting the deduction above.
   template <typename T>
     struct common_type<T, T>
     {
@@ -286,16 +366,29 @@ namespace origin
 
   // An alias to the common type of T and U if it exists. Note that the common
   // type of T and U may be neither T nor U.
+  //
+  // Template arguments
+  //    T, U -- a pair of type arguments
   template <typename T, typename U>
     using Common_type = typename common_type<T, U>::type;
 
+
   // Returns true if the common type of T and U exists.
+  //
+  // Template arguments
+  //    T, U -- a pair of type arguments
   template <typename T, typename U>
     constexpr bool Common() { return Subst_succeeded<Common_type<T, U>>(); }
 
     
 
+  //////////////////////////////////////////////////////////////////////////////   
+  // Convertible                                               types.rel.convert
+  //
   // Returns true if T is convertible to U.
+  //
+  // Template arguments:
+  //    T, U -- a pair of type arguments
   //
   // FIXME: Convertibility is not particularly well-defined in the abstract
   // sense. It convers some forms of construction and casting, but does not
@@ -308,11 +401,19 @@ namespace origin
 
 
 
-  // Returns true if T is derived from U.
+  //////////////////////////////////////////////////////////////////////////////   
+  // Derived                                                   types.rel.derived
+  //
+  // Returns true if T is derived from U. This is the subtype relation defined
+  // over conversion.
+  //
+  // Template arguments:
+  //    T, U -- a pair of type arguments
   template <typename T, typename U>
     constexpr bool Derived() { return std::is_base_of<U, T>::value; }    
 
     
+
     
   //////////////////////////////////////////////////////////////////////////////   
   // Type queries and transformations
@@ -2462,6 +2563,65 @@ namespace origin
       return Subst_succeeded<Member_find_result <C, K>>();
     }
 
+
+  // Implementation type traits.
+  namespace traits
+  {
+    // Return the first type in the given sequence of arguments. This is
+    // undefined when Args... is empty.
+    template <typename... Args> struct front_type;
+
+    template <typename T, typename... Args>
+      struct front_type<T, Args...>
+      { 
+        using type = T; 
+      };
+
+    // Returns the last type in a sequence of type arguments. This is
+    // undefined when Args... is empty.
+    template <typename... Args> struct back_type;
+
+    template <typename T>
+      struct back_type<T>
+      { 
+        using type = T;
+      };
+
+    template <typename T, typename... Args>
+      struct back_type<T, Args...> : back_type<Args...>
+      { };
+
+
+
+    // Returns true if all of the types are the same, or if Args... is an
+    // empty sequence of types. Evaluation is of type equality is performed
+    // left-to-right, and the operation will not instantiate arguments after
+    // a non-equal pair is found.
+    template <typename... Args> struct are_same;
+
+    // True for an empty sequence
+    template <>
+      struct are_same<> : std::true_type
+      { };
+
+    // For a single type, this is trivially true.
+    template <typename T> 
+      struct are_same<T> : std::true_type 
+      { };
+
+    // Recursively apply are_same (is_same) to T and Args...
+    // FIXME: Does && properly short-circuit the instantiation, or do I need to
+    // use std::conditional to make sure thta it's done correctly. How do you
+    // test this?
+    template <typename T, typename... Args>
+      struct are_same<T, Args...>
+        : boolean_constant<
+            std::is_same<T, typename front_type<Args...>::type>::value &&
+            are_same<Args...>::value
+          >
+      { };
+  
+  } // namespace traits
 
 } // namespace origin
 
