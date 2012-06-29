@@ -1,5 +1,5 @@
 // Copyright (c) 2008-2010 Kent State University
-// Copyright (c) 2011 Texas A&M University
+// Copyright (c) 2011-2012 Texas A&M University
 //
 // This file is distributed under the MIT License. See the accompanying file
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
@@ -8,271 +8,228 @@
 #ifndef ORIGIN_MATRIX1_HPP
 #define ORIGIN_MATRIX1_HPP
 
-#ifndef ORIGIN_MATRIX_COMMON_HPP
-# error Do not include this file directly. Include <origin/matrix.hpp>.
-#endif
 
 namespace origin
 {
-  // The 1d matrix specialization is a row vector.
+  //////////////////////////////////////////////////////////////////////////////
+  // Matrix (1D)
   //
-  // Note that we support a 0-vector (a vector with no elements) as a special
-  // case value.
-  template<typename T, typename Alloc>
-    class matrix<T, 1, Alloc> : protected matrix_base<T, Alloc>
+  // The 1d matrix specialization implements a vector.
+  template<typename T, typename Storage>
+    class matrix<T, 1, Storage>
     {
-      typedef matrix_base<T, Alloc> base_type;
+      using base_type = Storage;
     public:
-      typedef typename base_type::value_type value_type;
-      typedef typename base_type::reference reference;
-      typedef typename base_type::const_reference const_reference;
-      typedef typename base_type::pointer pointer;
-      typedef typename base_type::const_pointer const_pointer;
-      typedef typename base_type::size_type size_type;
+      using allocator_type  = typename base_type::allocator_type;
+      using value_type      = T;
+      using reference       = T&;
+      using const_reference = const T&;
+      using pointer         = typename base_type::pointer;
+      using const_pointer   = typename base_type::const_pointer;
+      using size_type       = typename base_type::size_type;
+      using difference_type = typename base_type::difference_type;
+      using dimension_type  = size_type;
 
-      // The default constructor creates a 0-element vector.
-      matrix()
-        : base_type()
+      using iterator        = typename base_type::iterator;
+      using const_iterator  = typename base_type::const_iterator;
+
+      // Constructs a vector with 0 elements.
+      matrix(const allocator_type& alloc = {})
+        : base(alloc)
       { }
       
-      // Create an n-element vector
-      explicit matrix(size_type n, value_type const& x = value_type{})
-        : base_type(n)
-      { 
-        std::fill(begin(), end(), x); 
-      }
-      
-      // Transform initialization.
-      //
-      // FIXME: These algorithms seem like they could use the apply() pattern, 
-      // but their a little different since they don't pass this values to
-      // transform function.
-      
-      // Initialize this matrix as the result of applying f(e) to each element
-      // e in x.
-      template<typename F>
-        matrix(matrix const& x, F f)
-          : base_type(x.size())
-        {
-          std::transform(x.begin(), x.end(), begin(), f);
-        }
 
-      // Initialize this matrix as the result of applying f(e, a) to each 
-      // element e in x.
-      template<typename F>
-        matrix(matrix const& x, F f, value_type const& a)
-          : base_type(x.size())
-        {
-          using namespace std::placeholders;
-          std::transform(x.begin(), x.end(), begin(), std::bind(f, _1, a));
-        }
-      
-      // Initialize this matrix as the result of applying f(e1, e2) to the 
-      // elements e1, e2, in a and b element-wise. F is a binary operation.
-      template<typename F>
-        matrix(matrix const& a, matrix const& b, F f)
-          : base_type(a.size())
-        {
-          assert(( a.size() == b.size() ));
-          std::transform(a.begin(), a.end(), b.begin(), begin(), f);
-        }
-
-      // Movable
+      // Move semantics
       matrix(matrix&& x)
-        : base_type(std::move(x))
+        : base(std::move(x.base))
       { }
       
       matrix& operator=(matrix&& x)
       {
-        matrix tmp(std::move(x));
-        swap(tmp);
-        return *this;
+        base = std::move(x.base);
+        return base;
       }
 
-      // Copyable
+
+      // Copy semantics
       matrix(matrix const& x)
-        : base_type(x)
+        : base(x.base)
       { }
       
       matrix& operator=(matrix const& x) 
       { 
-        matrix tmp(x); 
-        swap(tmp); 
-        return *this; 
+        base = x.base;
+        return *this;
       }
 
-      // FIXME: Needs to be specialized for input iterators. I need to track
-      // down the traits that were determining iterator properties.
-      //
+
+      // Fill initialziation
+      // Create an n-element vector, with each element initialized to the
+      // given value or the default value if not given.
+      explicit matrix(size_type n, 
+                      const value_type& value = {}, 
+                      const allocator_type& alloc = {})
+        : base(n, value, alloc)
+      { }
+      
+
+      // Range initialization
+      template <typename I>
+        matrix(I first, I last, const allocator_type& alloc = {})
+          : base(first, last, alloc)
+        { }
+
       // FIXME: Write a range constructor.
-      template<typename Iter>
-        matrix(Iter first, Iter last, 
-               typename std::enable_if<is_iterator<Iter>::value>::type* = nullptr)
-          : base_type(std::distance(first, last))
-        {
-          std::copy(first, last, begin());
-        }
       
-      // Initialize the matrix from the initializer list.
-      matrix(std::initializer_list<value_type> list)
-        : base_type(list.size())
-      { 
-        std::copy(list.begin(), list.end(), begin());
-      }
+      matrix(std::initializer_list<value_type> list, 
+             const allocator_type& alloc = {})
+        : base(list, alloc)
+      { }
+
+
+      // Returns the matrix's allocator.
+      allocator_type get_allocator() const { return base.get_allocator(); }
       
-      // Named values:
+      // Returns the size of the vector.
+      size_type size() const { return base.size(); }
       
-      // Return an n-element 0 vector where n is the size of this matrix.
-      // FIXME: What if value_type{0} does not define the additive identity?
-      matrix zero() const { return std::move(matrix(size(), value_type{0})); }
-      
-      // Properties
-      size_type size() const { return base_type::size(); }
-      
+      // Returns the dimensions of the vector. This is equivalent to its size.
+      size_type dim() const { return base.size(); }
+
       // Data access
-      pointer       data()       { return this->first; }
-      const_pointer data() const { return this->first; }
+      // Returns a pointer to the underlying data.
+      pointer       data()       { return base.data(); }
+      const_pointer data() const { return base.data(); }
       
-      // Member access
+
+      // Element access
+      // Returns the nth element of the vector.
       reference       operator[](size_type n)       { return get(n); }
       const_reference operator[](size_type n) const { return get(n); }
       
       reference       operator()(size_type n)       { return get(n); }
       const_reference operator()(size_type n) const { return get(n); }
       
-      // Equality comparable
-      bool operator==(matrix const& x) const { return std::equal(begin(), end(), x.begin()); }
-      bool operator!=(matrix const& x) const { return !operator==(x); }
-      
-      // Assignment operations
-      matrix& operator=(value_type const& x)  { return apply(assign<value_type>{}, x); }
-      matrix& operator+=(value_type const& x) { return apply(plus_assign<value_type>{}, x); }
-      matrix& operator-=(value_type const& x) { return apply(minus_assign<value_type>{}, x); }
-      matrix& operator*=(value_type const& x) { return apply(multiplies_assign<value_type>{}, x); }
-      matrix& operator/=(value_type const& x) { return apply(divides_assign<value_type>{}, x); }
-      matrix& operator%=(value_type const& x) { return apply(modulus_assign<value_type>{}, x); }
-      
-      // Numeric operations: Matrix x Scalar
-      //
-      // Note that we don't follow the usual convention of writing the binary
-      // operators in terms of the assignment operators. Instead, we rely on
-      // special constructors to perform the computation during initialization.
-      // Using the idiomatic solution, each operation would:
-      //  1. allocate and default initialize
-      //  2. copy the matrix x
-      //  3. apply the operation
-      // Using the right constructors, we skip step 2 and just transform a
-      // directly into the result matrix.
-      
-      // Addition
-      friend matrix operator+(matrix const& x, value_type const& a)
-      {
-        return std::move(matrix(x, std::plus<value_type>{}, a));
-      }
+      // Vector addition
+      matrix& operator+=(const matrix& x);
+      matrix& operator-=(const matrix& x);
 
-      friend matrix operator+(value_type const& a, matrix const& x)
-      {
-        return std::move(matrix(x, std::plus<value_type>{}, a));
-      }
+      // Scalar addition
+      matrix& operator=(const value_type& value);
+      matrix& operator+=(const value_type& value);
+      matrix& operator-=(const value_type& value);
 
-      // Subtraction: only x - a
-      friend matrix operator-(matrix const& x, value_type const& a)
-      {
-        return std::move(matrix(x, std::minus<value_type>{}, a));
-      }
+      // Scalar multiplication
+      matrix& operator*=(const value_type& value);
+      matrix& operator/=(const value_type& value);
+      matrix& operator%=(const value_type& value);
 
-      // Multiplication: a * x and x * a
-      friend matrix operator*(matrix const& x, value_type const& a)
-      {
-        return std::move(matrix(x, std::multiplies<value_type>{}, a));
-      }
 
-      friend matrix operator*(value_type const& a, matrix const& x)
-      {
-        return std::move(matrix(x, std::multiplies<value_type>{}, a));
-      }
-
-      // Division: only x / a
-      friend matrix operator/(matrix const& x, value_type const& a)
-      {
-        return std::move(matrix(x, std::divides<value_type>{}, a));
-      }
-
-      // Modulus: only x % a
-      friend matrix operator%(matrix const& x, value_type const& a)
-      {
-        return std::move(matrix(x, std::modulus<value_type>{}, a));
-      }
-
-      // Numeric operations: Matrix x Matrix
-      //
-      // 1d matrices only support addition and subtraction. Multiplication 
-      // isn't supported since we don't have a clear specification of
-      // dimensions in this specialization. The class needs to be wrapped as
-      // either a row or column matrix in order to be multiplied.
-
-      friend matrix operator+(matrix const& x, matrix const& y)
-      {
-        return std::move(matrix(x, y, std::plus<value_type>{}));
-      }
-
-      friend matrix operator-(matrix const& x, matrix const& y)
-      {
-        return std::move(matrix(x, y, std::minus<value_type>{}));
-      }
-
-      // Function application
-      
-      // for all i, m[i] = f(m[i])
-      template<typename F>
-        matrix& apply(F f)
-        {
-          std::transform(begin(), end(), begin(), f);
-          return *this;
-        }
-      
-      // for all i, m[i] = f(m[i], a)
-      template<typename F>
-        matrix& apply(F f, value_type const& a)
-        {
-          using namespace std::placeholders;
-          std::transform(begin(), end(), begin(), std::bind(f, _1, a));
-          return *this;
-        }
+      // Operations
+      void swap(matrix& x) { base.swap(x); }
 
       // Iterators
-      pointer begin() { return this->first; }
-      pointer end()   { return this->last; }
+      iterator begin() { return base.begin(); }
+      iterator end()   { return base.end(); }
 
-      const_pointer begin() const { return this->first; }
-      const_pointer end() const   { return this->last; }      
+      const_iterator begin() const { return base.begin(); }
+      const_iterator end() const   { return base.end(); }      
       
-      // Operations
-      void swap(matrix& x) { base_type::swap(x); }
       
     private:
       reference get(size_type n)
       {
-        assert(( n < size() ));
+        assert(n < size());
         return data()[n];
       }
 
       const_reference get(size_type n) const
       {
-        assert(( n < size() ));
+        assert(n < size());
         return data()[n];
       }
+
+    private:
+      base_type base;
     };
     
-  // I/O Operators
-  template<typename Char, typename Traits, typename T, typename Alloc>
-    std::basic_ostream<Char, Traits>& 
-    operator<<(std::basic_ostream<Char, Traits>& os, matrix<T, 1, Alloc> const& m)
+
+  template <typename T, typename S>
+    inline matrix<T, 1, S>&
+    matrix<T, 1, S>::operator+=(const matrix& x)
     {
-      typedef matrix<T, 1, Alloc> Matrix;
+      assign_elements(begin(), end(), x.begin(), plus_assign<value_type>{});
+      return *this;
+    }
+
+  template <typename T, typename S>
+    inline matrix<T, 1, S>&
+    matrix<T, 1, S>::operator-=(const matrix& x)
+    {
+      assign_elements(begin(), end(), x.begin(), minus_assign<value_type>{});
+      return *this;
+    }
+
+  template <typename T, typename S>
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator=(const value_type& value)  
+    { 
+      assign_value(begin(), end(), value, assign<value_type>{}); 
+      return *this;
+    }
+      
+  template <typename T, typename S>
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator+=(const value_type& value) 
+    { 
+      assign_value(begin(), end(), value, plus_assign<value_type>{}); 
+      return *this;
+    }
+      
+  template <typename T, typename S>
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator-=(value_type const& value) 
+    { 
+      assign_value(begin(), end(), value, minus_assign<value_type>{}); 
+      return *this;
+    }
+  
+  template <typename T, typename S>    
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator*=(value_type const& value) 
+    { 
+      assign_value(begin(), end(), value, multiplies_assign<value_type>{}); 
+      return *this;
+    }
+
+  template <typename T, typename S>      
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator/=(value_type const& value) 
+    { 
+      assign_value(begin(), end(), value, divides_assign<value_type>{}); 
+      return *this;
+    }
+      
+  template <typename T, typename S>      
+    inline matrix<T, 1, S>& 
+    matrix<T, 1, S>::operator%=(value_type const& value) 
+    { 
+      assign_value(begin(), end(), value, modulus_assign<value_type>{}); 
+      return *this;
+    }
+
+
+
+  // Output streamable
+  // TODO: Can this be made general? Probably... Look at the 2D implementaiton.
+  // It's virtually identical except in the use of m.size() vs. m.rows().
+  template <typename C, typename T, typename U, typename S>
+    std::basic_ostream<C, T>& 
+    operator<<(std::basic_ostream<C, T>& os, const matrix<U, 1, S>& m)
+    {
       os << '[';
-      typename Matrix::size_type i = 0;
-      while(i < m.size() - 1) {
+      typename matrix<T, 1, S>::size_type i = 0;
+      while (i < m.size() - 1) {
         os << m[i] << ' ';
         ++i;
       }

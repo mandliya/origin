@@ -15,32 +15,32 @@ using namespace origin;
 
 int main()
 {
-  typedef matrix<int, 1> Matrix;
+  typedef matrix<int, 2> Matrix;
   
   Matrix m1;
   assert(m1.size() == 0);
-  assert(m1.dim() == 0);
+  assert(m1.dim() == make_pair(0ul, 0ul));
   
-  Matrix m2(3);
-  cout << m2 << '\n';
-  
-  Matrix m3(3, 1);
+  Matrix m2({3, 4});
+  assert(m2.size() == 12);
+  cout << m2.rows() << '\n';
+  assert(m2.rows() == 3);
+  assert(m2.cols() == 4);
+
+  Matrix m3({3, 4}, 1);  
   cout << m3 << '\n';
-  
   m3 += 2;
   cout << m3 << '\n';
-  assert(m3 == Matrix(3, 3));
-
+  assert(( m3 == Matrix({3, 4}, 3) ));
+  
+  /*
   Matrix m4 = m3 + 3;
-  cout << m4 << '\n';
-  assert(m4 == Matrix(3, 6));
+  assert(( m4 == Matrix(3, 6) ));
 
   Matrix m5 = m3 * 3;
-  cout << m5 << '\n';
-  assert((m5 == Matrix{9, 9, 9}));
+  assert(( m5 == Matrix{9, 9, 9} ));
   
   Matrix m6 = {1, 2, 3, 4};
-  cout << m6 << '\n';
-  cout << m6 % 2 << '\n';
-  assert((m6 % 2 == Matrix{1, 0, 1, 0}));
+  assert(( m6 % 2 == Matrix{1, 0, 1, 0} ));
+  */
 }

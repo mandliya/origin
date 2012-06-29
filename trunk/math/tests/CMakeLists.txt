@@ -6,11 +6,10 @@
 # and conditions.
 
 origin_run_test(math_number number.cpp)
-
+add_subdirectory(matrix)
 add_subdirectory(counting)
-#add_subdirectory(matrix)
-add_subdirectory(blas)
+# add_subdirectory(blas)
 
-origin_run_test(math_integer integer.cpp)
-origin_run_test(math_real real.cpp)
-origin_run_test(math_fraction fraction.cpp)
+# origin_run_test(math_integer integer.cpp)
+# origin_run_test(math_real real.cpp)
+# origin_run_test(math_fraction fraction.cpp)
