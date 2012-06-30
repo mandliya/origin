@@ -391,13 +391,18 @@ namespace origin
 
 
   // Element access
+  //
+  // FIXME: Write type constraints on Args.
   template <typename T, std::size_t N, typename S>
     template <typename... Args>
       inline auto
       matrix<T, N, S>::operator()(Args... args) -> reference
       {
-        return 
-          *matrix_impl::address(data.data(), dims.begin(), dims.end(), args...);
+        // Explicitly convert to size_type so that all of the argument types
+        // will be the same when calling address. That will make it easy to
+        // write optimizations against common cases later on.
+        return *matrix_impl::address(
+          data.data(), dims.begin(), dims.end(), size_type(args)...);
       }
 
   template <typename T, std::size_t N, typename S>
@@ -405,8 +410,8 @@ namespace origin
       inline auto
       matrix<T, N, S>::operator()(Args... args) const -> const_reference
       {
-        return 
-          *matrix_impl::address(data.data(), dims.begin(), dims.end(), args...);
+        return *matrix_impl::address(
+          data.data(), dims.begin(), dims.end(), size_type(args)...);
       }
 
 
