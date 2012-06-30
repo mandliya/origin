@@ -6,4 +6,4 @@
 # and conditions.
 
 origin_run_test(math_matrix1 matrix1.cpp)
-origin_run_test(math_matrix2 matrix2.cpp)
+#  origin_run_test(math_matrix2 matrix2.cpp)
