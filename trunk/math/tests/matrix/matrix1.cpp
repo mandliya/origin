@@ -43,7 +43,16 @@ int main()
   assert(m1.size() == 5);
 
   // Initialize m1 to the value:
+  //
   // 0 1 2 3 4
+  //
+  // Access to the ith element is m(i), which simply computes the ith offset
+  // from the beginning of the matrix.
+  //
+  // m(i) -> data + i
+  //
+  // The row accessor, m[i] is the same as element access (since a 0D matrix)
+  // is a single value.
   init(m1);
   for (int i = 0; i < 5; ++i)
     assert(m1(i) == i);
@@ -55,15 +64,26 @@ int main()
   assert(m2.size() == 12);
 
   // Put increasing values into m1 s.t we have the following matrix:
+  //
   // 0 1 2 3
   // 4 5 6 7
   // 8 9 a b
+  //
+  // Access to the (i, j)th element is computed as:
+  //
+  // m(i, j) -> data + i * cols(m) + j
+  //
+  // Here, i * cols(m) finds the offset of the row in which (i, j) is found,
+  // and j is the offset in the 1D vector (see the 1D) case.
+  //
+  // Access to the ith row, m[i] returns a 1D slice over the contiguous 
+  // addresses starting at data.
   init(m2);
   for (int i = 0, n = 0; i < 3; ++i) {
     for (int j = 0; j < 4; ++j, ++n)
       assert(m2(i, j) == n);
   }
-
+  cout << m2 << '\n';
 
   // This fails: can't construct a 2d matrix with 3 extents!
   // matrix<int, 2> m {{3, 4, 5}};
@@ -85,6 +105,19 @@ int main()
   //
   //  h  j  l  n
   // g  i  k  m 
+  //
+  // Access to the (i, j k)th element is computed as:
+  //
+  // m(i, j, k) -> data + (i * m.extent(1) * m.extent(2)) + (j * m.extent(2)) + k
+  //
+  // Here, (i * m.extent(1) * m.extent(2)) locates the address of the first
+  // element in the ith row. The product of extents computes the number of
+  // contiguously allocated elements in each row. Note that the 2d case has
+  // m.extent(2) == 1 (if it were defined). The computation j * m.extent(2)
+  // locates the 1D vector within that 2D sub-matrix of m. Finally the k 
+  // locates the offset in that 1D vector.
+  //
+  // Row access, m[i], returns the 2D matrix located at the ith row.
   init(m3);
   for (int i = 0, n = 0; i < 3; ++i) {
     for (int j = 0; j < 4; ++j) {

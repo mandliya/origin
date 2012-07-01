@@ -17,9 +17,17 @@
 #include <numeric>
 
 #include <origin/traits.hpp>
+#include <origin/concepts.hpp>
 
 namespace origin
 {
+  template <typename T, std::size_t N, typename S>
+    class matrix;
+
+  template <typename T, std::size_t N>
+    class matrix_ptr;
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Operations
   //
@@ -98,6 +106,16 @@ namespace origin
     }
 
 
+  // Compute the product of the elements in the range [first, last) starting
+  // with the initial value. If no initial value is given, the value 1 is
+  // used by default.
+  template <typename I, typename T>
+    T product(I first, I last, const T& value = 1)
+    {
+      return std::accumulate(first, last, value, std::multiplies<T>{});
+    }
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Matrix Shape
   //
@@ -119,7 +137,6 @@ namespace origin
       // Construct an "empty" matrix shape such that a matrix with this shape
       // contains 0 elements in each dimension.
       matrix_shape()
-        : exts {}
       { }
 
       // Construct a matrix shape with the extents given by the sequence of
@@ -131,6 +148,7 @@ namespace origin
           : exts{es...}
         {
           static_assert(sizeof...(Exts) == N, "");
+          count();
         }
 
       // Construct a matrix shape with the extents given in the specified
@@ -140,7 +158,19 @@ namespace origin
       {
         assert(list.size() == N);
         std::copy(list.begin(), list.end(), exts);
+        count();
       }
+
+      // Construct a matrix over the extents given in the range [first, last).
+      // The size of the [first, last) must be the same as the rank of the
+      // shape (N).
+      template <typename I>
+        matrix_shape(I first, I last)
+        {
+          assert(std::distance(first, last) == N);
+          std::copy(first, last, exts);
+          count();
+        }
 
       // Returns the number of dimensions representd by these extents.
       static constexpr std::size_t rank() { return N; }
@@ -156,11 +186,22 @@ namespace origin
 
       // Computes the number of elements contained within an array of this
       // shape. This operation requires exactly N - 1 multiplications.
-      T elements() const
-      {
-        using mul = std::multiplies<T>;
-        return std::accumulate(exts, exts + N, std::size_t{1}, mul{});
+      //
+      // TODO: This probably isn't the right name for this function, but 
+      // neither is size() (that relates to iterators).
+      T elements() const { return elems[0]; }
+
+
+      // Returns the shape of a row described by this shape.
+      matrix_shape<T, N - 1> inner() const 
+      { 
+        static_assert(N > 1, "");
+        return {exts + 1, exts + N}; 
       }
+
+      // Underlying data
+      const T* extents() const { return exts; }
+      const T* sizes() const { return elems; }
 
       // Iterators
       iterator begin() { return exts; }
@@ -170,8 +211,31 @@ namespace origin
       const_iterator end() const   { return exts + N; }
 
     private:
-      T exts[N];
+      void count();
+
+    private:
+      T exts[N];    // The extents of each dimension
+      T elems[N];   // Number of elements stored in each sub-table.
     };
+
+
+  // Pre-compute the number of elements for each sub-table described by the
+  // shape. Note that N must not be 0.
+  template <typename T, std::size_t N>
+    inline void 
+    matrix_shape<T, N>::count()
+    {
+      if (N == 0)
+        return;
+      T i = N - 1;
+      elems[i] = exts[i];
+      if (N == 1)
+        return;      
+      do {
+        --i;
+        elems[i] = exts[i] * elems[i + 1];
+      } while (i != 0);
+    }
 
 
   // Equality comparable
@@ -194,6 +258,7 @@ namespace origin
     }
 
 
+
   // Some infrastructure
   namespace matrix_impl
   {
@@ -202,6 +267,12 @@ namespace origin
     // constraint is not evaluated until instantiation.
     template <typename T, std::size_t N>
       using Requires_1D = Requires<Same<T, T>() && (N == 1)>;
+
+    // Determines the row type of a matrix. If N is 0, then the row type is
+    // simply the scalar type T. Otherwise, the row type is a row matrix of
+    // the given dimension.
+    template <typename T, std::size_t N>
+      using Row_type = If<(N == 0), T, matrix_ptr<T, N>>;
   
   } // namespace matrix_impl
 
@@ -230,7 +301,10 @@ namespace origin
       using const_pointer   = typename storage_type::const_pointer;
       using size_type       = typename storage_type::size_type;
       using difference_type = typename storage_type::difference_type;
+
       using shape_type      = matrix_shape<size_type, N>;
+      using row_type        = matrix_impl::Row_type<T, N - 1>;
+      using const_row_type  = matrix_impl::Row_type<const T, N - 1>;
 
       using iterator        = typename storage_type::iterator;
       using const_iterator  = typename storage_type::const_iterator;
@@ -307,8 +381,9 @@ namespace origin
     const shape_type& shape() const { return dims; }
 
     // Returns the rank of the matrix
-    size_type rank() const { return dims.rank(); }
+    static constexpr size_type rank() { return N; }
 
+    // Returns the extent of the matrix in the nth dimension.
     size_type extent(size_type n) const { return dims.extent(n); }
 
     // Returns the total number of elements contained in the matrix.
@@ -322,19 +397,23 @@ namespace origin
     template <typename... Args>
       const_reference operator()(Args... args) const;
 
-      // Vector addition
-      matrix& operator+=(const matrix& x);
-      matrix& operator-=(const matrix& x);
+    // Row access
+    row_type       operator[](size_type n);
+    const_row_type operator[](size_type n) const;
 
-      // Scalar addition
-      matrix& operator=(const value_type& value);
-      matrix& operator+=(const value_type& value);
-      matrix& operator-=(const value_type& value);
+    // Vector addition
+    matrix& operator+=(const matrix& x);
+    matrix& operator-=(const matrix& x);
 
-      // Scalar multiplication
-      matrix& operator*=(const value_type& value);
-      matrix& operator/=(const value_type& value);
-      matrix& operator%=(const value_type& value);
+    // Scalar addition
+    matrix& operator=(const value_type& value);
+    matrix& operator+=(const value_type& value);
+    matrix& operator-=(const value_type& value);
+
+    // Scalar multiplication
+    matrix& operator*=(const value_type& value);
+    matrix& operator/=(const value_type& value);
+    matrix& operator%=(const value_type& value);
 
 
     // Iterators
@@ -352,39 +431,34 @@ namespace origin
 
   namespace matrix_impl
   {
-    // The range [first, last) denotes the sequence of dimensions. The size of
-    // this range corresponds to the extent for which we are requesting an offset.
-    // The distance also corresponds to the the number of index parameters
-    // being requested.
-    template <typename T, typename I>
-      inline T* 
-      address(T* data, I first, I last, std::size_t n)
+    // Returns the address of the nth element in a table whose element counts
+    // are given in the range [first, last). That is, each value in that range
+    // denotes the number of contiguous elements in that table. 
+    //
+    // Note that these functions are defined over iterators, but they're
+    // expected to be pointers.
+
+    // This overload is specifically for 1D matrices, hence the single
+    // index n. Note that size + 1 is PTE of the sizes array owned by the
+    // calling Matrix.
+    template <typename Size>
+      inline Size
+      offset(const Size* size, Size n)
       {
-        assert(first + 1 == last);
-        assert(n < *first);
-        return data + n;
+        assert(n < *size);
+        return n;
       }
 
-    template <typename T, typename I, typename... Args>
-      inline T* 
-      address(T* data, I first, I last, std::size_t n, Args... args)
+    // Here, {n, args...} are the indexes of the requested element. Note that
+    // size + 1 + sizeof...(Args) is PTE of the sizes array owned by the shape 
+    // of the calling matrix.
+    template <typename Size, typename... Args>
+      inline Size
+      offset(const Size* size, Size n, Args... args)
       {
-        // The number of indexes (1 + args) must match the number of extents.
-        assert(first + (1 + sizeof...(Args)) == last);
-
-        // The index must not exceed the extent.
-        assert(n < *first);
-
-        // Compute the size of the submatrix being addressed.
-        // TODO: This is an extraordinarily redundand computation. We should
-        // problaby pre-compute and cache this so we don't have keep re-computing
-        // these values.
-        using mul = std::multiplies<std::size_t>;
-        std::size_t sz = std::accumulate(first + 1, last, std::size_t(1), mul{});
-
-        // Move to the required address, and compute the next address for the
-        // remaining indexes.
-        return address(data + (n * sz), first + 1, last, args...);
+        assert(n * *(size + 1) < *size);
+        ++size;
+        return (n * *size) + offset(size, args...);
       }
 
   } // namespace matrix_impl
@@ -401,8 +475,8 @@ namespace origin
         // Explicitly convert to size_type so that all of the argument types
         // will be the same when calling address. That will make it easy to
         // write optimizations against common cases later on.
-        return *matrix_impl::address(
-          data.data(), dims.begin(), dims.end(), size_type(args)...);
+        size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
+        return *(data.data() + off);
       }
 
   template <typename T, std::size_t N, typename S>
@@ -410,9 +484,63 @@ namespace origin
       inline auto
       matrix<T, N, S>::operator()(Args... args) const -> const_reference
       {
-        return *matrix_impl::address(
-          data.data(), dims.begin(), dims.end(), size_type(args)...);
+        size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
+        return *(data.data() + off);
       }
+
+
+  namespace matrix_impl
+  {
+    // Returs the address the "row" corresponding to the given index. If N == 1
+    // then the resulting "row" is just a scalar value.
+    //
+    // TODO: This feels inelegant. Maybe there should be a better way to
+    // implement it.
+    template <std::size_t N, typename Result>
+      struct get_row
+      {
+        template <typename T, typename Shape>
+          Result operator()(T* ptr, const Shape& shape, std::size_t n)
+          {
+            std::size_t off = n * shape.sizes()[1];
+            return {shape.inner(), ptr + off};
+          }
+      };
+
+    template <typename Result>
+      struct get_row<1, Result>
+      {
+        template <typename T, typename Shape>
+          Result operator()(T* ptr, const Shape& shape, std::size_t n)
+          {
+            return *(ptr + n);
+          }
+      };
+
+    template <std::size_t N, typename Result, typename T, typename Shape>
+      inline Result
+      row(T* ptr, const Shape& shape, std::size_t n)
+      {
+        get_row<N, Result> f;
+        return f(ptr, shape, n);
+      }
+
+  } // namespace matrix_impl
+
+
+  template <typename T, std::size_t N, typename S>
+    inline auto
+    matrix<T, N, S>::operator[](size_type n) -> row_type
+    {
+      return matrix_impl::row<N, row_type>(data.data(), dims, n);
+    }
+
+  template <typename T, std::size_t N, typename S>
+    inline auto
+    matrix<T, N, S>::operator[](size_type n) const -> const_row_type
+    {
+      return matrix_impl::row<N, const_row_type>(data.data(), dims, n);
+    }
 
 
   // Matrix addition
@@ -494,53 +622,216 @@ namespace origin
     }
 
 
-  // Helper functions
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Matrix ptr
+  //
+  // A matrix ptr wraps a contiguously allocated region of memory, imbuing it
+  // with a specified shape. The matrix row does not own its elements.
+  //
+  // This is closely related to the notion of a slice or a submatrix except
+  // that all elements are contiguously allocated and define a complete matrix.
+  // Indexing into a matrix row does not require strides or spans to move from
+  // one element to the next.
+  //
+  // The matrix row class is a Matrix; it has the same interface as the matrix
+  // class.
+  //
+  // TOOD: There is a disagreement between the pointer/size types here, and
+  // those derived from the allocator in the matrix class.
+  template <typename T, std::size_t N>
+    class matrix_ptr
+    {
+    public:
+      using value_type      = T;
+      using reference       = T&;
+      using const_reference = const T&;
+      using pointer         = T*;
+      using const_pointer   = const T*;
+      using size_type       = std::size_t;
+      using difference_type = std::ptrdiff_t;
+
+      using shape_type      = matrix_shape<size_type, N>;
+      using row_type        = matrix_impl::Row_type<T, N - 1>;
+      using const_row_type  = matrix_impl::Row_type<const T, N - 1>;
+
+      using iterator        = T*;
+      using const_iterator  = const T*;
+
+    // Initialize the submatrix with the given shape.
+    matrix_ptr(const shape_type& s, pointer f)
+      : ptr(f), dims(s)
+    { }
+
+
+    // Returns the shape of the matrix.
+    const shape_type& shape() const { return dims; }
+
+    // Returns the rank of the matrix
+    static constexpr size_type rank() { return N; }
+
+    // Returns the extent of the matrix in the nth dimension.
+    size_type extent(size_type n) const { return dims.extent(n); }
+
+    // Returns the total number of elements contained in the matrix.
+    size_type size() const { return dims.elements(); }
+
+
+    // Element access
+    template <typename... Args>
+      reference operator()(Args... args);
+    template <typename... Args>
+      const_reference operator()(Args... args) const;
+
+    // Row access
+    row_type       operator[](size_type n);
+    const_row_type operator[](size_type n) const;
+
+
+    // Iterators
+    iterator begin() { return ptr; }
+    iterator end()   { return ptr + dims.elements(); }
+
+    const_iterator begin() const { return ptr; }
+    const_iterator end() const   { return ptr + dims.elements(); }
+
+    private:
+      pointer ptr;      // The 1st element in the matrix
+      shape_type dims;  // The shape of the matrix
+    };
+
+
+  // FIXME: Write type requirements.
+  template <typename T, std::size_t N>
+    template <typename... Args>
+      inline auto
+      matrix_ptr<T, N>::operator()(Args... args) -> reference
+      {
+        size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
+        return *(ptr + off);
+      }
+
+  template <typename T, std::size_t N>
+    template <typename... Args>
+      inline auto
+      matrix_ptr<T, N>::operator()(Args... args) const -> const_reference
+      {
+        size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
+        return *(ptr + off);
+      }
+
+  template <typename T, std::size_t N>
+    inline auto
+    matrix_ptr<T, N>::operator[](size_type n) -> row_type
+    {
+      return matrix_impl::row<N, row_type>(ptr, dims, n);
+    }
+
+  template <typename T, std::size_t N>
+    inline auto
+    matrix_ptr<T, N>::operator[](size_type n) const -> const_row_type
+    {
+      return matrix_impl::row<N, const_row_type>(ptr, dims, n);
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Matrix operations
+  //
+  // The following operations are defined for all Matrix types.
+
+  namespace matrix_impl
+  {
+    // Safely deduce the result of the expression x.shape().
+    template <typename T>
+      struct get_shape_result
+      {
+      private:
+        template <typename X>
+          static auto check(const X& x) -> decltype(x.shape());
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    template <typename T>
+      using Shape_type = typename get_shape_result<T>::type;
+  };
+
+
+  // Returns true if T is a matrix.
+  //
+  // FIXME: A matrix is substantially more complex than this. Finish defining
+  // and implementing the concept.
+  template <typename T>
+    constexpr bool Matrix()
+    {
+      return Subst_succeeded<matrix_impl::Shape_type<T>>();
+    }
+
 
 
   // Returns the number of rows in a matrix with rank > 1. The number of rows
   // is the same as the extent in the 1st dimension.
-  template <typename T, std::size_t N, typename S>
-    inline typename matrix<T, N, S>::size_type
-    rows(const matrix<T, N, S>& m)
+  template <typename M, typename = Requires<Matrix<M>()>>
+    inline Size_type<M> rows(const M& m)
     {
-      static_assert(N > 1, "");
+      static_assert(M::rank() > 0, "");
       return m.extent(0);
     }
 
+
   // Returns the number of columns in a matrix with rank > 1. This number of
   // columns is the same as the extent in the 2nd dimension.
-  template <typename T, std::size_t N, typename S>
-    inline typename matrix<T, N, S>::size_type
-    cols(const matrix<T, N, S>& m)
+  template <typename M, typename = Requires<Matrix<M>()>>
+    inline Size_type<M> cols(const M& m)
     {
-      static_assert(N > 1, "");
+      static_assert(M::rank() > 0, "");
       return m.extent(1);
     }
 
 
+
   // Equality comparable
   // Two matrices compare equal when they have the same shape and elements.
-  template <typename T, std::size_t N, typename S>
-    inline bool 
-    operator==(const matrix<T, N, S>& a, const matrix<T, N, S>& b)
+  template <typename M>
+    inline auto 
+    operator==(const M& a, const M& b)
+      -> Requires<Matrix<M>(), bool>
     { 
       return a.shape() == b.shape() 
           && std::equal(a.begin(), a.end(), b.begin());
     }
   
-  template <typename T, std::size_t N, typename S>
-    inline bool 
-    operator!=(const matrix<T, N, S>& a, const matrix<T, N, S>& b)
+  template <typename M>
+    inline auto 
+    operator!=(const M& a, const M& b) -> Requires<Matrix<M>(), bool>
     {
       return !(a == b);
     }
       
 
 
+  // FIXME: These arithmetic operations can't be implemented in the same
+  // straightforward manner since the statement "M result = a" would not make
+  // a copy of the elements of a; it would just copy the pointer. Basically,
+  // we'd be trying to modify the first argument.
+  //
+  // We could assume that there's a corresponding matrix for a matrix_ptr, but
+  // if we want to be precise, we're going to have to parameterize the
+  // matrix_ptr over an allocator even though *no allocation is performed*!
+  // Allocators as template parameters are poisonous.
+  //
+  // Furthermore, we would be returning a different type -- which leads me to
+  // believe that these operators should not be defined for matrix_ptrs.
+
+
   // Matrix addition
   // Add or subtract the elements of a matrix.
   template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S> 
+    inline matrix<T, N, S>
     operator+(const matrix<T, N, S>& a, const matrix<T, N, S>& b)
     {
       assert(a.dim() == b.dim());
@@ -671,41 +962,20 @@ namespace origin
 
 
   // Streaming
-  //
-  // FIXME: Make this general. We need slicing to make it work elegantly.
-  template <typename C, typename T, typename U, typename S>
-    inline std::basic_ostream<C, T>&
-    operator<<(std::basic_ostream<C, T>& os, const matrix<U, 1, S>& m)
-    {
-      os << '[';
-      for (auto i = m.begin(); i != m.end(); ++i) {
-        os << *i;
-        if (next(i) != m.end())
-          os << ',' << ' ';
-      }
-      os << ']';
-      return os;
-    }
-
-  template <typename C, typename T, typename U, typename S>
-    inline std::basic_ostream<C, T>&
-    operator<<(std::basic_ostream<C, T>& os, const matrix<U, 2, S>& m)
+  template <typename C, typename T, typename M>
+    inline Requires<Matrix<M>(), std::basic_ostream<C, T>&>
+    operator<<(std::basic_ostream<C, T>& os, const M& m)
     {
       os << '[';
       for (std::size_t i = 0; i < rows(m); ++i) {
-        os << '[';
-        for (std::size_t j = 0; j < cols(m); ++j) {
-          os << m(i, j);
-          if (j + 1 != cols(m))
-            os << ',' << ' ';
-        }
-        os << ']';
+        os << m[i];
         if (i + 1 != rows(m))
           os << ',';
       }
       os << ']';
       return os;
     }
+
 
   //////////////////////////////////////////////////////////////////////////////
   // Matrix Multiplication
