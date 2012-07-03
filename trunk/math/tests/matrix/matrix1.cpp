@@ -25,13 +25,13 @@ int main()
   matrix_shape<size_t, 1> s1{5ul};
   assert(s1.rank() == 1);
   assert(s1.extent(0) == 5);
-  assert(s1.elements() == 5);
+  assert(s1.size() == 5);
 
   matrix_shape<size_t, 2> s2 {3ul, 4ul};
   assert(s2.rank() == 2);
   assert(s2.extent(0) == 3);
   assert(s2.extent(1) == 4);
-  assert(s2.elements() == 12);
+  assert(s2.size() == 12);
 
   assert(s1 == s1);
   assert((s1 != matrix_shape<size_t, 1>{3ul}));
@@ -144,34 +144,4 @@ int main()
     cout << c << '\n';
   }
 
-  /*
-  typedef matrix<int, 1> Matrix;
-  
-  Matrix m1;
-  assert(m1.size() == 0);
-  assert(m1.dim() == 0);
-  
-  Matrix m2(3);
-  cout << m2 << '\n';
-  
-  Matrix m3(3, 1);
-  cout << m3 << '\n';
-  
-  m3 += 2;
-  cout << m3 << '\n';
-  assert(m3 == Matrix(3, 3));
-
-  Matrix m4 = m3 + 3;
-  cout << m4 << '\n';
-  assert(m4 == Matrix(3, 6));
-
-  Matrix m5 = m3 * 3;
-  cout << m5 << '\n';
-  assert((m5 == Matrix{9, 9, 9}));
-  
-  Matrix m6 = {1, 2, 3, 4};
-  cout << m6 << '\n';
-  cout << m6 % 2 << '\n';
-  assert((m6 % 2 == Matrix{1, 0, 1, 0}));
-  */
 }

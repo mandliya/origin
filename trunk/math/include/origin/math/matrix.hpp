@@ -34,6 +34,8 @@ namespace origin
   // The following function objects extend the usual set found in the 
   // <functional> library and provide abstractions over assignment and 
   // arithmetic compound assignment operators.
+  //
+  // TODO: These should probably be moved into the functional module.
 
   template< typename T>
     struct assign
@@ -72,11 +74,13 @@ namespace origin
     };
 
 
+
   //////////////////////////////////////////////////////////////////////////////
   // Algorithms
   //
-  // The following function objects extend the generalized numeric algorithms
-  // in the <numeric> library.
+  // Support algorithms for implementing some matrix operations.
+  //
+  // TODO: These should be moved into the algorithms module.
 
 
   // Assign value
@@ -106,15 +110,6 @@ namespace origin
     }
 
 
-  // Compute the product of the elements in the range [first, last) starting
-  // with the initial value. If no initial value is given, the value 1 is
-  // used by default.
-  template <typename I, typename T>
-    T product(I first, I last, const T& value = 1)
-    {
-      return std::accumulate(first, last, value, std::multiplies<T>{});
-    }
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Matrix Shape
@@ -129,10 +124,7 @@ namespace origin
     class matrix_shape
     {
     public:
-      using value_type     = T;
-      using iterator       = const std::size_t*;
-      using const_iterator = const std::size_t*;
-
+      using value_type = T;
 
       // Construct an "empty" matrix shape such that a matrix with this shape
       // contains 0 elements in each dimension.
@@ -154,7 +146,7 @@ namespace origin
       // Construct a matrix shape with the extents given in the specified
       // initializer list. The size of the list must be the same as the rank
       // of the shape (N).
-      matrix_shape(std::initializer_list<T> list)
+      matrix_shape(std::initializer_list<value_type> list)
       {
         assert(list.size() == N);
         std::copy(list.begin(), list.end(), exts);
@@ -172,43 +164,47 @@ namespace origin
           count();
         }
 
-      // Returns the number of dimensions representd by these extents.
-      static constexpr std::size_t rank() { return N; }
 
-      // Returns the number of elements contained in the nth dimension. If a
-      // specific dimension is not given, then returns the number of elements
-      // contained in the first dimension.
-      T extent(std::size_t i = 0) const 
+      // Returns the rank of the shape.
+      static constexpr value_type rank() { return N; }
+
+      // Returns the number of sub-matrices contained in the nth dimension. If 
+      // a specific dimension is not given, then returns the number of rows.
+      value_type extent(std::size_t i = 0) const 
       { 
         assert(i < N);
         return exts[i]; 
       }
 
-      // Computes the number of elements contained within an array of this
-      // shape. This operation requires exactly N - 1 multiplications.
-      //
-      // TODO: This probably isn't the right name for this function, but 
-      // neither is size() (that relates to iterators).
-      T elements() const { return elems[0]; }
-
+      // Returns the total number of elements contained in a submatrix of the
+      // ith dimension. When i == 0, this is the total number of elements in
+      // the matrix. When i == 1, this is the total number of elementsm in
+      // a row the matrix, etc. If i is not given, the function returns the
+      // total number of elements in the table.
+      value_type size(std::size_t i = 0) const
+      {
+        assert(i < N);
+        return elems[i];
+      }
 
       // Returns the shape of a row described by this shape.
-      matrix_shape<T, N - 1> inner() const 
+      //
+      // TODO: Is there a better name for this function?
+      matrix_shape<value_type, N - 1> inner() const 
       { 
         static_assert(N > 1, "");
         return {exts + 1, exts + N}; 
       }
 
-      // Underlying data
-      const T* extents() const { return exts; }
-      const T* sizes() const { return elems; }
 
-      // Iterators
-      iterator begin() { return exts; }
-      iterator end()   { return exts + N; }
+      // Data accessors
 
-      const_iterator begin() const { return exts; }
-      const_iterator end() const   { return exts + N; }
+      // Returns a pointer to the array of extents.
+      const value_type* extents() const { return exts; }
+
+      // Returns a pointer to the array of sizes.
+      const value_type* sizes() const { return elems; }
+
 
     private:
       void count();
@@ -241,13 +237,21 @@ namespace origin
   // Equality comparable
   // Two shapes compare equal when they have the same rank and extents.
   //
-  // TODO: This does not allow us to compare shapes of different rank. Should
-  // we be able to do that? Should it just return false?
+  // Note that we do not compare sizes since they are computed from the extents
+  // of the shape (that array exists only as an optimization).
+  //
+  // TODO: This definition not allow us to compare shapes of different rank.
+  // The operation is not defined. Should it be? Obviously, it would just 
+  // be false. The implication is that each shape type is part of a local
+  // group.
   template <typename T, std::size_t N>
     inline bool
     operator==(const matrix_shape<T, N>& a, const matrix_shape<T, N>& b)
     {
-      return std::equal(a.begin(), a.end(), b.begin());
+      for (std::size_t i = 0; i < N; ++i)
+        if (a.extent(i) != b.extent(i))
+          return false;
+      return true;
     }
 
   template <typename T, std::size_t N>
@@ -256,6 +260,119 @@ namespace origin
     {
       return !(a == b);
     }
+
+
+  namespace matrix_traits
+  {
+    // Safely deduce the result of the expression x.shape().
+    template <typename T>
+      struct get_shape_type
+      {
+      private:
+        template <typename X>
+          static typename X::shape_type check(const X& x);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    // Safely deduce the associated type name T::row_reference.
+    template <typename T>
+      struct get_associated_row_reference
+      {
+      private:
+        template <typename X>
+          static typename X::row_reference check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(checK(std::declval<T>()));
+      };
+
+    
+    // Safely deduce the associatd type name T::const_row_reference.
+    template <typename T>
+      struct get_associated_const_row_reference
+      {
+      private:
+        template <typename X>
+          static typename X::const_row_reference check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(checK(std::declval<T>()));
+      }; 
+  
+  } // namespace matrix_traits
+
+
+  // An alias to the reference-to-element type of the Matrix, M. The type
+  // denoted by this alias depends on whehter or not M is const. For example:
+  //
+  //    using M = matrix<T, N>;
+  //    Matrix_reference_type<M>       // is T&
+  //    Matrix_reference_type<const M> // is const T&
+  //
+  // Note that M can be any type modeling the Matrix concept. If M does not
+  // satisfy the requirements of the Matrix concept, then the resulting type
+  // indicates substitution failure.
+  template <typename M>
+    using Matrix_reference = 
+      If<Const<M>(), Associated_const_reference<M>, Associated_reference<M>>;
+
+
+  // An alias to the pointer-to-element type of the matrix, M. The type
+  // denoted by this alias depends on whehter or not M is const. For example:
+  //
+  //    using M = matrix<T, N>;
+  //    Matrix_pointer_type<M>       // is T*
+  //    Matrix_pointer_type<const M> // is const T*
+  //
+  // Note that M can be any type modeling the Matrix concept. If M does not
+  // satisfy the requirements of the Matrix concept, then the resulting type
+  // indicates substitution failure.
+  template <typename M>
+    using Matrix_pointer =
+      If<Const<M>(), Associated_const_pointer<M>, Associated_pointer<M>>;
+
+
+  // An alias to the reference-to-row type of the matrix, M. The type denoted
+  // by this alias depends on the const-ness and rank of M. When the rank of
+  // M is 1, this type is the same as the matrice's reference-to-eleemnt type.
+  // Otherwise, the type is an instance of the matrix_ref class template.
+  // Examples of usage and results are:
+  //
+  //    using M1 = matrix<T, 1>;
+  //    using M2 = matrix<T, 2>;
+  //    Matrix_row_reference
+  //
+  // Note that M can be any type modeling the Matrix concept. If M does not
+  // satisfy the requirements of the Matrix concept, then the resulting type
+  // indicates substitution failure.
+  template <typename M>
+    using Matrix_row_reference =
+      If<Const<M>(),
+        typename matrix_traits::get_associated_row_reference<M>::type,
+        typename matrix_traits::get_associated_const_row_reference<M>::type>;
+
+
+
+  // An alias to the shape type associated with a matrix.
+  template <typename M>
+    using Matrix_shape_type = typename matrix_traits::get_shape_type<M>::type;
+
+
+  // Returns true if T is a matrix.
+  //
+  // FIXME: A matrix is substantially more complex than this. Finish defining
+  // and implementing the concept.
+  template <typename M>
+    constexpr bool Matrix()
+    {
+      return Subst_succeeded<Matrix_shape_type<M>>();
+    }
+
 
 
 
@@ -268,43 +385,15 @@ namespace origin
     template <typename T, std::size_t N>
       using Requires_1D = Requires<Same<T, T>() && (N == 1)>;
 
+
+
     // Determines the row type of a matrix. If N is 0, then the row type is
     // simply the scalar type T. Otherwise, the row type is a row matrix of
     // the given dimension.
-    template <typename T, std::size_t N>
-      using Row_type = If<(N == 0), T, matrix_ref<T, N>>;
-  
+    template <typename M, std::size_t N>
+      using Row_type = If<(N == 0), Matrix_reference<M>, matrix_ref<M, N>>;
 
-
-    // Safely deduce the result of the expression x.shape().
-    template <typename T>
-      struct get_shape_result
-      {
-      private:
-        template <typename X>
-          static auto check(const X& x) -> decltype(x.shape());
-
-        static subst_failure check(...);
-      public:
-        using type = decltype(check(std::declval<T>()));
-      };
-
-    // An alias to the shape type associated with a matrix.
-    template <typename T>
-      using Shape_type = typename get_shape_result<T>::type;
-  };
-
-
-  // Returns true if T is a matrix.
-  //
-  // FIXME: A matrix is substantially more complex than this. Finish defining
-  // and implementing the concept.
-  template <typename T>
-    constexpr bool Matrix()
-    {
-      return Subst_succeeded<matrix_impl::Shape_type<T>>();
-    }
-
+  } // namespace matrix_impl
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -316,159 +405,169 @@ namespace origin
   // The matrix is also parameterized over an underlying Storage type which
   // is responsible for the allocation and ownership of the underlying value
   // types. Storage is required to be a Random_access_container. 
-  template <typename T, std::size_t N, typename Storage = std::vector<T>>
+  template <typename T, std::size_t N, typename Store = std::vector<T>>
     class matrix
     {
-      using storage_type = Storage;
+      using this_type           = matrix<T, N, Store>;
+      using store_type          = Store;
     public:
-      using allocator_type  = typename storage_type::allocator_type;
-      using value_type      = T;
-      using reference       = T&;
-      using const_reference = const T&;
-      using pointer         = typename storage_type::pointer;
-      using const_pointer   = typename storage_type::const_pointer;
-      using size_type       = typename storage_type::size_type;
-      using difference_type = typename storage_type::difference_type;
+      using allocator_type      = typename store_type::allocator_type;
+      using value_type          = typename store_type::value_type;
+      using reference           = typename store_type::reference;
+      using const_reference     = typename store_type::const_reference;
+      using pointer             = typename store_type::pointer;
+      using const_pointer       = typename store_type::const_pointer;
+      using size_type           = typename store_type::size_type;
+      using difference_type     = typename store_type::difference_type;
 
-      using shape_type      = matrix_shape<size_type, N>;
-      using row_type        = matrix_impl::Row_type<T, N - 1>;
-      using const_row_type  = matrix_impl::Row_type<const T, N - 1>;
+      using shape_type          = matrix_shape<size_type, N>;
+      using row_reference       = matrix_impl::Row_type<this_type, N - 1>;
+      using const_row_reference = matrix_impl::Row_type<const this_type, N - 1>;
 
-      using iterator        = typename storage_type::iterator;
-      using const_iterator  = typename storage_type::const_iterator;
-
-
-    // Default construction
-    matrix(const allocator_type& a = {})
-      : dims(), data()
-    { }
+      using iterator            = typename store_type::iterator;
+      using const_iterator      = typename store_type::const_iterator;
 
 
-    // Move semantics
-    matrix(matrix&& x, const allocator_type& alloc = {})
-      : dims(std::move(x.dims)), data(std::move(x.data), alloc)
-    { }
-    
-    matrix& operator=(matrix&& x)
-    {
-      dims = std::move(x.dims);
-      data = std::move(x.data);
-      return *this;
-    }
-
-
-    // Copy semantics
-    matrix(matrix const& x, const allocator_type& alloc = {})
-      : dims(x.dims), data(x.data, alloc)
-    { }
-
-    matrix& operator=(matrix const& x) 
-    { 
-      dims = x.dims;
-      data = x.data;
-      return *this;
-    }
-
-
-    // Conversion from matrix_ref
-    matrix(const matrix_ref<T, N>& x)
-      : dims(x.shape()), data(x.begin(), x.end())
-    { }
-
-    matrix& operator=(const matrix_ref<T, N>& x)
-    {
-      dims = x.shape();
-      data.assign(x.begin(), x.end());
-    }
-
-
-    // Construct a matrix of the specified shape.
-    explicit
-    matrix(const shape_type& shape, 
-           const value_type& value = {},
-           const allocator_type& alloc = {})
-      : dims(shape), data(shape.elements(), value, alloc)
-    { }
-
-    // Refinement of the shape constructor for 1-D matrices. This allows
-    // intialization over a single integer value.
-    template <typename Int>
-      explicit 
-      matrix(Int n,
-             const value_type& value = {},
-             const allocator_type& alloc = {},
-             matrix_impl::Requires_1D<Int, N>* = {})
-        : dims(size_type(n)), data(n, value, alloc)
+      // Default construction
+      explicit matrix(const allocator_type& a = {})
+        : dims(), elems()
       { }
 
 
-    // Range initialization
-    //
-    // TODO: Can we make this work for arbitrary levels of nesting for the
-    // initializer list? Probably, but we'll do that later.
-    //
-    // FIXME: Provide iterator-based operators too.
-    matrix(const shape_type& shape,
-           std::initializer_list<value_type> list,
-           const allocator_type& alloc = {})
-      : dims(shape), data(list, alloc)
-    {
-      assert(dims.elements() == data.size());
-    }
+      // Move semantics
+      // Moving a matrix transfers the underlying state of the object x into
+      // this object, leaving x empty.
+      matrix(matrix&& x, const allocator_type& alloc = {})
+        : dims(std::move(x.dims)), elems(std::move(x.elems), alloc)
+      { }
+      
+      matrix& operator=(matrix&& x)
+      {
+        dims = std::move(x.dims);
+        elems = std::move(x.elems);
+        return *this;
+      }
 
 
-    // Returns the shape of the matrix.
-    const shape_type& shape() const { return dims; }
+      // Copy semantics
+      matrix(matrix const& x, const allocator_type& alloc = {})
+        : dims(x.dims), elems(x.elems, alloc)
+      { }
 
-    // Returns the rank of the matrix
-    static constexpr size_type rank() { return N; }
-
-    // Returns the extent of the matrix in the nth dimension.
-    size_type extent(size_type n) const { return dims.extent(n); }
-
-    // Returns the total number of elements contained in the matrix.
-    size_type size() const { return data.size(); }
-
-
-
-    // Element access
-    template <typename... Args>
-      reference operator()(Args... args);
-    template <typename... Args>
-      const_reference operator()(Args... args) const;
-
-    // Row access
-    row_type       operator[](size_type n);
-    const_row_type operator[](size_type n) const;
-
-    // Vector addition
-    template <typename M>
-      Requires<Matrix<M>(), matrix&> operator+=(const M& x);
-    template <typename M>
-      Requires<Matrix<M>(), matrix&> operator-=(const M& x);
-
-    // Scalar addition
-    matrix& operator=(const value_type& value);
-    matrix& operator+=(const value_type& value);
-    matrix& operator-=(const value_type& value);
-
-    // Scalar multiplication
-    matrix& operator*=(const value_type& value);
-    matrix& operator/=(const value_type& value);
-    matrix& operator%=(const value_type& value);
+      matrix& operator=(matrix const& x) 
+      { 
+        dims = x.dims;
+        elems = x.elems;
+        return *this;
+      }
 
 
-    // Iterators
-    iterator begin() { return data.begin(); }
-    iterator end()   { return data.end(); }
+      // Conversion from matrix_ref
+      matrix(const matrix_ref<this_type, N>& x)
+        : dims(x.shape()), elems(x.begin(), x.end())
+      { }
 
-    const_iterator begin() const { return data.begin(); }
-    const_iterator end() const   { return data.end(); }
+      matrix& operator=(const matrix_ref<this_type, N>& x)
+      {
+        dims = x.shape();
+        elems.assign(x.begin(), x.end());
+      }
 
-    private:
-      shape_type dims;
-      storage_type data;
-    };
+
+      // Construct a matrix of the specified shape.
+      explicit
+      matrix(const shape_type& shape, 
+             const value_type& value = {},
+             const allocator_type& alloc = {})
+        : dims(shape), elems(shape.size(), value, alloc)
+      { }
+
+      // Refinement of the shape constructor for 1-D matrices. This allows
+      // intialization over a single integer value.
+      template <typename Int>
+        explicit 
+        matrix(Int n,
+               const value_type& value = {},
+               const allocator_type& alloc = {},
+               matrix_impl::Requires_1D<Int, N>* = {})
+          : dims(size_type(n)), elems(n, value, alloc)
+        { }
+
+
+      // Range initialization
+      //
+      // TODO: Can we make this work for arbitrary levels of nesting for the
+      // initializer list? Probably, but we'll do that later.
+      //
+      // FIXME: Provide iterator-based operators too.
+      matrix(const shape_type& shape,
+             std::initializer_list<value_type> list,
+             const allocator_type& alloc = {})
+        : dims(shape), elems(list, alloc)
+      {
+        assert(dims.size() == elems.size());
+      }
+
+
+
+      // Returns the shape of the matrix.
+      const shape_type& shape() const { return dims; }
+
+      // Returns the rank of the matrix.
+      static constexpr size_type rank() { return N; }
+
+      // Returns the extent of the matrix in the nth dimension.
+      size_type extent(size_type n) const { return dims.extent(n); }
+
+      // Returns the total number of elements contained in the matrix.
+      size_type size() const { return elems.size(); }
+
+
+      // Element access
+      template <typename... Args>
+        reference operator()(Args... args);
+      template <typename... Args>
+        const_reference operator()(Args... args) const;
+
+
+      // Row access
+      row_reference       operator[](size_type n);
+      const_row_reference operator[](size_type n) const;
+
+
+      // Data access
+      pointer       data()       { return elems.data(); }
+      const_pointer data() const { return elems.data(); }
+
+
+      // Vector addition
+      template <typename M>
+        Requires<Matrix<M>(), matrix&> operator+=(const M& x);
+      template <typename M>
+        Requires<Matrix<M>(), matrix&> operator-=(const M& x);
+
+      // Scalar addition
+      matrix& operator=(const value_type& value);
+      matrix& operator+=(const value_type& value);
+      matrix& operator-=(const value_type& value);
+
+      // Scalar multiplication
+      matrix& operator*=(const value_type& value);
+      matrix& operator/=(const value_type& value);
+      matrix& operator%=(const value_type& value);
+
+
+      // Iterators
+      iterator begin() { return elems.begin(); }
+      iterator end()   { return elems.end(); }
+
+      const_iterator begin() const { return elems.begin(); }
+      const_iterator end() const   { return elems.end(); }
+
+      private:
+        shape_type dims;
+        store_type elems;
+      };
 
 
   namespace matrix_impl
@@ -503,6 +602,7 @@ namespace origin
         return (n * *size) + offset(size, args...);
       }
 
+
   } // namespace matrix_impl
 
 
@@ -518,7 +618,7 @@ namespace origin
         // will be the same when calling address. That will make it easy to
         // write optimizations against common cases later on.
         size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
-        return *(data.data() + off);
+        return *(data() + off);
       }
 
   template <typename T, std::size_t N, typename S>
@@ -527,61 +627,61 @@ namespace origin
       matrix<T, N, S>::operator()(Args... args) const -> const_reference
       {
         size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
-        return *(data.data() + off);
+        return *(data() + off);
       }
 
 
   namespace matrix_impl
   {
-    // Returs the address the "row" corresponding to the given index. If N == 1
-    // then the resulting "row" is just a scalar value.
+    // Returns a reference to the nth row of the matrix m, with base being the
+    // originating matrix.
     //
-    // TODO: This feels inelegant. Maybe there should be a better way to
-    // implement it.
-    template <std::size_t N, typename Result>
-      struct get_row
+    // FIXME: It would be nice to use Row_reference<M> and Row_refernce<const M> 
+    // in these algorithms.
+    template <typename B, typename M>
+      inline Requires<(M::rank() != 1), typename M::row_reference>
+      row(B& base, M& m, Size_type<M> n)
       {
-        template <typename T, typename Shape>
-          Result operator()(T* ptr, const Shape& shape, std::size_t n)
-          {
-            std::size_t off = n * shape.sizes()[1];
-            return {shape.inner(), ptr + off};
-          }
-      };
-
-    template <typename Result>
-      struct get_row<1, Result>
-      {
-        template <typename T, typename Shape>
-          Result operator()(T* ptr, const Shape& shape, std::size_t n)
-          {
-            return *(ptr + n);
-          }
-      };
-
-    template <std::size_t N, typename Result, typename T, typename Shape>
-      inline Result
-      row(T* ptr, const Shape& shape, std::size_t n)
-      {
-        get_row<N, Result> f;
-        return f(ptr, shape, n);
+        return {base, m.shape().inner(), m.data() + n * m.shape().size(1)};
       }
 
+    template <typename B, typename M>
+      inline Requires<(M::rank() != 1), typename M::const_row_reference>
+      row(const B& base, const M& m, Size_type<M> n)
+      {
+        return {base, m.shape().inner(), m.data() + n * m.shape().size(1)};
+      }
+
+    // Specializations for the case where N == 1
+    template <typename B, typename M>
+      inline Requires<(M::rank() == 1), typename M::row_reference>
+      row(B& base, M& m, Size_type<M> n)
+      {
+        return *(m.data() + n);
+      }
+
+    template <typename B, typename M>
+      inline Requires<(M::rank() == 1), typename M::const_row_reference>
+      row(const B& base, const M& m, Size_type<M> n)
+      {
+        return *(m.data() + n);
+      }
   } // namespace matrix_impl
 
 
   template <typename T, std::size_t N, typename S>
     inline auto
-    matrix<T, N, S>::operator[](size_type n) -> row_type
+    matrix<T, N, S>::operator[](size_type n) -> row_reference
     {
-      return matrix_impl::row<N, row_type>(data.data(), dims, n);
+      return matrix_impl::row(*this, *this, n);
     }
+
 
   template <typename T, std::size_t N, typename S>
     inline auto
-    matrix<T, N, S>::operator[](size_type n) const -> const_row_type
+    matrix<T, N, S>::operator[](size_type n) const -> const_row_reference
     {
-      return matrix_impl::row<N, const_row_type>(data.data(), dims, n);
+      return matrix_impl::row(*this, *this, n);
     }
 
 
@@ -668,7 +768,6 @@ namespace origin
     }
 
 
-
   //////////////////////////////////////////////////////////////////////////////
   // Matrix ref
   //
@@ -683,26 +782,35 @@ namespace origin
   // The matrix row class is a Matrix except that assignment writes through
   // (not to) the matrix reference to the referenced data.
   //
-  // TOOD: There is a disagreement between the pointer/size types here, and
-  // those derived from the allocator in the matrix class.
-  template <typename T, std::size_t N>
+  // Template parameters:
+  //    M -- The type of matrix into which this class ultimately refers. Note
+  //         that M is an instane of matrix, not matrix_ref. Also, M may have
+  //         the type const T, indicating that the all elements returned by
+  //         this refrence class are also const.
+  //    N -- The number of dimensions of this sub-matrix. N must be less than
+  //         or equal to M::rank().
+  template <typename M, std::size_t N>
     class matrix_ref
     {
+      using this_type = matrix_ref<M, N>;
+      using base_type = Remove_const<M>;
     public:
-      using value_type      = T;
-      using reference       = T&;
-      using const_reference = const T&;
-      using pointer         = T*;
-      using const_pointer   = const T*;
-      using size_type       = std::size_t;
-      using difference_type = std::ptrdiff_t;
+      using matrix_type         = M;
+      using allocator_type      = typename base_type::allocator_type;
+      using value_type          = typename base_type::value_type;
+      using reference           = Matrix_reference<M>;
+      using const_reference     = typename base_type::const_reference;
+      using pointer             = Matrix_pointer<M>;
+      using const_pointer       = typename base_type::const_pointer;
+      using size_type           = typename base_type::size_type;
+      using difference_type     = typename base_type::difference_type;
 
-      using shape_type      = matrix_shape<size_type, N>;
-      using row_type        = matrix_impl::Row_type<T, N - 1>;
-      using const_row_type  = matrix_impl::Row_type<const T, N - 1>;
+      using shape_type          = matrix_shape<size_type, N>;
+      using row_reference       = matrix_impl::Row_type<M, N - 1>;
+      using const_row_reference = matrix_impl::Row_type<const M, N - 1>;
 
-      using iterator        = T*;
-      using const_iterator  = const T*;
+      using iterator            = pointer;
+      using const_iterator      = const_pointer;
 
 
       // Move and copy semantics
@@ -711,10 +819,16 @@ namespace origin
 
 
       // Initialize the submatrix with the given shape.
-      matrix_ref(const shape_type& s, pointer p)
-        : ptr(p), dims(s)
+      matrix_ref(matrix_type& m, const shape_type& s, pointer p)
+        : mat(m), dims(s), ptr(p)
       { }
 
+
+      // Returns a reference to the originating matrix.
+      const matrix_type& base() const { return mat; }
+
+      // Returns the allocator of the originating matrix.
+      allocator_type get_allocator() const { return mat.get_allocator(); }
 
       // Returns the shape of the matrix.
       const shape_type& shape() const { return dims; }
@@ -735,15 +849,22 @@ namespace origin
       template <typename... Args>
         const_reference operator()(Args... args) const;
 
+
       // Row access
-      row_type       operator[](size_type n);
-      const_row_type operator[](size_type n) const;
+      row_reference       operator[](size_type n);
+      const_row_reference operator[](size_type n) const;
+
+
+      // Data access
+      pointer       data()       { return ptr; }
+      const_pointer data() const { return ptr; }
+
 
       // Matrix addition
-      template <typename M>
-        Requires<Matrix<M>(), matrix_ref&> operator+=(const matrix_ref& x);
-      template <typename M>
-        Requires<Matrix<M>(), matrix_ref&> operator-=(const matrix_ref& x);
+      template <typename M2>
+        Requires<Matrix<M2>(), matrix_ref&> operator+=(const M2& x);
+      template <typename M2>
+        Requires<Matrix<M2>(), matrix_ref&> operator-=(const M2& x);
 
       // Scalar addition
       matrix_ref& operator=(const value_type& value);
@@ -763,8 +884,9 @@ namespace origin
       const_iterator end() const   { return ptr + dims.elements(); }
 
     private:
-      pointer ptr;      // The 1st element in the matrix
+      matrix_type mat;  // A reference to the originating matrix
       shape_type dims;  // The shape of the matrix
+      pointer ptr;      // The 1st element in the matrix
     };
 
 
@@ -789,17 +911,18 @@ namespace origin
 
   template <typename T, std::size_t N>
     inline auto
-    matrix_ref<T, N>::operator[](size_type n) -> row_type
+    matrix_ref<T, N>::operator[](size_type n) -> row_reference
     {
-      return matrix_impl::row<N, row_type>(ptr, dims, n);
+      return matrix_impl::row(mat, *this, n);
     }
 
   template <typename T, std::size_t N>
     inline auto
-    matrix_ref<T, N>::operator[](size_type n) const -> const_row_type
+    matrix_ref<T, N>::operator[](size_type n) const -> const_row_reference
     {
-      return matrix_impl::row<N, const_row_type>(ptr, dims, n);
+      return matrix_impl::row(mat, *this, n);
     }
+
 
   // Scalar addition
   template <typename T, std::size_t N>
@@ -936,7 +1059,7 @@ namespace origin
   // allocator in the reference class.
   template <typename T, std::size_t N, typename S>
     inline matrix<T, N, S>
-    operator+(const matrix<T, N, S>& a, const matrix_ref<T, S>& b)
+    operator+(const matrix<T, N, S>& a, const matrix_ref<T, N>& b)
     {
       assert(a.dim() == b.dim());
       matrix<T, N, S> result = a;
@@ -945,7 +1068,7 @@ namespace origin
 
   template <typename T, std::size_t N, typename S>
     inline matrix<T, N, S>
-    operator+(const matrix_ref<T, S>& a, const matrix<T, N, S>& b)
+    operator+(const matrix_ref<T, N>& a, const matrix<T, N, S>& b)
     {
       assert(a.dim() == b.dim());
       matrix<T, N, S> result = a;

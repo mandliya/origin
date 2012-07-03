@@ -54,7 +54,7 @@ namespace origin
   // Arithmetic type.
   template <typename T> using zero_type = integral_constant<T, 0>;
   template <typename T> using one_type = integral_constant<T, 1>;
-  template <typename T> using neg_one_type = integral_constant<T, -1>;
+  template <typename T> using negative_one_type = integral_constant<T, -1>;
 
 
   // True and false
@@ -2343,6 +2343,87 @@ namespace origin
     {
       return Subst_succeeded<Associated_size_type<T>>();
     }
+
+
+  namespace traits
+  {
+    // Safely deduce the associated type name T::reference.
+    template <typename T>
+      struct get_associated_reference
+      {
+      private:
+        template <typename X>
+          static typename X::reference check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    
+    // Safely deduce the associatd type name T::const_reference.
+    template <typename T>
+      struct get_associated_const_reference
+      {
+      private:
+        template <typename X>
+          static typename X::const_reference check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      }; 
+
+    // Safely deduce the associated type name T::pointer.
+    template <typename T>
+      struct get_associated_pointer
+      {
+      private:
+        template <typename X>
+          static typename X::pointer check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      };
+
+    
+    // Safely deduce the associatd type name T::const_pointer.
+    template <typename T>
+      struct get_associated_const_pointer
+      {
+      private:
+        template <typename X>
+          static typename X::const_pointer check(X&&);
+
+        static subst_failure check(...);
+      public:
+        using type = decltype(check(std::declval<T>()));
+      }; 
+  } // namsepace traits
+
+
+  // An alias to the associated reference type.
+  template <typename T>
+    using Associated_reference = 
+      typename traits::get_associated_reference<T>::type;
+
+
+  // An alias to the associated const_reference type.
+  template <typename T>
+    using Associated_const_reference = 
+      typename traits::get_associated_const_reference<T>::type;
+
+  // An alias to the associated pointer type.
+  template <typename T>
+    using Associated_pointer = 
+      typename traits::get_associated_pointer<T>::type;
+
+
+  // An alias to the associated const_pointer type.
+  template <typename T>
+    using Associated_const_pointer = 
+      typename traits::get_associated_const_pointer<T>::type;
 
 
 
