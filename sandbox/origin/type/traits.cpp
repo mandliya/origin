@@ -1,3 +1,4 @@
+
 // Copyright (c) 2008-2010 Kent State University
 // Copyright (c) 2011-2012 Texas A&M University
 //
@@ -5,11 +6,4 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_FORWARD_HPP
-#define ORIGIN_FORWARD_HPP
-
-namespace origin
-{
-}
-
-#endif
+#include "concepts.hpp"
