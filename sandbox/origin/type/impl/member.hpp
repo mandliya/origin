@@ -63,7 +63,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static typename X::reference check(X&&);
+        static typename X::reference check(const X&);
 
       static subst_failure check(...);
     public:
@@ -77,7 +77,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static typename X::const_reference check(X&&);
+        static typename X::const_reference check(const X&);
 
       static subst_failure check(...);
     public:
@@ -91,7 +91,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static typename X::pointer check(X&&);
+        static typename X::pointer check(const X&);
 
       static subst_failure check(...);
     public:
@@ -105,7 +105,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static typename X::const_pointer check(X&&);
+        static typename X::const_pointer check(const X&);
 
       static subst_failure check(...);
     public:
@@ -126,7 +126,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static auto check(X const& x) -> decltype(x.size());
+        static auto check(const X& x) -> decltype(x.size());
       static subst_failure check(...);
     public:
       using type = decltype(check(std::declval<T>()));
@@ -138,7 +138,7 @@ namespace type_impl
     {
     private:
       template <typename X>
-        static auto check(X const& x) -> decltype(x.empty());
+        static auto check(const X& x) -> decltype(x.empty());
       static subst_failure check(...);
     public:
       using type = decltype(check(std::declval<T>()));

@@ -59,7 +59,7 @@ namespace type_impl
   template <typename T>
     struct get_deduced_value_type<T, false>
     {
-      using type = decltype(deduce_value_type(default_t {}, std::declval<T>()));
+      using type = decltype(deduce_value_type(default_t{}, std::declval<T>()));
     };
 
 
@@ -87,7 +87,7 @@ namespace type_impl
   template <typename T>
     struct get_deduced_size_type<T, false> 
     { 
-      using type = decltype(deduce_size_type(default_t {}, std::declval<T>()));
+      using type = decltype(deduce_size_type(default_t{}, std::declval<T>()));
     };
 
 
@@ -149,7 +149,117 @@ namespace type_impl
     struct get_deduced_difference_type<T, false>
     {
       using type = 
-        decltype(deduce_difference_type(default_t {}, std::declval<T>()));
+        decltype(deduce_difference_type(default_t{}, std::declval<T>()));
     };
+
+
+
+  // Reference deduction hook.
+  subst_failure deduce_reference(...);
+
+  // By default, anything with a unary operator* has a reference type. It's
+  // the result of applying that operator.
+  template <typename T>
+    auto deduce_reference(default_t, T&& x) -> decltype(*x);
+
+
+  // Deduce a reasonable reference type from T. If T is...
+  template <typename T, 
+            bool = Has_associated_reference<T>(),
+            bool = Has_associated_const_reference<T>()>
+    struct get_deduced_reference;
+
+  // Container-like types define both reference and const_reference. The
+  // actual result depends on the constness of T.
+  template <typename T>
+    struct get_deduced_reference<T, true, true>
+    {
+      using type = If<
+        Const<Remove_reference<T>>(), 
+        Associated_const_reference<T>, 
+        Associated_reference<T>>;
+    };
+
+  // Iterators typically define an associated reference type, but not a const
+  // reference.
+  template <typename T>
+    struct get_deduced_reference<T, true, false>
+    {
+      using type = Associated_reference<T>;
+    };
+
+  // It is *extremely* unlikeky that somebody would define const_reference
+  // without reference, but we know the answer when they do.
+  template <typename T>
+    struct get_deduced_reference<T, false, true>
+    {
+      using type = Associated_const_reference<T>;
+    };
+
+  // If no associated reference type is defined, use the deduction hook to
+  // get an answer.
+  template <typename T>
+    struct get_deduced_reference<T, false, false>
+    {
+      using type = decltype(deduce_reference(default_t{}, std::declval<T>()));
+    };
+
+
+
+  // As with refefences, we can also deduce pointers.
+
+  // Pointer deduction hook.
+  subst_failure deduce_pointer(...);
+
+  // By default, anything with a unary operator* has a pointer type that
+  // can be deduced as the address of the dereferenced value, but only when
+  // the derefenced value is a Reference. If that's not the case, then we
+  // expect the user to define a T::pointer and/or T::const_pointer.
+  template <typename T>
+    auto deduce_pointer(default_t, T&& x) 
+      -> Requires<Reference<decltype(*x)>(), decltype(&*x)>;
+
+
+  // Deduce a reasonable pointer type from T. This depends on whether or not
+  // T defines T::pointer and/or T::const_pointer.
+  template <typename T, 
+            bool = Has_associated_pointer<T>(),
+            bool = Has_associated_const_pointer<T>()>
+    struct get_deduced_pointer;
+
+  // Container-like types define both pointer and const_pointer. The actual
+  // result depends on the constness of T.
+  template <typename T>
+    struct get_deduced_pointer<T, true, true>
+    {
+      using type = If<
+        Const<Remove_reference<T>>(), 
+        Associated_const_pointer<T>, 
+        Associated_pointer<T>>;
+    };
+
+  // Iterators typically define an associated pointer, but not a const pointer.
+  template <typename T>
+    struct get_deduced_pointer<T, true, false>
+    {
+      using type = Associated_pointer<T>;
+    };
+
+  // It is *extremely* unlikeky that somebody would define const_pointers
+  // without pointer, but we know the answer when they do.
+  template <typename T>
+    struct get_deduced_pointer<T, false, true>
+    {
+      using type = Associated_const_pointer<T>;
+    };
+
+  // If no associated pointer type is defined, use the deduction hook to get an
+  // answer.
+  template <typename T>
+    struct get_deduced_pointer<T, false, false>
+    {
+      using type = decltype(deduce_pointer(default_t{}, std::declval<T>()));
+    };
+
 
 } // namespace type_impl

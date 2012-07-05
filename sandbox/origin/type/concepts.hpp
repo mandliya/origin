@@ -795,6 +795,19 @@ namespace origin
     }
 
 
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Reference Of                                       concepts.types.reference
+  //
+  template <typename T>
+    using Reference_of = typename type_impl::get_deduced_reference<T>::type;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Pointer Of                                           concepts.types.pointer
+  //
+  template <typename T>
+    using Pointer_of = typename type_impl::get_deduced_pointer<T>::type;
+
 } // namespace origin
 
 

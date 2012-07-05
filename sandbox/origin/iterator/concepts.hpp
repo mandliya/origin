@@ -19,9 +19,7 @@ namespace origin
   // Reading and Writing                                                 iter.rw
   //
   // There are three concepts describing reading from and writing through
-  // iterators: Readable, Move_writable, and Copy_writable.
-  //
-  // TODO: Document me...
+  // iterators using the unary * operator.
   //////////////////////////////////////////////////////////////////////////////
 
 
@@ -29,9 +27,26 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Readable                                                          iter.read
   //
-  // A type is readable if it has an associated value type, is dereferenceable,
-  // and a constant refernce to the value type can be bound to the result of
-  // dereferencing.
+  // A type I is readable if it defines an associated value type and can be
+  // dereferenced. The associated value type (accessed through Value_type<I>)
+  // is the type of the object being dereference (excluding references or
+  // cv-qualifiers). The result of dereferencing a readable type can be bound
+  // to a constant reference to the value type. That is:
+  //
+  //    const Value_type<I>& x = *i;
+  //
+  // Must be a valid declaration for all Readable types.
+  //
+  // A Readable object can be dereferenced multiple times, having the same
+  // result each time, assuming there are no intervening changes to the
+  // iterator.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the 
+  //    Readable concept.
   template <typename I>
     constexpr bool Readable()
     {
@@ -53,6 +68,14 @@ namespace origin
   // 
   // where i has type I and t has type T. The operation has the result of
   // moving the representation of t into the object referenced by *i.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //    T -- A type being move assigned through an iterator of type I
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the 
+  //    Move_writable concept.
   template <typename I, typename T>
     constexpr bool Move_writable()
     {
@@ -73,6 +96,14 @@ namespace origin
   // where i has type I and t has type T. If I is also Readable and the 
   // assigned value type is Equality comparable, then *i == t after the
   // assignment.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //    T -- A type being copy assigned through an iterator of type I
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the 
+  //    Copy_writable concept.
   template <typename I, typename T>
     constexpr bool Copy_writable()
     {
@@ -85,8 +116,20 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Permutable                                                  iter.permutable
   //
-  // Returns true if I is permutable. A permutable iterator is readable,
-  // move-writable, and has a movable value type.
+  // An iterator type is permutable if its referenced values can be moved
+  // between iterators (of the same type). For example.
+  //
+  //    *i = move(*j);
+  //
+  // Permutable iterators are required by many of the STL algorithms, including
+  // the sort and heap algorithms.
+  //
+  // Template Parameters:
+  //    I -- The type being tested.
+  //
+  // Retruns:
+  //    True if and only if I satisfies the requirements of the Permutable 
+  //    concept.
   template <typename I>
     constexpr bool Permutable()
     {
@@ -100,14 +143,24 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Mutable                                                        iter.mutable
   //
-  // Returns true if I mutable. A mutable iterator is readable and writable,
-  // and has a copyable value type.
+  // An iterator type is mutable if its referenced values can be copied between
+  // iterators (of the same type). For example:
   //
-  // Note that all Mutable iterator types are also Permutable.
+  //    *i = *j;
+  //
+  // Note that all mutable iterator types are also permutable. Mutable iterators
+  // are not commoly required by STL algorithms. Most of algorithms that
+  // exchange values do so through move operations (i.e,. permutation).
+  //
+  // Template Parameters:
+  //    I -- The type being tested.
+  //
+  // Retruns:
+  //    True if and only if I satisfies the requirements of the Mutable concept.
   template <typename I>
     constexpr bool Mutable()
     {
-      return Readable<I>() 
+      return Permutable<I>() 
           && Copyable<Value_type<I>>() 
           && Copy_writable<I, Value_type<I>>();
     }
@@ -117,26 +170,33 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Incrementable Types                                               iter.incr
   //
-  // TODO: Document me...
+  // An incrementable type is one whose value can be incremented or advanced.
+  // There are three concepts describing incrementable types: weakly
+  // incrementable, incrementable, and decrementable. These concepts provide
+  // a basis for writing algorithms that only operate on the traversal aspects
+  // of an iterator (e.g., advance and distance).
+  //
+  // Note that all incrementable types should be equality comparable since the
+  // values of these types generally represent an offset, index, or state.
+  // However, the C++ standard does not require equality comparison for
+  // output iterators, so we cannot enforce this requirement at this level.
   //////////////////////////////////////////////////////////////////////////////
 
 
-
   //////////////////////////////////////////////////////////////////////////////
-  // Incrementable   
+  // Weakly Incrementable
   //
   // A weakly incrementable type is a semiregular type that can be pre- and
-  // post-incremented. Neither operation is requireed to be equality
-  // preserving, and the result of post-increment is unspecified.
+  // post-incremented. Both operations advance the value, but neither operation
+  // is required to be equality preserving. The result type of post-incrementing 
+  // is unspecified.
   //
-  // An incrementable type is an equality comparable, weakly incrementable 
-  // type with a post-increment operator.
+  // Template Parameters:
+  //    I -- The type being tested
   //
-  // Note that the weakly incrementable type does not include the
-  // post-increment operator.
-
-
-  // Returns true if I is weakly incrementable.
+  // Returns:
+  //    True if and only if I satisfies the requirements of the 
+  //    Weakly_incrementable concept.
   template <typename I>
     constexpr bool Weakly_incrementable()
     {
@@ -144,11 +204,25 @@ namespace origin
           && Equality_comparable<I>()
           && Has_difference_type<I>()
           && Has_pre_increment<I>()
-          && Same<Pre_increment_result<I>, I&>();
+          && Same<Pre_increment_result<I>, I&>()
+          && Has_post_increment<I>();
     }
     
-  
-  // Returns true if I is incremetnable.
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Incrementable
+  //
+  // Like a weakly incremetable types, an incrementable type is also pre- and 
+  // post-incremetable, but the requirements on those operations are stronger.
+  // In particular, both operations are required to be equality preserving, and
+  // the result of post-incrementing an incrementable object returns a copy
+  // of the previous value or state.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if I is incrementable.
   template <typename I>
     constexpr bool Incrementable()
     {
@@ -158,23 +232,12 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Strict Weakly Incrementable
-  //
-  // A type that is weakly incrementable but not (strongly) incrementable.
-  template <typename I>
-    constexpr bool Strict_weakly_incrementable()
-    {
-      return Weakly_incrementable<I>() && !Incrementable<I>();
-    }
-
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
   // Decrementable
   //
   // A decrementable type is an inrementable type that can also be pre- and
-  // post-decremented.
+  // post-decremented. Like the incrementable concept, the pre- and post-
+  // decrement operators are required to be equality preserving, and the
+  // post-decrement operator returns a copy of the previous state.
   //
   // Note that there is no weakly decrementable. A type cannot support 
   // decrementing without also supportng incrementing, and the ability to
@@ -190,9 +253,29 @@ namespace origin
     }
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Strict Weakly Incrementable
+  //
+  // It is sometimes necessary to overload an algorithm for differently for
+  // weakly incrementable types than for incrementable types. This type
+  // predicate provides that capability.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if I is weakly incrementable but not incrementable.
+  template <typename I>
+    constexpr bool Strict_weakly_incrementable()
+    {
+      return Weakly_incrementable<I>() && !Incrementable<I>();
+    }
+
+
   // TODO: Create another concept that mirrors random access iterators, but
   // does not include readability or writability. Not sure what the name should
   // be...
+
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -214,6 +297,13 @@ namespace origin
   // An Iterator is minimally a weakly incrementable and dereferenceable type.
   // Note that no constraints are placed on the result of the dereference
   // operator.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the
+  //    Iterator concept.
   template <typename I>
     constexpr bool Iterator()
     {
