@@ -175,7 +175,18 @@ namespace type_impl
       }
     };
     
-    
+  // Generate array references differently.
+  template <typename T, std::size_t N>
+    struct type_to_string<T(&)[N]>
+    {
+      std::string operator()() const
+      {
+        return typestr<T>() + "(&)" + '[' + std::to_string(N) + ']';
+      }
+    };
+
+
+
   // Type list to string
   // Compute an intercalated list of type names (i.e., T1, T2, ..., Tn). This 
   // function (object) is intended to be used by typestr.

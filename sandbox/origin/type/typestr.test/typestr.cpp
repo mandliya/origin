@@ -21,35 +21,47 @@ using namespace origin;
 // Note that the result of the operation is sensitive to the spelling of T. In
 // the example above, passing the argument as "int const" would cause the
 // evaluation to base.
-#define CHECK_TYPESTR(T) typestr<T>() == #T
+#define CHECK_TYPESTR(T) assert(typestr<T>() == #T)
 
+
+template <typename T>
+  void f(T&& x)
+  {
+    cout << typestr<T>() << '\n';
+    // cout << type_impl::to_string(typeid(x)) << '\n';
+  }
 
 int main()
 {
-  assert(CHECK_TYPESTR(int));
-  assert(CHECK_TYPESTR(const int));
-  assert(CHECK_TYPESTR(volatile int));
-  assert(CHECK_TYPESTR(const volatile int));
-  assert(CHECK_TYPESTR(int&));
+  CHECK_TYPESTR(int);
+  CHECK_TYPESTR(int);
+  CHECK_TYPESTR(const int);
+  CHECK_TYPESTR(volatile int);
+  CHECK_TYPESTR(const volatile int);
+  CHECK_TYPESTR(int&);
 
   // The C Preprocessor can't expand this correctly.
   assert(typestr<int&&>() == "int&&");
   
-  assert(CHECK_TYPESTR(int*));
-  assert(CHECK_TYPESTR(int**));
-  assert(CHECK_TYPESTR(int***));
+  CHECK_TYPESTR(int*);
+  CHECK_TYPESTR(int**);
+  CHECK_TYPESTR(int***);
 
-  assert(CHECK_TYPESTR(const int*));
-  assert(CHECK_TYPESTR(const int* const));
-  assert(CHECK_TYPESTR(const int* const* const));
-  assert(CHECK_TYPESTR(const int*));
-  assert(CHECK_TYPESTR(const int* volatile));
-  assert(CHECK_TYPESTR(const int* const volatile));
+  CHECK_TYPESTR(const int*);
+  CHECK_TYPESTR(const int* const);
+  CHECK_TYPESTR(const int* const* const);
+  CHECK_TYPESTR(const int*);
+  CHECK_TYPESTR(const int* volatile);
+  CHECK_TYPESTR(const int* const volatile);
 
-  assert(CHECK_TYPESTR(int(int, int)));
-  assert(CHECK_TYPESTR(int(int&, int)));
-  assert(CHECK_TYPESTR(int(*)(int, bool)));
+  CHECK_TYPESTR(int(int, int));
+  CHECK_TYPESTR(int(int&, int));
+  CHECK_TYPESTR(int(*)(int, bool));
 
+  int a[3];
+  const int b[3] {0, 0, 0};
+  f(a);
+  f(b);
 
   // TODO: Check member pointer types, too. I'm pretty sure I'm going to have
   // to write specializations on those.

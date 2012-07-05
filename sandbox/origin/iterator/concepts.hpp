@@ -8,6 +8,8 @@
 #ifndef ORIGIN_ITERATOR_CONCEPTS_HPP
 #define ORIGIN_ITERATOR_CONCEPTS_HPP
 
+#include <iterator>
+
 #include <origin/type/concepts.hpp>
 
 namespace origin
