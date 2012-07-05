@@ -174,7 +174,18 @@ namespace type_impl
         return typestr<R>() + "(*)" + function_args_to_string<Args...>();
       }
     };
-    
+
+
+  // Generate array types differently that typeid does.
+  template <typename T, std::size_t N>
+    struct type_to_string<T[N]>
+    {
+      std::string operator()() const
+      {
+        return typestr<T>() + '[' + std::to_string(N) + ']';
+      }
+    };
+
   // Generate array references differently.
   template <typename T, std::size_t N>
     struct type_to_string<T(&)[N]>

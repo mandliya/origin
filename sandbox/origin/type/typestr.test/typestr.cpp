@@ -24,29 +24,32 @@ using namespace origin;
 #define CHECK_TYPESTR(T) assert(typestr<T>() == #T)
 
 
+// Check that the array reference matches the string given by x.
 template <typename T>
-  void f(T&& x)
+  void check_array_ref(T&& x, const string& str)
   {
-    cout << typestr<T>() << '\n';
-    // cout << type_impl::to_string(typeid(x)) << '\n';
+    assert(typestr<T>() == str);
   }
 
 int main()
 {
   CHECK_TYPESTR(int);
-  CHECK_TYPESTR(int);
+
+  // Cv-qualifiers.
   CHECK_TYPESTR(const int);
   CHECK_TYPESTR(volatile int);
   CHECK_TYPESTR(const volatile int);
-  CHECK_TYPESTR(int&);
 
-  // The C Preprocessor can't expand this correctly.
-  assert(typestr<int&&>() == "int&&");
-  
+  // Reference and pointer types.
+  CHECK_TYPESTR(int&);
   CHECK_TYPESTR(int*);
   CHECK_TYPESTR(int**);
   CHECK_TYPESTR(int***);
 
+  // The C Preprocessor can't expand this correctly.
+  assert(typestr<int&&>() == "int&&");
+
+  // Complex cv-qualified pointer types.
   CHECK_TYPESTR(const int*);
   CHECK_TYPESTR(const int* const);
   CHECK_TYPESTR(const int* const* const);
@@ -54,14 +57,16 @@ int main()
   CHECK_TYPESTR(const int* volatile);
   CHECK_TYPESTR(const int* const volatile);
 
+  // Function and function pointer types.
   CHECK_TYPESTR(int(int, int));
   CHECK_TYPESTR(int(int&, int));
   CHECK_TYPESTR(int(*)(int, bool));
 
+  // Check array types
+  CHECK_TYPESTR(int[3]);
+
   int a[3];
-  const int b[3] {0, 0, 0};
-  f(a);
-  f(b);
+  check_array_ref(a, "int(&)[3]");
 
   // TODO: Check member pointer types, too. I'm pretty sure I'm going to have
   // to write specializations on those.
