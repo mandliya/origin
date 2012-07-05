@@ -9,15 +9,15 @@
 #define ORIGIN_TYPE_HPP
 
 // Basic types
-#include "type/default.hpp"
-#include "type/unspecified.hpp"
-#include "type/empty.hpp"
+#include "default.hpp"
+#include "unspecified.hpp"
+#include "empty.hpp"
 
 // Type functions
-#include "type/traits.hpp"
-#include "type/concepts.hpp"
+#include "traits.hpp"
+#include "concepts.hpp"
 
 // Type facilities
-#include "type/typestr.hpp"
+#include "typestr.hpp"
 
 #endif

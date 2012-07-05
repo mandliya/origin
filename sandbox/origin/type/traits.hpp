@@ -154,15 +154,13 @@ namespace origin
     constexpr bool Subst_failed() { return Same<T, subst_failure>(); }
 
 
-
   // Returns true if T does not indicate a substitution failure.
   template <typename T>
     constexpr bool Subst_succeeded() { return Different<T, subst_failure>(); }
 
 
-// Include common SFINAE-based trait implementations.
-#include "impl/sfinae.hpp"
-
+// Include operator support.
+#include "impl/operators.hpp"
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -431,58 +429,11 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Functions
+  // Functions                                                       traits.func
   //
   // The following traits apply to functions.
   //////////////////////////////////////////////////////////////////////////////
     
-  // Safely deduce the result type of the expression f(args...).
-  namespace traits
-  {
-    template <typename F, typename... Args>
-      struct get_call_result
-      {
-      private:
-        template <typename X, typename... Y>
-          static auto check(X x, Y&&... y) -> decltype(x(std::forward<Y>(y)...));
-          
-        static subst_failure check(...);
-      public:
-        using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
-      };
-
-    // Actually access the result type.
-    template <typename T>
-      struct result_of
-      {
-        using type = subst_failure;
-      };
-      
-    template <typename F, typename... Args>
-      struct result_of<F(Args...)>
-      {
-        using type = typename get_call_result<F, Args...>::type;
-      };
-
-    // Deduce the argument types from a function type.
-    //
-    // TODO: Extend this trait so that we can deduce argument types from a
-    // class that declares them as associatd type (i.e., first_argument_type,
-    // second_argument_type, etc.).
-    template <typename F>
-      struct get_argument_types
-      {
-        using type = subst_failure;
-      };
-
-    template <typename R, typename... Args>
-      struct get_argument_types<R(Args...)>
-      {
-        using type = std::tuple<Args...>;
-      };
-  } // namespace traits
-
-
 
   // Returns true if T is a function type.
   template <typename T>
@@ -598,85 +549,62 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Member pointers
+  // Member Pointers                                               traits.memptr
   //
-  // The following traits provide queries for pointers to member objects
+  // The following traits implement queries for pointers to member objects
   // and member functions.
   //////////////////////////////////////////////////////////////////////////////
 
-  // Infrastructure for accessing a member pointer's pointee and class types.
-  namespace traits
-  {
-    // TODO: Extend these traits with accessors for this pointers of member
-    // functions and (perhaps), their argument tuples.
-    template <typename Memptr>
-      struct member_pointer_traits
-      {
-        using result_type = subst_failure;
-        using class_type = subst_failure;
-      };
+#include "impl/memptr.hpp"
 
-    template <typename T, typename C>
-      struct member_pointer_traits<T(C::*)>
-      {
-        using result_type = T;
-        using class_type = C;
-      };
-
-    template <typename T, typename C, typename... Args>
-      struct member_pointer_traits<T(C::*)(Args...)>
-      {
-        using result_type = T;
-        using class_type = C;
-      };
-
-    template <typename T, typename C, typename... Args>
-      struct member_pointer_traits<T(C::*)(Args...) const>
-      {
-        using result_type = T;
-        using class_type = C;
-      };
-
-    template <typename T, typename C, typename... Args>
-      struct member_pointer_traits<T(C::*)(Args...) volatile>
-      {
-        using result_type = T;
-        using class_type = C;
-      };
-
-    template <typename T, typename C, typename... Args>
-      struct member_pointer_traits<T(C::*)(Args...) const volatile>
-      {
-        using result_type = T;
-        using class_type = C;
-      };
-  } // namespace traits
-
-
-
-  // Returns true if T is a pointer to a member variable.
+  // A type T is a member-obect-pointer if it is of the form R C::* where R is
+  // the type of the pointed-at object and C is the class containing the member.
+  //
+  // Template Parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //     True if T is a pointer to a member object.
   template <typename T>
     constexpr bool Member_object_pointer()
     {
       return std::is_member_object_pointer<T>::value;
     }
 
-  // Returns true if T is a member function pointer.
+  // A type T is a member-function-pointer if it is of the form 
+  // R (C::*)(Args...) where R is the result type of the function, C is the
+  // class containing the member, and Args is the sequence of function 
+  // arguments.
+  //
+  // Template Parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //     True if T is a pointer to a member object.
   template <typename T>
     constexpr bool Member_function_pointer()
     {
       return std::is_member_function_pointer<T>::value;
     }
 
-  // An alias to a member pointer's pointee type (the type being pointed to).
-  template <typename Ptr>
-    using Member_pointee_type = 
-      typename type_impl::member_pointer_traits<Ptr>::result_type;
+
+
+  // The member result type is the result of an expression using a member
+  // pointer. For a member object pointer, this is the type of the dereferenced
+  // object. For a member function pointer, it is the result type of the
+  // the function.
+  //
+  // FIXME: I don't think that this is very well defined. It's kind of hard to
+  // say what it points at.
+
+  // template <typename T>
+  //   using Member_result_type = 
+  //     typename type_impl::member_pointer_traits<T>::result_type;
 
   // An alias to a member pointer's class type.
-  template <typename Ptr>
+  template <typename T>
     using Member_class_type = 
-      typename type_impl::member_pointer_traits<Ptr>::class_type;
+      typename type_impl::member_pointer_traits<T>::class_type;
 
 
 

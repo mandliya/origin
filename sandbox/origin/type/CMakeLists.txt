@@ -15,5 +15,6 @@ origin_module(
          traits 
          concepts 
          typestr
+         type
 )
 

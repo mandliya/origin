@@ -26,9 +26,6 @@ namespace origin
     template <typename S, typename T> struct is_output_streamable;
   }
 
-  template <typename T> constexpr bool Boolean();
-
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Boolean                                                    concepts.boolean
