@@ -5,7 +5,6 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#include <cassert>
 #include <vector>
 #include <memory>
 
@@ -35,11 +34,9 @@ int main()
 	static_assert(!Mutable<V::const_iterator>(), "");
 
 	using V2 = vector<unique_ptr<int>>;
-
-	// FIXME: Why doesn't this work? It *must*.
-	// static_assert(Move_writable<V2::iterator, int>(), "");
-	assert(false);
-	static_assert(!Copy_writable<V2::iterator, int>(), "'");
+	static_assert(Move_writable<V2::iterator, unique_ptr<int>&&>(), "");
+	static_assert(!Copy_writable<V2::iterator, const unique_ptr<int>&>(), "'");
+	static_assert(Permutable<V2::iterator>(), "");
 
 	static_assert(!Readable<int>(), "");
 }
