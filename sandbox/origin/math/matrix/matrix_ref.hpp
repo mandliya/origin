@@ -6,8 +6,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_MATH_MATRIX_MATRIX_HPP
-#  error Do not include this file directly. Include matrix.hpp.
+#ifndef ORIGIN_MATH_MATRIX_HPP
+#  error Do not include this file directly. Include matrix/matrix.hpp.
 #endif
 
 namespace origin
@@ -42,9 +42,9 @@ namespace origin
       using matrix_type         = M;
       using allocator_type      = typename base_type::allocator_type;
       using value_type          = typename base_type::value_type;
-      using reference           = Matrix_reference<M>;
+      using reference           = Reference_of<M>;
       using const_reference     = typename base_type::const_reference;
-      using pointer             = Matrix_pointer<M>;
+      using pointer             = Pointer_of<M>;
       using const_pointer       = typename base_type::const_pointer;
       using size_type           = typename base_type::size_type;
       using difference_type     = typename base_type::difference_type;

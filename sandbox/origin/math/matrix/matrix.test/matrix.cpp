@@ -5,9 +5,19 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_MATH_MATRIX_HPP
-#define ORIGIN_MATH_MATRIX_HPP
+#include <origin/math/matrix/matrix.hpp>
 
-#include "matrix/matrix.hpp"
 
-#endif
+template <typename T>
+  auto h(T x) -> decltype(*x) { return *x; }
+
+template <typename T>
+  auto g(T x) -> decltype(h(x)) { return h(x); }
+
+template <typename T>
+  auto f(T x) -> decltype(g(x)) { return g(x); };
+
+int main()
+{
+  f(0);
+}

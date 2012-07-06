@@ -5,18 +5,19 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_MATH_MATRIX_MATRIX_HPP
-#define ORIGIN_MATH_MATRIX_MATRIX_HPP
+#ifndef ORIGIN_MATH_MATRIX_HPP
+#define ORIGIN_MATH_MATRIX_HPP
 
 #include <algorithm>
 #include <cassert>
 
 #include <origin/type/concepts.hpp>
 
+
 namespace origin
 {
   // Declarations
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     class matrix;
 
   template <typename T, std::size_t N>
@@ -30,38 +31,9 @@ namespace origin
 #include "impl/traits.hpp"
 
 
-  // An alias to the reference-to-element type of the Matrix, M. The type
-  // denoted by this alias depends on whehter or not M is const. For example:
-  //
-  //    using M = matrix<T, N>;
-  //    Matrix_reference_type<M>       // is T&
-  //    Matrix_reference_type<const M> // is const T&
-  //
-  // Note that M can be any type modeling the Matrix concept. If M does not
-  // satisfy the requirements of the Matrix concept, then the resulting type
-  // indicates substitution failure.
-  template <typename M>
-    using Matrix_reference = 
-      If<Const<M>(), Associated_const_reference<M>, Associated_reference<M>>;
-
-
-  // An alias to the pointer-to-element type of the matrix, M. The type
-  // denoted by this alias depends on whehter or not M is const. For example:
-  //
-  //    using M = matrix<T, N>;
-  //    Matrix_pointer_type<M>       // is T*
-  //    Matrix_pointer_type<const M> // is const T*
-  //
-  // Note that M can be any type modeling the Matrix concept. If M does not
-  // satisfy the requirements of the Matrix concept, then the resulting type
-  // indicates substitution failure.
-  template <typename M>
-    using Matrix_pointer =
-      If<Const<M>(), Associated_const_pointer<M>, Associated_pointer<M>>;
-
 
   // An alias to the reference-to-row type of the matrix, M. The type denoted
-  // by this alias depends on the const-ness and rank of M. When the rank of
+  // by this alias depends on the const-ness and order of M. When the order of
   // M is 1, this type is the same as the matrice's reference-to-eleemnt type.
   // Otherwise, the type is an instance of the matrix_ref class template.
   // Examples of usage and results are:
@@ -111,11 +83,14 @@ namespace origin
   // The matrix is also parameterized over an underlying Storage type which
   // is responsible for the allocation and ownership of the underlying value
   // types. Storage is required to be a Random_access_container. 
-  template <typename T, std::size_t N, typename Store = std::vector<T>>
+  //
+  // NOTE: The matrix class is not parameterized over an allocator, simply
+  // for the reason that that feature has not yet been implemented. 
+  template <typename T, std::size_t N>
     class matrix
     {
-      using this_type           = matrix<T, N, Store>;
-      using store_type          = Store;
+      using this_type           = matrix<T, N>;
+      using store_type          = std::vector<T>;
     public:
       using allocator_type      = typename store_type::allocator_type;
       using value_type          = typename store_type::value_type;
@@ -219,8 +194,8 @@ namespace origin
       // Returns the shape of the matrix.
       const shape_type& shape() const { return dims; }
 
-      // Returns the rank of the matrix.
-      static constexpr size_type rank() { return N; }
+      // Returns the order of the matrix.
+      static constexpr size_type order() { return N; }
 
       // Returns the extent of the matrix in the nth dimension.
       size_type extent(size_type n) const { return dims.extent(n); }
@@ -279,10 +254,10 @@ namespace origin
   // Element access
   //
   // FIXME: Write type constraints on Args.
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     template <typename... Args>
       inline auto
-      matrix<T, N, S>::operator()(Args... args) -> reference
+      matrix<T, N>::operator()(Args... args) -> reference
       {
         // Explicitly convert to size_type so that all of the argument types
         // will be the same when calling address. That will make it easy to
@@ -291,26 +266,26 @@ namespace origin
         return *(data() + off);
       }
 
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     template <typename... Args>
       inline auto
-      matrix<T, N, S>::operator()(Args... args) const -> const_reference
+      matrix<T, N>::operator()(Args... args) const -> const_reference
       {
         size_type off = matrix_impl::offset(dims.sizes(), size_type(args)...);
         return *(data() + off);
       }
 
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     inline auto
-    matrix<T, N, S>::operator[](size_type n) -> row_reference
+    matrix<T, N>::operator[](size_type n) -> row_reference
     {
       return matrix_impl::row(*this, *this, n);
     }
 
 
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     inline auto
-    matrix<T, N, S>::operator[](size_type n) const -> const_row_reference
+    matrix<T, N>::operator[](size_type n) const -> const_row_reference
     {
       return matrix_impl::row(*this, *this, n);
     }
@@ -319,24 +294,24 @@ namespace origin
   // Matrix addition
   // One matrix can be added to another (elementwise) only when they have the
   // same shape.
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     template <typename M>
-      inline Requires<Matrix<M>(), matrix<T, N, S>&>
-      matrix<T, N, S>::operator+=(const M& x)
+      inline Requires<Matrix<M>(), matrix<T, N>&>
+      matrix<T, N>::operator+=(const M& x)
       {
-        static_assert(rank() == M::rank(), "");
+        static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
         matrix_impl::assign_elements(
           begin(), end(), x.begin(), matrix_impl::plus_assign<value_type>{});
         return *this;
       }
 
-  template <typename T, std::size_t N, typename S>
+  template <typename T, std::size_t N>
     template <typename M>
-      inline Requires<Matrix<M>(), matrix<T, N, S>&>
-      matrix<T, N, S>::operator-=(const M& x)
+      inline Requires<Matrix<M>(), matrix<T, N>&>
+      matrix<T, N>::operator-=(const M& x)
       {
-        static_assert(rank() == M::rank(), "");
+        static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
         matrix_impl::assign_elements(
           begin(), end(), x.begin(), matrix_impl::minus_assign<value_type>{});
@@ -347,27 +322,27 @@ namespace origin
   // Scalar addition
   // A scalar can be added to a matrix, adding that value to each element of
   // the matrix.
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator=(const value_type& value)  
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator=(const value_type& value)  
     { 
       matrix_impl::assign_value(
         begin(), end(), value, matrix_impl::assign<value_type>{}); 
       return *this;
     }
       
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator+=(const value_type& value) 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator+=(const value_type& value) 
     { 
       matrix_impl::assign_value(
         begin(), end(), value, matrix_impl::plus_assign<value_type>{}); 
       return *this;
     }
       
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator-=(value_type const& value) 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator-=(value_type const& value) 
     { 
       matrix_impl::assign_value(
         begin(), end(), value, matrix_impl::minus_assign<value_type>{}); 
@@ -378,18 +353,18 @@ namespace origin
   // Scalar multiplication
   // A matrix can be multiplied by a scalar, scaling each element by that
   // value.
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator*=(value_type const& value) 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator*=(value_type const& value) 
     { 
       matrix_impl::assign_value(
         begin(), end(), value, matrix_impl::multiplies_assign<value_type>{}); 
       return *this;
     }
 
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator/=(value_type const& value) 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator/=(value_type const& value) 
     { 
       matrix_impl::assign_value(begin(), end(), value, 
         matrix_impl::divides_assign<value_type>{}); 
@@ -397,9 +372,9 @@ namespace origin
     }
       
   // This operation is only defined when T is a model of Euclidean domain.
-  template <typename T, std::size_t N, typename S>
-    inline matrix<T, N, S>& 
-    matrix<T, N, S>::operator%=(value_type const& value) 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>& 
+    matrix<T, N>::operator%=(value_type const& value) 
     { 
       matrix_impl::assign_value(begin(), end(), value, 
         matrix_impl::modulus_assign<value_type>{}); 

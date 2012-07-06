@@ -5,8 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_MATH_MATRIX_MATRIX_HPP
-#  error Do not include this file directly. Include matrix.hpp.
+#ifndef ORIGIN_MATH_MATRIX_HPP
+#  error Do not include this file directly. Include matrix/matrix.hpp.
 #endif
 
 namespace matrix_impl
@@ -109,7 +109,7 @@ namespace matrix_impl
   // simply the scalar type T. Otherwise, the row type is a row matrix of
   // the given dimension.
   template <typename M, std::size_t N>
-    using Row_type = If<(N == 0), Matrix_reference<M>, matrix_ref<M, N>>;
+    using Row_type = If<(N == 0), Reference_of<M>, matrix_ref<M, N>>;
 
 
 

@@ -18,8 +18,12 @@ namespace origin
   // Matrix Shape
   //
   // The shape class describes the shape of an array: its number of dimensions 
-  // (or rank) and the number of elements (extent) contained in each dimension.
-  // The rank of the shape is specified by the template parameter N.
+  // (or order) and the number of elements (extent) contained in each dimension.
+  // The order of the shape is specified by the template parameter N.
+  //
+  // NOTE: The traditonal C/C++ name for number of dimensions is traditionally
+  // called its rank. However, that name has special meaning in the context
+  // of linear algebra, so we use the name "order" instead.
   template <typename T, std::size_t N>
     class matrix_shape
     {
@@ -45,7 +49,7 @@ namespace origin
         }
 
       // Construct a matrix shape with the extents given in the specified
-      // initializer list. The size of the list must be the same as the rank
+      // initializer list. The size of the list must be the same as the order
       // of the shape (N).
       matrix_shape(std::initializer_list<value_type> list)
       {
@@ -55,7 +59,7 @@ namespace origin
       }
 
       // Construct a matrix over the extents given in the range [first, last).
-      // The size of the [first, last) must be the same as the rank of the
+      // The size of the [first, last) must be the same as the order of the
       // shape (N).
       template <typename I>
         matrix_shape(I first, I last)
@@ -66,8 +70,8 @@ namespace origin
         }
 
 
-      // Returns the rank of the shape.
-      static constexpr value_type rank() { return N; }
+      // Returns the order of the shape.
+      static constexpr value_type order() { return N; }
 
       // Returns the number of sub-matrices contained in the nth dimension. If 
       // a specific dimension is not given, then returns the number of rows.
@@ -136,12 +140,12 @@ namespace origin
 
 
   // Equality comparable
-  // Two shapes compare equal when they have the same rank and extents.
+  // Two shapes compare equal when they have the same order and extents.
   //
   // Note that we do not compare sizes since they are computed from the extents
   // of the shape (that array exists only as an optimization).
   //
-  // TODO: This definition not allow us to compare shapes of different rank.
+  // TODO: This definition not allow us to compare shapes of different order.
   // The operation is not defined. Should it be? Obviously, it would just 
   // be false. The implication is that each shape type is part of a local
   // group.

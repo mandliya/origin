@@ -5,8 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_MATH_MATRIX_MATRIX_HPP
-#  error Do not include this file directly. Include matrix.hpp.
+#ifndef ORIGIN_MATH_MATRIX_HPP
+#  error Do not include this file directly. Include matrix/matrix.hpp.
 #endif
 
 namespace matrix_impl
