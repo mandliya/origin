@@ -50,9 +50,14 @@ namespace origin
   template <typename I>
     constexpr bool Readable()
     {
+      // Some iterators have void as their value type so we can't just write
+      // "const Value_type<I>&" when describing that requirement. We have to
+      // do this...
+      using Ref = Require_lvalue_reference<Add_const<Value_type<I>>>;
+      
       return Has_value_type<I>()
           && Has_dereference<I>() 
-          && Convertible<Dereference_result<I>, const Value_type<I>&>();
+          && Convertible<Dereference_result<I>, Ref>();
     }
 
 
@@ -186,10 +191,9 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Weakly Incrementable
   //
-  // A weakly incrementable type is a semiregular type that can be pre- and
-  // post-incremented. Both operations advance the value, but neither operation
-  // is required to be equality preserving. The result type of post-incrementing 
-  // is unspecified.
+  // A weakly incrementable type, I, can be pre- and post-incremented. Both
+  // operations advance the value, but neither operation is required to be
+  // equality preserving. The result type of post-incrementing  is unspecified.
   //
   // Template Parameters:
   //    I -- The type being tested
@@ -197,14 +201,24 @@ namespace origin
   // Returns:
   //    True if and only if I satisfies the requirements of the 
   //    Weakly_incrementable concept.
+  //
+  // NOTE: Weakly incrementable types are not required to be equality 
+  // comparable, even though they should be. This allows us to reuse this
+  // concept to describe standard-conforming output iterators.
   template <typename I>
     constexpr bool Weakly_incrementable()
     {
       return Copyable<I>()
-          && Equality_comparable<I>()
+          
+          // Difference_type<I> must be Signed
           && Has_difference_type<I>()
+          && Signed<Difference_type<I>>()
+          
+          // ++i return I&
           && Has_pre_increment<I>()
           && Same<Pre_increment_result<I>, I&>()
+
+          // i++ is valid
           && Has_post_increment<I>();
     }
     
@@ -227,7 +241,11 @@ namespace origin
     constexpr bool Incrementable()
     {
       return Weakly_incrementable<I>()
-          && Same<Post_increment_result<I>, I>();
+
+          // i++ returns I
+          && Same<Post_increment_result<I>, I>()
+
+          && Equality_comparable<I>();
     }
 
 
@@ -246,8 +264,12 @@ namespace origin
     constexpr bool Decrementable()
     {
       return Incrementable<I>()
+
+          // --i returns I&
           && Has_pre_decrement<I>()
           && Same<Pre_decrement_result<I>, I&>()
+
+          // i-- returns I
           && Has_post_decrement<I>()
           && Same<Post_decrement_result<I>, I>();
     }
@@ -286,6 +308,31 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
 
 
+
+  // An iterator, I, has an associated tag class called its "category". This
+  // describes the concept modeled by the type I.
+  //
+  // Template Parameters:
+  //    I -- An iterator type
+  //
+  // Aliases:
+  //    The iterator category of I.
+  //
+  // FIXME: This will not fail gracefully. Wrap this in a type trait to prevent
+  // unindented substitution or compilation failures.
+  template <typename I>
+    using Iterator_category = 
+      typename std::iterator_traits<I>::iterator_category;
+
+
+  // Returns true if and only if Iterator_category<I> is a valid type name.
+  template <typename I>
+    constexpr bool Has_iterator_category()
+    {
+      return Subst_succeeded<Iterator_category<I>>();
+    }
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Iterator Types                                                iter.iterator
   //
@@ -307,96 +354,187 @@ namespace origin
   template <typename I>
     constexpr bool Iterator()
     {
-    return Weakly_incrementable<I>() 
-        && Has_dereference<I>();
+      return Weakly_incrementable<I>() 
+          && Has_dereference<I>()
+          && Has_iterator_category<I>();
     }
 
-
-  // An alias for the associated reference type of the iterator. This supports 
-  // writing  backwards compatible iterators where the reference type is 
-  // actually named even though it should be deduced as decltype(*i).
-  template <typename I>
-    using Iterator_reference = decltype(*std::declval<I>());
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Input Iterator                                              iter.input
+  // Input Iterator                                                   iter.input
   //
-  // An input iterator is...
+  // An input iterator is a kind of iterator, I, that allows reading elements of
+  // type T from an input sequence or stream in a single pass, much reading data
+  // from a tape.
   //
-  // There are two kinds of input iterators...
-  
-  // Returns true if I is a weak input iterator.
-  template <typename I>
-    constexpr bool Weak_input_iterator()
-    {
-      return Weakly_incrementable<I>() && Readable<I>();
-    }
-    
-  // Returns true if I is an input iterator.
+  // Note that there is only ever one "active" iterator in an input sequence:
+  // the iterator representing the current position in that sequence. An
+  // iterator past the end of the sequence is not considered to be "active".
+  //
+  // An input iterator is readable, weakly incrementable and equality
+  // comparable.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the
+  //    Input_iterator concept.
   template <typename I>
     constexpr bool Input_iterator()
     {
-      return Weak_input_iterator<I>() && Equality_comparable<I>();
+      return Readable<I>()
+          && Weakly_incrementable<I>() 
+          && Equality_comparable<I>()
+          && Derived<Iterator_category<I>, std::input_iterator_tag>();
     }
-
-
 
 
   //////////////////////////////////////////////////////////////////////////////
   // Output Iterator                                                 iter.output
   //
-  // An output itertor is...
+  // An output itertor, I, is a kind of iterator that allows writing elements 
+  // of type T to an output sequence or stream in in a single pass, much like 
+  // writing data to a tape. The syntax for writing through an iterator is:
   //
-  // There are two kinds of output iterators...
+  //    *i = t;
   //
-  // Note that, for either output iterator, if T is an rvalue reference, this
-  // concept requires T to implement move semantics. If T is not an rvalue
-  // reference, the iterator is required to implement copy semantics.
-  
-  // Returns true if I is a weak output iterator, accepting values of type T.
-  template <typename I, typename T>
-    constexpr bool Weak_output_iterator()
-    {
-      return Weakly_incrementable<I>() && Copy_writable<I, T>();
-    }
-    
-  // Returns true if I is an output iterator accepting values of type T.
+  // Note that there is only ever one "active" iterator in an output sequence:
+  // the iterator representing the current position in that sequence. An
+  // iterator past the end of the sequence is not considered to be "active".
+  //
+  // There are two kinds of output iterators: (standard) output iterators and
+  // strong output iterators. Both are required to be weakly incrementable
+  // and copy writable, but a regular output iterator is also required to be
+  // equality comparable.
+  //
+  // NOTE: Ideally, all iterators should be equality comparable. However, the
+  // C++ standard has an established convention of not requiring equality for
+  // output iterators and subsequently over-constraining some algorithms that
+  // both write through and compare iterators by requiring them to be forward
+  // iterators.
+
+
+  // An output iterator, I, is a weakly incrementable type through which
+  // values of type T may be written.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //    T -- A type whose values are written through T.
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the 
+  //    Output_iterator concepts with respect to a written type T.
+  //
+  // NOTE: The iterator category is not checked in this concept, because it
+  // isn't obvious that it is ever actually checked. Also, a forward iterator
+  // that is also an output iterator does not derive from the output iterator
+  // tag class.
+  //
+  // NOTE: This concept is degenrate. Basically, it has to match the 
+  // expectations of output iterators in the C++ standard, which require that
+  // the value, reference, and pointer types are void. At least the difference
+  // type of output iterators should be defined.
   template <typename I, typename T>
     constexpr bool Output_iterator()
     {
-      return Weak_output_iterator<I, T>() && Equality_comparable<I>();
+      return Copy_writable<I, T>() 
+          && Has_difference_type<I>() // Actual type is unspecified!
+          
+          // ++i returns I&
+          && Has_pre_increment<I>()
+          && Same<Pre_increment_result<I>, I&>()
+
+          // i++ is valid
+          && Has_post_increment<I>();
+    }
+
+
+  // A strong output iterator, I, is an output iterator that is also equality
+  // comparable. Strong output iterators occur infrequently in the STL 
+  // algorithms. Only fill, generate, and iota require this concept.
+  //
+  // Template Parameters:
+  //    I -- The type being tested
+  //    T -- A type whose values are written through T.
+  //
+  // Returns:
+  //    True if and only if I satisfies the syntactic requirements of the 
+  //    Strong_output_iterator concepts with respect to a written type T.
+  template <typename I, typename T>
+    constexpr bool Strong_output_iterator()
+    {
+      return Output_iterator<I, T>() && Equality_comparable<I>();
     }
  
  
   //////////////////////////////////////////////////////////////////////////////
   // Forward Iterator                                                   iter.fwd
   //
-  // A forward iterator is an input iterator with a regular post-increment
-  // operation. This guarantees that multiple passes of a range may be made
-  // and that multiple iterators into the range may be used.
+  // A forward iterator, I, is an iterator over a sequence of objects, allowing
+  // both reading and possibly writing (if allowed by the underlying object
+  // type) and that can be traversed only in a forward direction. Forward 
+  // iterators generalize the traversal of singly linked lists.
+  //
+  // The sequences of objects is required to have a lifetime is greater than
+  // that of any iterator over it. This allows multiple passes over the
+  // sequence.
+  //
+  // A forward iterator is an input iterator that is incrementable and readable,
+  // and allows multiple passes over its underlying sequence. 
+  //
+  // Note that an underlying sequence whose objects can be moved is a permutable
+  // forward iterator. If the objects can be copied, then the sequence is a
+  // mutable forward iterator. The Permutable and Mutable concepts must be
+  // required separately.
+  //
+  // Template Paramters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if and I satisfies the requirements of the Forward_iterator 
+  //    concept.
   template <typename I>
     constexpr bool Forward_iterator()
     {
-      return Input_iterator<I>()
+      return Readable<I>() 
           && Incrementable<I>()
-          && Readable<I>();
+          && Derived<Iterator_category<I>, std::forward_iterator_tag>();
     }
     
 
   //////////////////////////////////////////////////////////////////////////////
   // Bidirectional Iterator                                            iter.bidi
   //
-  // A bidirectional iterator is a forward iterator that can also move 
-  // backwards using decrement operators.
-  template <typename Iter>
+  // A bidirectional iterator, I, is an iterator over a sequence of objects,
+  // allowing both reading and possibly writing (if allowed by the underlying
+  // object type) and that can be traversed both forwards and backwards.
+  // Bidirectional iterators generalize the traversal of doubly linked lists.
+  //
+  // As with forward iterators, the sequences of objects is required to have a
+  // lifetime is greater than that of any iterator over it. This allows multiple
+  // passes over the sequence.
+  //
+  // A bidirectional iterator is a forward iterator that is decrementable.
+  //
+  // Note that an underlying sequence whose objects can be moved is a permutable
+  // bidirectional iterator. If the objects can be copied, then the sequence is
+  // a mutable bidirectional iterator. The Permutable and Mutable concepts must
+  // be required separately.
+  //
+  // Template Paramters:
+  //    I -- The type being tested
+  //
+  // Returns:
+  //    True if and I satisfies the requirements of the Bidirectional_iterator 
+  //    concept.
+  template <typename I>
     constexpr bool Bidirectional_iterator()
     {
-      return Forward_iterator<Iter>()
-          && Has_pre_decrement<Iter>()
-          && Same<Pre_decrement_result<Iter>, Iter&>()
-          && Has_post_decrement<Iter>()
-          && Same<Post_decrement_result<Iter>, Iter>();
+      return Readable<I>()
+          && Decrementable<I>()
+          && Derived<Iterator_category<I>, std::bidirectional_iterator_tag>();
     };
 
     
@@ -408,29 +546,38 @@ namespace origin
   template <typename I>
     constexpr bool Random_access_iterator()
     {
-      return Bidirectional_iterator<I>()
-            && Signed<Difference_type<I>>()
-            
-            && Has_plus_assign<I, Difference_type<I>>()
-            && Same<Plus_assign_result<I, Difference_type<I>>, I&>()
-            
-            && Has_minus_assign<I, Difference_type<I>>()
-            && Same<Minus_assign_result<I, Difference_type<I>>, I&>()
-            
-            && Has_plus<I, Difference_type<I>>()
-            && Same<Plus_result<I, Difference_type<I>>, I>()
-            
-            && Has_plus<Difference_type<I>, I>()
-            && Same<Plus_result<Difference_type<I>, I>, I>()
-            
-            && Has_minus<I, Difference_type<I>>()
-            && Same<Minus_result<I, Difference_type<I>>, I>()
-            
-            && Has_minus<I>()
-            && Same<Minus_result<I>, Difference_type<I>>()
-            
-            && Has_subscript<I, Difference_type<I>>()
-            && Same<Subscript_result<I, Difference_type<I>>, Dereference_result<I>>();
+      return Readable<I>()
+          && Decrementable<I>()
+
+          // i += n returns I&  
+          && Has_plus_assign<I, Difference_type<I>>()
+          && Same<Plus_assign_result<I, Difference_type<I>>, I&>()
+          
+          // i -= n returns I&
+          && Has_minus_assign<I, Difference_type<I>>()
+          && Same<Minus_assign_result<I, Difference_type<I>>, I&>()
+          
+          // i + n returns I
+          && Has_plus<I, Difference_type<I>>()
+          && Same<Plus_result<I, Difference_type<I>>, I>()
+          
+          // n + i returns I
+          && Has_plus<Difference_type<I>, I>()
+          && Same<Plus_result<Difference_type<I>, I>, I>()
+          
+          // i - n returns I
+          && Has_minus<I, Difference_type<I>>()
+          && Same<Minus_result<I, Difference_type<I>>, I>()
+          
+          // i - j returns Difference_type<I>
+          && Has_minus<I>()
+          && Same<Minus_result<I>, Difference_type<I>>()
+          
+          // i[n] returns Reference_of<I>
+          && Has_subscript<I, Difference_type<I>>()
+          && Same<Subscript_result<I, Difference_type<I>>, Dereference_result<I>>()
+
+          && Derived<Iterator_category<I>, std::random_access_iterator_tag>();
     };
     
     
@@ -452,16 +599,16 @@ namespace origin
   template <typename I>
     constexpr bool Strict_input_iterator()
     {
-      return Weak_input_iterator<I>() && !Forward_iterator<I>();
+      return Input_iterator<I>() && !Forward_iterator<I>();
     }
     
     
   // Returns true if I is strictly an output iterator, an output iterator but
-  // not a forward iterator.
+  // not readable.
   template <typename I>
     constexpr bool Strict_output_iterator()
     {
-      return Weak_output_iterator<I> && !Readable<I>();
+      return Output_iterator<I> && !Readable<I>();
     }
   
 

@@ -483,6 +483,9 @@ namespace origin
   // The following traits apply to pointer types.
   //////////////////////////////////////////////////////////////////////////////
 
+// Additional traits needed for forming references.
+#include "impl/reference.hpp"
+
   // Returns true if T is an lvalue reference to some type U.
   template <typename T>
     constexpr bool Lvalue_reference() { return std::is_lvalue_reference<T>::value; }
@@ -506,6 +509,21 @@ namespace origin
   // An alias to a type U if T is a reference-to-T.
   template <typename T>
     using Remove_reference = typename std::remove_reference<T>::type;
+
+
+  // Refers to an lvalue-reference-to-T if it can be formed. Otherwise, the type
+  // function indicates substitution failure.
+  template <typename T>
+    using Require_lvalue_reference = 
+      typename type_impl::require_lvalue_reference<T>::type;
+
+
+  // Refers to an lvalue-reference-to-T if it can be formed. Otherwise, the type
+  // function indicates substitution failure.
+  template <typename T>
+    using Require_rvalue_reference = 
+      typename type_impl::require_rvalue_reference<T>::type;
+
 
 
     

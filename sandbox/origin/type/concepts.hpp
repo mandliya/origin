@@ -733,7 +733,7 @@ namespace origin
       return Subst_succeeded<Value_type<T>>();
     }
 
-    
+
   //////////////////////////////////////////////////////////////////////////////
   // Size Type                                               concepts.types.size
   //
@@ -799,12 +799,32 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Reference Of                                       concepts.types.reference
   //
+  // A type T may have an associated reference type, defined either as the 
+  // result of an operation or as a nested type. For example, an iterator's
+  // reference type is the result of its dereference operator. A container's
+  // associated reference type is explicitly declared as C::reference or
+  // C::const_reference (with C being a Container).
+  //
+  // The associated reference type may depend on whether T is const qualified.
+  //
+  // Aliases:
+  //    The associated reference type of T.
   template <typename T>
     using Reference_of = typename type_impl::get_deduced_reference<T>::type;
 
   //////////////////////////////////////////////////////////////////////////////
   // Pointer Of                                           concepts.types.pointer
   //
+  // A type T may have an associated pointer type, defined either as the  result
+  // of an operation or as a nested type. For example, an iterator's pointer
+  // type is the result of its arrow operator. A container's associated pointer
+  // type is explicitly declared as C::pointer or C::const_pointer (with C being
+  // a Container).
+  //
+  // The associated pointer type may depend on whether T is const qualified.
+  //
+  // Aliases:
+  //    The associated pointer type of T.
   template <typename T>
     using Pointer_of = typename type_impl::get_deduced_pointer<T>::type;
 
