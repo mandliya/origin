@@ -8,6 +8,7 @@
 #ifndef ORIGIN_MATH_MATRIX_HPP
 #define ORIGIN_MATH_MATRIX_HPP
 
+#include <iostream>
 #include <algorithm>
 #include <cassert>
 
@@ -69,6 +70,19 @@ namespace origin
     }
 
 
+  // The matrix initializer is a sequence of nested initializer lists that
+  // describes the initailization structure of an N dimensional matrix. For
+  // example, an initializer for a 2D matrix of ints allows us to construct 
+  // the following initializer list:
+  //
+  //    {{0, 1},
+  //     {2, 3},
+  //     {4, 5}}
+  //
+  // Assuming we have a 3x2 matrix.
+  template <typename T, std::size_t N>
+    using Matrix_initializer = typename matrix_impl::matrix_init<T, N>::type;
+
 
 // Include additionl support operations and traits.
 #include "impl/support.hpp"
@@ -102,8 +116,8 @@ namespace origin
       using difference_type     = typename store_type::difference_type;
 
       using shape_type          = matrix_shape<size_type, N>;
-      using row_reference       = matrix_impl::Row_type<this_type, N - 1>;
-      using const_row_reference = matrix_impl::Row_type<const this_type, N - 1>;
+      using row_reference       = matrix_impl::Row_type<T, N - 1>;
+      using const_row_reference = matrix_impl::Row_type<const T, N - 1>;
 
       using iterator            = typename store_type::iterator;
       using const_iterator      = typename store_type::const_iterator;
@@ -175,18 +189,15 @@ namespace origin
         { }
 
 
-      // Range initialization
+      // Nested range initialization
       //
-      // TODO: Can we make this work for arbitrary levels of nesting for the
-      // initializer list? Probably, but we'll do that later.
-      //
-      // FIXME: Provide iterator-based operators too.
-      matrix(const shape_type& shape,
-             std::initializer_list<value_type> list,
-             const allocator_type& alloc = {})
-        : dims(shape), elems(list, alloc)
+      // NOTE: This is not terribly efficient since it effectively requries
+      matrix(Matrix_initializer<T, N> init, const allocator_type& alloc = {})
+        : dims(matrix_impl::shape<N, size_type>(init))
+        , elems(dims.size(), T{}, alloc)
       {
-        assert(dims.size() == elems.size());
+        elems.resize(dims.size());
+        matrix_impl::assign_init<N>(init, elems.data());
       }
 
 
@@ -279,7 +290,7 @@ namespace origin
     inline auto
     matrix<T, N>::operator[](size_type n) -> row_reference
     {
-      return matrix_impl::row(*this, *this, n);
+      return matrix_impl::row(*this, n);
     }
 
 
@@ -287,7 +298,7 @@ namespace origin
     inline auto
     matrix<T, N>::operator[](size_type n) const -> const_row_reference
     {
-      return matrix_impl::row(*this, *this, n);
+      return matrix_impl::row(*this, n);
     }
 
 
@@ -301,7 +312,7 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::assign_elements(
+        matrix_impl::apply(
           begin(), end(), x.begin(), matrix_impl::plus_assign<value_type>{});
         return *this;
       }
@@ -313,7 +324,7 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::assign_elements(
+        matrix_impl::apply(
           begin(), end(), x.begin(), matrix_impl::minus_assign<value_type>{});
         return *this;
       }
@@ -326,7 +337,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator=(const value_type& value)  
     { 
-      matrix_impl::assign_value(
+      matrix_impl::apply(
         begin(), end(), value, matrix_impl::assign<value_type>{}); 
       return *this;
     }
@@ -335,7 +346,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator+=(const value_type& value) 
     { 
-      matrix_impl::assign_value(
+      matrix_impl::apply(
         begin(), end(), value, matrix_impl::plus_assign<value_type>{}); 
       return *this;
     }
@@ -344,7 +355,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator-=(value_type const& value) 
     { 
-      matrix_impl::assign_value(
+      matrix_impl::apply(
         begin(), end(), value, matrix_impl::minus_assign<value_type>{}); 
       return *this;
     }
@@ -357,7 +368,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator*=(value_type const& value) 
     { 
-      matrix_impl::assign_value(
+      matrix_impl::apply(
         begin(), end(), value, matrix_impl::multiplies_assign<value_type>{}); 
       return *this;
     }
@@ -366,7 +377,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator/=(value_type const& value) 
     { 
-      matrix_impl::assign_value(begin(), end(), value, 
+      matrix_impl::apply(begin(), end(), value, 
         matrix_impl::divides_assign<value_type>{}); 
       return *this;
     }
@@ -376,7 +387,7 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator%=(value_type const& value) 
     { 
-      matrix_impl::assign_value(begin(), end(), value, 
+      matrix_impl::apply(begin(), end(), value, 
         matrix_impl::modulus_assign<value_type>{}); 
       return *this;
     }

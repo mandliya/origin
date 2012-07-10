@@ -5,19 +5,15 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
+#include <iostream>
+
+#include <origin/type/typestr.hpp>
 #include <origin/math/matrix/matrix.hpp>
 
+using namespace std;
+using namespace origin;
 
-template <typename T>
-  auto h(T x) -> decltype(*x) { return *x; }
-
-template <typename T>
-  auto g(T x) -> decltype(h(x)) { return h(x); }
-
-template <typename T>
-  auto f(T x) -> decltype(g(x)) { return g(x); };
 
 int main()
 {
-  f(0);
 }

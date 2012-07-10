@@ -26,7 +26,7 @@ namespace origin
   template <typename M, typename = Requires<Matrix<M>()>>
     inline Size_type<M> rows(const M& m)
     {
-      static_assert(M::rank() > 0, "");
+      static_assert(M::order() > 0, "");
       return m.extent(0);
     }
 
@@ -36,7 +36,7 @@ namespace origin
   template <typename M, typename = Requires<Matrix<M>()>>
     inline Size_type<M> cols(const M& m)
     {
-      static_assert(M::rank() > 0, "");
+      static_assert(M::order() > 0, "");
       return m.extent(1);
     }
 
@@ -62,22 +62,32 @@ namespace origin
       
 
 
-  // FIXME: These arithmetic operations can't be implemented in the same
-  // straightforward manner since the statement "M result = a" would not make
-  // a copy of the elements of a; it would just copy the pointer. Basically,
-  // we'd be trying to modify the first argument.
   //
-  // We could assume that there's a corresponding matrix for a matrix_ref, but
-  // if we want to be precise, we're going to have to parameterize the
-  // matrix_ref over an allocator even though *no allocation is performed*!
-  // Allocators as template parameters are poisonous.
+  // NOTE: This operation is kind of funny because it is heterogeneous in its
+  // result type. If we try to concept check Matrix<R, R> (where R is a matrix
+  // ref type), we would normally be asking for an operation a homogeneous
+  // operator+(R,R)->R. That's not what we have.
   //
-  // Furthermore, we would be returning a different type -- which leads me to
-  // believe that these operators should not be defined for matrix_refs.
+  // In order to check this concept, we have to weaken the result type. The
+  // C++0x concepts required that the result be convertible to the argument
+  // types. That doesn't work here because matrix is not convertible to matrix
+  // ref. It's the other way around.
+  //
+  // The correct way to check this is to say that the result type must share
+  // a common type with the domain type. That is, if U is the result type of the
+  // expression t + t (with t having type T), then Common<T, U> must be true.
+  //
+  // NOTE: We may be able to generalize and differentiate the addition of 
+  // matrices vs. matrix references in the the future. A fully general matrix
+  // slice would have the same properties as matrix_ref w.r.t. to addition
+  // and subtraction.
 
-
+  
+  //////////////////////////////////////////////////////////////////////////////
   // Matrix addition
-  // Add or subtract the elements of a matrix.
+  //
+  // Adding two matrices with the same shape adds corresponding elements in
+  // each operatand.
   template <typename T, std::size_t N>
     inline matrix<T, N>
     operator+(const matrix<T, N>& a, const matrix<T, N>& b)
@@ -87,7 +97,16 @@ namespace origin
       return result += b;
     }
 
-  // Addition for matrix and matrix_ref.
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator+(const matrix_ref<T, N>& a, const matrix_ref<T, N>& b)
+    {
+      assert(a.dim() == b.dim());
+      matrix<T, N> result = a;
+      return result += b;
+    }
+
+  // Cross-type addition
   template <typename T, std::size_t N>
     inline matrix<T, N>
     operator+(const matrix<T, N>& a, const matrix_ref<T, N>& b)
@@ -106,34 +125,12 @@ namespace origin
       return result += b;
     }
 
-  //  Addition of matrix_refs.
-  //
-  // NOTE: This operation is kind of funny because it is heterogeneous in its
-  // result type. If we try to concept check Matrix<R, R> (where R is a matrix
-  // ref type), we would normally be asking for an operation a homogeneous
-  // operator+(R,R)->R. That's not what we have.
-  //
-  // In order to check this concept, we have to weaken the result type. The
-  // C++0x concepts required that the result be convertible to the argument
-  // types. That doesn't work here because matrix is not convertible to matrix
-  // ref. It's the other way around.
-  //
-  // The correct way to check this is to say that the result type must share
-  // a common type with the domain type. That is, if U is the result type of the
-  // expression t + t (with t having type T), then Common<T, U> must be true.
-  // That's it.
 
-  template <typename T, std::size_t N>
-    inline matrix<T, N>
-    operator+(const matrix_ref<T, N>& a, const matrix_ref<T, N>& b)
-    {
-      assert(a.dim() == b.dim());
-      matrix<T, N> result = a;
-      return result += b;
-    }
-
-
+  //////////////////////////////////////////////////////////////////////////////
   // Matrix subtraction
+  //
+  // Subtracting one matrix from another with the same shape subtracts
+  // corresponding elements in each operatand.
   template <typename T, std::size_t N>
     inline matrix<T, N>
     operator-(const matrix<T, N>& a, const matrix<T, N>& b)
@@ -143,7 +140,16 @@ namespace origin
       return a -= b;
     }
 
-  // Subtraction for matrix and matrix_ref.
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator-(const matrix_ref<T, N>& a, const matrix_ref<T, N>& b)
+    {
+      assert(a.dim() == b.dim());
+      matrix<T, N> result = a;
+      return result -= b;
+    }
+
+  // Cross-type subtraction
   template <typename T, std::size_t N>
     inline matrix<T, N>
     operator-(const matrix<T, N>& a, const matrix_ref<T, N>& b)
@@ -162,42 +168,52 @@ namespace origin
       return result -= b;
     }
 
-  // Subtraction for matrix_refs.
-  template <typename T, std::size_t N>
-    inline matrix<T, N>
-    operator-(const matrix_ref<T, N>& a, const matrix_ref<T, N>& b)
-    {
-      assert(a.dim() == b.dim());
-      matrix<T, N> result = a;
-      return result -= b;
-    }
 
 
-
+  //////////////////////////////////////////////////////////////////////////////
   // Scalar addition
+  //
   // Adding a scalar to a matrix adds that value to each element in the matrix.
   // The following operations are supported:
   //
   //    a + n
   //    n + a
-  //
   template <typename T, std::size_t N>
     inline matrix<T, N> 
-    operator+(const matrix<T, N>& a, const T& n)
+    operator+(const matrix<T, N>& x, const T& n)
     {
-      matrix<T, N> result = a;
+      matrix<T, N> result = x;
       return result += n;
     }
 
   template <typename T, std::size_t N>
     inline matrix<T, N> 
-    operator+(const T& n, const matrix<T, N>& a)
+    operator+(const T& n, const matrix<T, N>& x)
     {
-      matrix<T, N> result = a;
+      matrix<T, N> result = x;
       return result += n;
     }
 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator+(const matrix_ref<T, N>& x, const T& n)
+    {
+      matrix<T, N> result = x;
+      return result += n;
+    }
+
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator+(const T& n, const matrix_ref<T, N>& x)
+    {
+      matrix<T, N> result = x;
+      return result += n;
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Scalar subtraction
+  //
   // A scalar can be subtracted from a matrix. It is equivalent to adding the
   // negation of the scalar. That is:
   //
@@ -206,13 +222,25 @@ namespace origin
   // It is not possible to subtract a matrix from a scalar.
   template <typename T, std::size_t N>
     inline matrix<T, N> 
-    operator-(const matrix<T, N>& a, const T& n)
+    operator-(const matrix<T, N>& x, const T& n)
     {
-      matrix<T, N> result = a;
+      matrix<T, N> result = x;
       return result += n;
     }
 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator-(const matrix_ref<T, N>& x, const T& n)
+    {
+      matrix<T, N> result = x;
+      return result -= n;
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Scalar multiplication
+  //
   // Multiplying a matrix by a scalar multiplies each element by the scalar
   // value. The following operations are supported:
   //
@@ -221,21 +249,40 @@ namespace origin
   //
   template <typename T, std::size_t N>
     inline matrix<T, N>
-    operator*(const matrix<T, N>& a, const T& n)
+    operator*(const matrix<T, N>& x, const T& n)
     {
-      matrix<T, N> result = a;
+      matrix<T, N> result = x;
       return result *= n;
     }
 
   template <typename T, std::size_t N>
     inline matrix<T, N>
-    operator*(const T& n, const matrix<T, N>& a)
+    operator*(const T& n, const matrix<T, N>& x)
     {
-      matrix<T, N> result = a;
+      matrix<T, N> result = x;
       return result *= n;
     }
 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator*(const matrix_ref<T, N>& x, const T& n)
+    {
+      matrix<T, N> result = x;
+      return result *= n;
+    }
+
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator*(const T& n, const matrix_ref<T, N>& x)
+    {
+      matrix<T, N> result = x;
+      return result *= n;
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Scalar division
+  //
   // A matrix can be divided by a scalar value. It is equivalent to multiplying
   // the matrix by the reciprocal of the scalar.
   //
@@ -250,7 +297,19 @@ namespace origin
       return result /= n;
     }
 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator/(const matrix_ref<T, N>& x, const T& n)
+    {
+      matrix<T, N> result = x;
+      return result /= n;
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Scalar modulus
+  //
   // Returns a matrix containing the remainder of each element divided by the
   // given scalar value.
   //
@@ -263,18 +322,27 @@ namespace origin
       return result %= n;
     }
 
+  template <typename T, std::size_t N>
+    inline matrix<T, N>
+    operator%(const matrix_ref<T, N>& x, const T& n)
+    {
+      matrix<T, N> result = x;
+      return result %= n;
+    }
+
 
   // Declarations
-  template <typename T>
-    matrix<T, 2> 
-    matrix_product(const matrix<T, 2>& a, const matrix<T, 2>& b);
+  template <typename M1, typename M2, typename M3>
+    void matrix_product(const M1&, const M2&, M3&);
 
-  template <typename T>
-    matrix<T, 2> 
-    hadamard_product(const matrix<T, 2>& a, const matrix<T, 2>& b);
+  template <typename M1, typename M2, typename M3>
+    void hadamard_product(const M1&, const M2&, M3&);
 
 
-  // Matrix mulitplication
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Matrix Multiplication
+  //
   // Two 2D matrices a (m x p) and b (p x n) can be multiplied, resulting in a
   // matrix c (m x n). Note that the "inner" dimension of the operands must
   // be the same.
@@ -282,11 +350,96 @@ namespace origin
     inline matrix<T, 2>
     operator*(const matrix<T, 2>& a, const matrix<T, 2>& b) 
     {
-      return matrix_product(a, b);
+      matrix<T, 2> result (a.dims());
+      matrix_product(a, b, result);
+      return result;
+    }
+
+  template <typename T>
+    inline matrix<T, 2>
+    operator*(const matrix_ref<T, 2>& a, const matrix_ref<T, 2>& b) 
+    {
+      matrix<T, 2> result (a.dims());
+      matrix_product(a, b, result);
+      return result;
+    }
+
+  // Cross product multiplication.
+  template <typename T>
+    inline matrix<T, 2>
+    operator*(const matrix<T, 2>& a, const matrix_ref<T, 2>& b) 
+    {
+      matrix<T, 2> result (a.dims());
+      matrix_product(a, b, result);
+      return result;
+    }
+
+  template <typename T>
+    inline matrix<T, 2>
+    operator*(const matrix_ref<T, 2>& a, const matrix<T, 2>& b) 
+    {
+      matrix<T, 2> result (a.dims());
+      matrix_product(a, b, result);
+      return result;
     }
 
 
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Matrix Product
+  //
+  // The usual meaning of the operation.
+  //
+  // FIXME: This is not terribly efficient. Implement a more efficient algorithm
+  // than this brute force version.
+  //
+  // FIXME: I'm not at all sure that this generalizes to n dimensions. It might
+  // be the case that we want all M's to be 2 dimensions (as they are now!).
+  template <typename M1, typename M2, typename M3>
+    void 
+    matrix_product(const M1& a, const M2& b, M3& out)
+    {
+      static_assert(M1::order() == 2, "");
+      static_assert(M2::order() == 2, "");
+      static_assert(M3::order() == 2, "");
+      assert(cols(a) == rows(b));
+      assert(rows(a) == rows(out));
+      assert(cols(b) == cols(out));
+
+      using Size = Size_type<M3>;
+
+      for (Size i = 0; i != rows(a); ++i) {
+        for (Size j = 0; j < cols(b); ++j) {
+          for (Size k = 0; k < rows(b); ++k)
+            out(i, j) += a(i, k) * b(k, j);
+        }
+      }
+    }
+
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Hadamard Product
+  //
+  // The hadamard product can be easly generalized to N-dimensional matrices 
+  // since the operation is performed elementwise. The operands only need the
+  // same shape.
+  template <typename M1, typename M2, typename M3>
+    void
+    hadamard_product(const M1& a, const M2& b, M3& out)
+    {
+      assert(a.shape() == b.shape());
+      assert(a.shape() == out.shape());
+
+      using Mul = std::multiplies<Value_type<M1>>;
+      std::transform(a.begin(), a.end(), b.begin(), out.begin(), Mul{});
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Streaming
+  //
+  // Write the matrix to the the given output stream.
   template <typename C, typename T, typename M>
     inline Requires<Matrix<M>(), std::basic_ostream<C, T>&>
     operator<<(std::basic_ostream<C, T>& os, const M& m)
@@ -302,51 +455,6 @@ namespace origin
     }
 
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Matrix Multiplication
-  //
-  // The following algorithms implement various forms of matrix products.
 
-
-  // Matrix Product
-  //
-  // The usual meaning of the operation.
-  //
-  // FIXME: Write in terms of slices when we get them.
-  template <typename T>
-    matrix<T, 2>
-    matrix_product(const matrix<T, 2>& a, const matrix<T, 2>& b) 
-    {
-      using Size = typename matrix<T, 2>::size_type;
-
-      assert(cols(a) == rows(b));
-
-      matrix<T, 2> result{{rows(a), cols(b)}, 0};
-      for (Size i = 0; i != rows(a); ++i) {
-        for (Size j = 0; j < cols(b); ++j) {
-          for (Size k = 0; k < rows(b); ++k) {
-            result(i, j) += a(i, k) * b(k, j);
-          }
-        }
-      }
-      return result;
-    }
-
-  
-  // Hadamard Product
-  //
-  // The hadamard product can be easly generalized to N-dimensional matrices 
-  // since the operation is performed elementwise. The operands only need the
-  // same shape.
-  template <typename T, std::size_t N>
-    matrix<T, N>
-    hadamard_product(const matrix<T, N>& a, const matrix<T, N>& b) 
-    {
-      assert(a.shape() == b.shape());
-      matrix<T, N> result = a;
-      matrix_impl::assign_elements(
-        a.begin(), a.end(), b.begin(), matrix_impl::multiplies_assign<T>{}); 
-      return result;
-    }
 } // namespace origin
 

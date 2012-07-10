@@ -60,5 +60,38 @@ namespace matrix_impl
     using Requires_1D = Requires<Same<T, T>() && (N == 1)>;
 
 
+  // Used to define the reference type of matrix references. It depends on
+  // the const-ness of T.
+  template <typename T, typename A>
+    using Matrix_ref = 
+      If<Const<T>(), typename A::const_reference, typename A::reference>;
+
+  // Used to define the pointer type of matrix references. It depends on the
+  // const-ness of T.
+  template <typename T, typename A>
+    using Matrix_ptr =
+      If<Const<T>(), typename A::const_pointer, typename A::pointer>;
+
+
+
+  // The matrix init trait defines the matrix initializer list for any matrix
+  // with order > 1.
+  template <typename T, std::size_t N>
+    struct matrix_init
+    {
+      using type = std::initializer_list<typename matrix_init<T, N - 1>::type>;
+    };
+
+  template <typename T>
+    struct matrix_init<T, 1>
+    {
+      using type = std::initializer_list<T>;
+    };
+
+  // This is not defined on purpose!
+  template <typename T>
+    struct matrix_init<T, 0>;
+
+
 } // namespace matrix_impl
 

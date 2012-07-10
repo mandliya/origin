@@ -60,37 +60,66 @@ namespace matrix_impl
 
 
   ////////////////////////////////////////////////////////////////////////////
-  // Algorithms
+  // Apply
   //
-  // Support algorithms for implementing some matrix operations.
+  // Apply a value, x, to each element of a mutable range. There are two
+  // overloads of this function:
   //
-  // TODO: These should be moved into the algorithms module.
-  ////////////////////////////////////////////////////////////////////////////
+  //    apply(first, last, value, f)
+  //    apply(first1, last1, first2, last2, f)
+  //
+  // The first overload applies a single value to each element in the range
+  // [first, last), while the second applies 
 
 
-  // Assign value
+  // Apply f(*i, value) to each iterator i in the mutable range [first, last).
+  // Note that f may (and is generally expected to) modify the object referred
+  // to by *i.
   //
-  // The assign value algorithm calls op(*i, value) for each iterator i in the
-  // range [first, last). Here, op typically performs an assignment.
-  template <typename I, typename T, typename Op>
-    void assign_value(I first, I last, const T& value, Op op)
+  // Parameters:
+  //    first, last -- A bounded, mutable range
+  //    value -- The value being applied to each element in [first, last)
+  //
+  // Requires:
+  //    Mutable_iterator<I1>
+  //    Input_iterator<I2>
+  //    Function<F, Value_type<I1>&, Value_type<I2>
+  //
+  // Returns:
+  //    The function object f.
+  template <typename I, typename T, typename F>
+    inline F 
+    apply(I first, I last, const T& value, F f)
     {
       while (first != last) {
-        op(*first, value);
+        f(*first, value);
         ++first;
       }
+      return f;
     }
 
 
-  // Assign elements
+  // Apply f(*i, *j) to each iterator i in the mutable range [first1, last1) and
+  // each corresponding j in the input range [first2, last2). Note that f may
+  // (and is generally expected to) modify the object referred to by *i.
   //
-  // The assign elements function calls op(*i, *j) for each corresponding
-  // pair of iterators i and j in the ranges [first1, last1) and [first2, last).
-  template <typename I1, typename I2, typename Op>
-    void assign_elements(I1 first1, I1 last1, I2 first2, Op op)
+  // Parameters:
+  //    first1, last1 -- A bounded, mutable range
+  //    first2, last2 -- A bounded input range
+  //
+  // Requires:
+  //    Mutable_iterator<I1>
+  //    Input_iterator<I2>
+  //    Function<F, Value_type<I1>&, Value_type<I2>
+  //
+  // Returns:
+  //    The function object f.  
+  template <typename I1, typename I2, typename F>
+    inline F 
+    apply(I1 first1, I1 last1, I2 first2, F f)
     {
       while (first1 != last1) {
-        op(*first1, *first2);
+        f(*first1, *first2);
         ++first1;
       }
     }
@@ -105,11 +134,102 @@ namespace matrix_impl
   //////////////////////////////////////////////////////////////////////////////
 
 
+  // A helper class for extracting the extents from a nested sequence of
+  // initializer lists. Note that dimensions are recorded left-to right in the
+  // dims array such that the greatest index in dims corresponds to the 
+  // outermost array size.
+  template <std::size_t N>
+    struct extent_from_init
+    {
+      // Get 
+      template <typename List, typename Size>
+        static void get(const List& list, Size* dims)
+        {
+          assert(check_list(list));
+          *dims = list.size();
+          ++dims;
+          extent_from_init<N - 1>::get(*list.begin(), dims);
+        }
+
+      // Returns true if all the sub-lists are the same size.
+      template <typename List>
+        static bool check_list(const List& list)
+        {
+          auto i = list.begin();
+          for(auto j = i + 1; j != list.end(); ++j) {
+            if (i->size() != j->size())
+              return false;
+          }
+          return true;
+        };
+    };
+
+  template <>
+    struct extent_from_init<1>
+    {
+      template <typename T, typename Size>
+        static void get(const std::initializer_list<T>& list, Size* dims)
+        {
+          *dims = list.size();
+          ++dims;
+        }
+    };
+
+
+  // Returns the matrix shape corresponding to a sequence of nested initialize
+  // lists.
+  template <std::size_t N, typename Size, typename List>
+    inline matrix_shape<Size, N> 
+    shape(const List& list)
+    {
+      Size dims[N];
+      extent_from_init<N>::get(list, dims);
+      return {dims, dims + N};
+    }
+
+
+
+  template <std::size_t N>
+    struct copy_from_init
+    {
+      template <typename List, typename T>
+        static T* put(const List& list, T* p)
+        {
+          for (const auto& l : list)
+            p = copy_from_init<N - 1>::put(l, p);
+          return p;
+        }
+    };
+
+  template <>
+    struct copy_from_init<1>
+    {
+      template <typename List, typename T>
+        static T* put(const List& list, T* p)
+        {
+          std::copy(list.begin(), list.end(), p);
+          return p + list.size();
+        }
+    };
+
+
+  template <std::size_t N, typename List, typename T>
+    void assign_init(const List& list, T* p)
+    {
+      copy_from_init<N>::put(list, p);
+    }
+
+
+  // Return an element reference for T (possibly const).
+  template <typename T>
+    using Element_reference = If<Const<T>(), const T&, T&>;
+
+
   // Determines the row type of a matrix. If N is 0, then the row type is
   // simply the scalar type T. Otherwise, the row type is a row matrix of
   // the given dimension.
-  template <typename M, std::size_t N>
-    using Row_type = If<(N == 0), Reference_of<M>, matrix_ref<M, N>>;
+  template <typename T, std::size_t N>
+    using Row_type = If<(N == 0), Element_reference<T>, matrix_ref<T, N>>;
 
 
 
@@ -154,31 +274,31 @@ namespace matrix_impl
   //
   // FIXME: It would be nice to use Row_reference<M> and Row_refernce<const M> 
   // in these algorithms.
-  template <typename B, typename M>
-    inline Requires<(M::rank() != 1), typename M::row_reference>
-    row(B& base, M& m, Size_type<M> n)
+  template <typename M>
+    inline Requires<(M::order() != 1), typename M::row_reference>
+    row(M& m, Size_type<M> n)
     {
-      return {base, m.shape().inner(), m.data() + n * m.shape().size(1)};
+      return {m.shape().inner(), m.data() + n * m.shape().size(1)};
     }
 
-  template <typename B, typename M>
-    inline Requires<(M::rank() != 1), typename M::const_row_reference>
-    row(const B& base, const M& m, Size_type<M> n)
+  template <typename M>
+    inline Requires<(M::order() != 1), typename M::const_row_reference>
+    row(const M& m, Size_type<M> n)
     {
-      return {base, m.shape().inner(), m.data() + n * m.shape().size(1)};
+      return {m.shape().inner(), m.data() + n * m.shape().size(1)};
     }
 
   // Specializations for the case where N == 1
-  template <typename B, typename M>
-    inline Requires<(M::rank() == 1), typename M::row_reference>
-    row(B& base, M& m, Size_type<M> n)
+  template <typename M>
+    inline Requires<(M::order() == 1), typename M::row_reference>
+    row(M& m, Size_type<M> n)
     {
       return *(m.data() + n);
     }
 
-  template <typename B, typename M>
-    inline Requires<(M::rank() == 1), typename M::const_row_reference>
-    row(const B& base, const M& m, Size_type<M> n)
+  template <typename M>
+    inline Requires<(M::order() == 1), typename M::const_row_reference>
+    row(const M& m, Size_type<M> n)
     {
       return *(m.data() + n);
     }
