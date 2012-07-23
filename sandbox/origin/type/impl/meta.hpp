@@ -31,6 +31,14 @@ namespace type_impl
       using type = T; 
     };
 
+  // Adaptation for expandable types
+  template <template <typename...> class Template, typename... Args>
+    struct front_type<Expand<Template<Args...>>>
+      : front_type<Args...>
+    { };
+
+
+
   // Returns the last type in a sequence of type arguments. This is
   // undefined when Args... is empty.
   template <typename... Args> struct back_type;
@@ -45,6 +53,12 @@ namespace type_impl
     struct back_type<T, Args...> : back_type<Args...>
     { };
 
+  // Adapatation for expandable types.
+  template <template <typename...> class Template, typename... Args>
+    struct back_type<Expand<Template<Args...>>>
+      : back_type<Args...>
+    { };
+
 
 
   // Returns true if all of the types are the same, or if Args... is an
@@ -55,29 +69,31 @@ namespace type_impl
 
   // True for an empty sequence
   template <>
-    struct are_same<> : std::true_type
-    { };
+    struct are_same<> : std::true_type  { };
 
   // For a single type, this is trivially true.
   template <typename T> 
-    struct are_same<T> : std::true_type 
-    { };
+    struct are_same<T> : std::true_type { };
 
-  // Recursively apply are_same (is_same) to T and Args...
-  // FIXME: Does && properly short-circuit the instantiation, or do I need to
-  // use std::conditional to make sure thta it's done correctly. How do you
-  // test this?
-  template <typename T, typename... Args>
-    struct are_same<T, Args...>
+  // Recursively apply are_same (is_same) to T, U and Args...
+  template <typename T, typename U, typename... Args>
+    struct are_same<T, U, Args...>
       : boolean_constant<
-          std::is_same<T, typename front_type<Args...>::type>::value &&
-          are_same<Args...>::value
+          std::is_same<T, U>::value &&
+          are_same<U, Args...>::value
         >
     { };
 
+  // Adapt are_same to the Expand wrapper. 
+  template <template <typename... Args> class Template, typename... Args>
+    struct are_same<Expand<Template<Args...>>>
+      : are_same<Args...>
+    { };
 
 
   // The identity metafunction for types.
+  //
+  // TODO: Move this into the origin namespace?
   template <typename T>
     struct identity
     {

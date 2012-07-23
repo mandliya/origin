@@ -5,9 +5,11 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
+#include <iostream>
 #include <string>
 
 #include <origin/type/traits.hpp>
+#include <origin/type/typestr.hpp>
 
 using namespace std;
 using namespace origin;
@@ -80,5 +82,26 @@ int main()
   static_assert(Same<Common_type<signed int, unsigned int>, unsigned int>(), "");
   static_assert(Same<Common_type<signed long, unsigned long>, unsigned long>(), "");
 
-  // TODO: Other common types to test?
+
+  // Tests on variadic common type
+  // The common type of a single type is that type.
+  static_assert(Same<Common_type<int>, int>(), "");
+
+  // The common type of 3 type is the type of the "most common". This is also
+  // independent of order.
+  static_assert(Same<Common_type<char, short, int>, int>(), "");
+  static_assert(Same<Common_type<short, char, int>, int>(), "");
+  static_assert(Same<Common_type<char, int, short>, int>(), "");
+  static_assert(Same<Common_type<short, int, char>, int>(), "");
+  static_assert(Same<Common_type<int, char, short>, int>(), "");
+  static_assert(Same<Common_type<int, short, char>, int>(), "");
+
+
+  // Test with the expander
+  // Test the expander.
+  using List = type_list<char, short, int>;
+  static_assert(Same<Common_type<Expand<List>>, int>(), "");
+
+  using Tuple = std::tuple<int, int, int>;
+  static_assert(Same<Common_type<Expand<Tuple>>, int>(), "");
 }

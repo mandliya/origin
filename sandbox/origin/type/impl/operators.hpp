@@ -11,54 +11,6 @@
 
 namespace type_impl
 {
-  ////////////////////////////////////////////////////////////////////////////
-  // Functions
-
-  // Safely deduce the result of the expression f(args...).
-  template <typename F, typename... Args>
-    struct get_call_result
-    {
-    private:
-      template <typename X, typename... Y>
-        static auto check(X x, Y&&... y) -> decltype(x(std::forward<Y>(y)...));
-        
-      static subst_failure check(...);
-    public:
-      using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
-    };
-
-  // Actually access the result type.
-  template <typename T>
-    struct result_of
-    {
-      using type = subst_failure;
-    };
-    
-  template <typename F, typename... Args>
-    struct result_of<F(Args...)>
-    {
-      using type = typename get_call_result<F, Args...>::type;
-    };
-
-
-
-  // Deduce the argument types from a function type.
-  //
-  // TODO: Extend this trait so that we can deduce argument types from a
-  // class that declares them as associatd type (i.e., first_argument_type,
-  // second_argument_type, etc.).
-  template <typename F>
-    struct get_argument_types
-    {
-      using type = subst_failure;
-    };
-
-  template <typename R, typename... Args>
-    struct get_argument_types<R(Args...)>
-    {
-      using type = std::tuple<Args...>;
-    };
-
 
   ////////////////////////////////////////////////////////////////////////////
   // Overloadable operators

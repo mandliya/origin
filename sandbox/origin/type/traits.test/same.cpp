@@ -5,6 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
+#include <iostream>
+
 #include <origin/type/traits.hpp>
 
 using namespace std;
@@ -57,4 +59,13 @@ int main()
 
   static_assert(Different<int, int*>(), "");
   static_assert(Different<int*, int>(), "");
+
+  // Test the expander.
+  using List = type_list<int, int, int>;
+  static_assert(Same<Expand<List>>(), "");
+  static_assert(!Different<Expand<List>>(), "");
+
+  using Tuple = std::tuple<int, int, int>;
+  static_assert(Same<Expand<Tuple>>(), "");
+  static_assert(!Different<Expand<Tuple>>(), "");
 }

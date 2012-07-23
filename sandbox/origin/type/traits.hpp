@@ -14,23 +14,9 @@
 #include "default.hpp"
 #include "unspecified.hpp"
 
-// Declarations
-namespace std
-{
-  template<typename... > class tuple;
-} // namespace std
-
 
 namespace origin
 {
-  // Declarations
-  template <typename... Args> 
-    constexpr bool Same();
-  
-  template <typename T, typename U> 
-    constexpr bool Different();
-
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Metaprogramming Support                                                meta
@@ -64,6 +50,55 @@ namespace origin
   using False_type = std::false_type;
 
 
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Type List
+  //
+  // The type_list class template describes a sequence of types, much like a a
+  // tuple. The similarities end there; type_list is an empty class that only
+  // serves to carry type information.Also, std::tuple<> does not seem to be a
+  // complete type whereas type_list<> is.
+  template <typename... Ts>
+    struct type_list { };
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Expand
+  //
+  // The expand class template is a helper class that can be used to indicate
+  // the explicit expansion of variadic class templates such as type_list and
+  // tuple in the context of variadic type functions such as Same or Common.
+  //
+  // Example:
+  //
+  //    using T1 = tuple<char, short, int>;
+  //    using T2 = type_list<char, short, int>;
+  //    Same<Expand<T1>>() // same as Same<char, short, int>()
+  //    Same<Expand<T2>>() // same as Same<char, short, int>()
+  //
+  // Note that the Expand facility works with any type define over a sequence
+  // of types. We call such types (e.g., type_list and tuple), "expandable 
+  // types".
+  //
+  // Note that the implementation of Same must be explicitly adapted to use
+  // the Expand wrapper. As an example, here is the specialization of are_same,
+  // the implementation of the Same type predicate, that adapts the type trait
+  // for use with an expandable sequence.
+  //
+  //    template <template <typename...> class Template, typename... Args>
+  //      struct are_same<Expand<Template<Args...>>>
+  //        : are_same<Args...>
+  //      { };
+  //
+  // The specialization includes both the template name (either type_list or
+  // tuple from the example above), and the sequence of types that being
+  // expanded in the type trait.
+  template <typename T>
+    struct Expand { };
+
+
+
 // Include metaprogramming support.
 #include "impl/meta.hpp"
 
@@ -81,6 +116,13 @@ namespace origin
   //
   // Here, the operation, odd, is only a viable candidate when the expression
   // Integer<T>() evaluates to true.
+  //
+  // Template Parameters:
+  //    B -- A Boolean constant
+  //    T -- The aliased type when B is true
+  //
+  // Refers To:
+  //    T if B is true, otherwise the alias results in a substitution failure.
   template <bool B, typename T = void>
     using Requires = typename std::enable_if<B, T>::type;
 
@@ -90,7 +132,7 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // If                                                                  meta.if
   //
-  // Refers to T when B is true and F otherwise. For example:
+  // The If alias refers to T when B is true and F otherwise. For example:
   //
   //    template<typename T>
   //      using Ptr = If<Const<T>(), const T*, T*>;
@@ -99,9 +141,52 @@ namespace origin
   //    Ptr<const int> // is const int*
   //
   // Note that this is an alias to std::conditional.
+  //
+  // Template Parameters:
+  //    B -- A Boolean constant
+  //    T -- The aliased type when B is true
+  //    F -- The aliased type when B is false
+  //
+  // Refers To:
+  //    T if B is true, F otherwise.
   template <bool B, typename T, typename F>
     using If = typename std::conditional<B, T, F>::type;
   
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Structural Type
+  //
+  // The Structural_type alias identifies the structure or value type in a
+  // cv-qualified reference type T. The structural type of a cv-qualified or
+  // reference type is the underlying type of the cv-qualifiers or reference.
+  // That is, it describes the structure of the object being constrained. For
+  // example:
+  //
+  //    Structural_type<int>        // is int
+  //    Structural_type<const int>  // is int
+  //    Structural_type<const int&> // is int
+  //    Structural_type<int*>       // is int*
+  //    Structural_type<int[3]>     // is int[3]
+  //
+  // Many type functions in this library operate only on or return only
+  // structural types. This alias is provided specifically to derive structural
+  // types from cv-qualified or reference type expressions.
+  //
+  // Note that the Value_type alias has similar meaning. It refers to a 
+  // structural type associated with an iterator or range.
+  //
+  // Template Parameters:
+  //    T -- A type
+  //
+  // Refers To:
+  //    The structural type underlying the type T.
+  template <typename T>
+    using Structural_type
+      = typename std::remove_cv<
+          typename std::remove_reference<T>::type
+        >::type;
+
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -151,12 +236,18 @@ namespace origin
 
   // Returns true if T indicates a substitution failure.
   template <typename T>
-    constexpr bool Subst_failed() { return Same<T, subst_failure>(); }
+    constexpr bool Subst_failed() 
+    { 
+      return std::is_same<T, subst_failure>::value;
+    }
 
 
   // Returns true if T does not indicate a substitution failure.
   template <typename T>
-    constexpr bool Subst_succeeded() { return Different<T, subst_failure>(); }
+    constexpr bool Subst_succeeded() 
+    { 
+      return !std::is_same<T, subst_failure>::value;
+    }
 
 
 // Include operator support.
@@ -190,12 +281,25 @@ namespace origin
 
 
 
-  // Returns true if T is the same as U for all pairs of types T and U in
-  // Args or if Args is an empty type sequence. For example:
+  //////////////////////////////////////////////////////////////////////////////
+  // Same
+  //
+  // The Same type predicate returns true when all types T in Args are the same
+  // type, or when Args is an empty list. For example:
   //
   //    Same<int, int>()       // returns true
   //    Same<int, const int>() // returns false
   //    Same<int, int&>()      // returns false
+  //    Same<char>()           // returns true
+  //    Same<>()               // returns true
+  //
+  // This is called the "same type relation" when used with only two arguments.
+  //
+  // Template Parameters:
+  //    Args -- A list of types
+  //
+  // Returns:
+  //    True if and only if all types T in Args are the same type.
   template <typename... Args>
     constexpr bool Same()
     {
@@ -204,29 +308,74 @@ namespace origin
     
 
 
-  // Returns true if T is different than U. Note that Different is simply
-  // the complement of Same for two arguments.
+  //////////////////////////////////////////////////////////////////////////////
+  // Different
   //
-  //    Different<T, U>() <=> !Same<T, U>().
+  // Returns true if any type T in Args is not the same as any other type U in
+  // Args. The predicate returns false when Args is empty or contains only a
+  // single type. For example:
   //
-  template <typename T, typename U>
+  //    Different<int, int>()       // returns false
+  //    Different<char, int>()      // returns true
+  //    Different<int, const int>() // returns true
+  //    Different<T>()              // returns false
+  //    Different<>()               // returns false
+  //
+  // Note that Different is the complement of Same. That is:
+  //
+  //    Different<T, U>() <=> !Same<Args...>()
+  //
+  // Template Parameters:
+  //    Args -- A list of types
+  //
+  // Returns:
+  //    True if, for any pair of types, T and U in Args, Same<T, U> is false.
+  template <typename... Args>
     constexpr bool Different()
     {
-      return !Same<T, U>();
+      return !Same<Args...>();
     }
 
 
 
-  // The common_type trait yields the common type of T and U. 
+  //////////////////////////////////////////////////////////////////////////////
+  // Common Type Trait
   //
-  // NOTE: This supercedes the std implementation of common type, which will
+  // The common_type trait defines the basic mechanism by which the common type
+  // lattice is defined. The type trait is part of the public interface because
+  // it can be specialized by a user to disambiguate conversions or to derive a
+  // new type that is not one of the type arguments. For example, if T and U are
+  // mutually convertible, common_type must be specialized to select on of those
+  // conversions as being dominant. If the common type C of T and U is neither
+  // of those types, the common_type must be specialized to derive C. An example
+  // of this is std::duration.
+  //
+  // In general, it is preferable to avoid explicit specialization of this 
+  // relation. The first approach to defining an appropriate conversion lattice
+  // is to use the standard mechanisms for conversion.
+  //
+  // Notes: This supercedes the std implementation of common type, which will
   // can result in compilation failures when the common type of T and U is not
   // defined. Also note tht this is not in the traits namespace to allow for
   // easier customization.
   //
   // FIXME: This needs to be explicitly specialized for std::duration.
+
+  template <typename... Args>
+    struct common_type;
+
+  // The common type of a single type is obviously that type.
+  template <typename T>
+    struct common_type<T>
+    {
+      using type = T;
+    };
+
+  // The common type relation. This specialization is the primary mechanism
+  // by which common type is defined, and by which it is extended. The default
+  // definition of common type is based on the result type of the ?: operator.
   template <typename T, typename U>
-    struct common_type
+    struct common_type<T, U>
     {
     private:
       template <typename X, typename Y>
@@ -252,18 +401,68 @@ namespace origin
       >::type;
     };
 
+  // The recursive definition of common type simply applies the common type
+  // to each pair of types in turn. The computation is similar to that of
+  // max_elements where the "max" type is the common type of each consecutive
+  // pair of elements.
+  template <typename T, typename U, typename... Args>
+    struct common_type<T, U, Args...>
+      : common_type<typename common_type<T, U>::type, Args...>
+    { };
+
+  // Adaptation for expandable types
+  template <template <typename...> class Template, typename... Args>
+    struct common_type<Expand<Template<Args...>>>
+      : origin::common_type<Args...>
+    { };
 
 
-  // An alias to the common type of T and U if it exists. Note that the common
-  // type of T and U may be neither T nor U.
-  template <typename T, typename U>
-    using Common_type = typename common_type<T, U>::type;
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Commmon Type
+  //
+  // The common type alias yields a type, C, that is common to each of the
+  // argument types in the list Args. By "common" we mean that each type in
+  // Args can be embedded in the universe of values represented by the common
+  // type C. For example, the common type of char, short, and int is int because
+  // the values of each argument type can be represented by int.
+  //
+  // More specifically, each argument Args_i must be unambiguously converted to
+  // C. That is, an implicit conversion from Args_i to C is possible, but not
+  // from C to Args_i. Note that the common_type specialization table may be
+  // used disambiguate conversions (in some cases the C++ language
+  // disambiguates).
+  //
+  // Note that the common type of Args_n may not be any of the types in the list
+  // Args. In such cases, the common type must be computed from the arguments.
+  // This is only possible using the common_type specialization table.
+  //
+  // Template Parameters:
+  //    Args -- A list of types
+  //
+  // Refers To:
+  //    A type C that is common tyoe all types T in Args.
+  template <typename... Args>
+    using Common_type = typename common_type<Args...>::type;
 
 
-
-  // Returns true if the common type of T and U exists.
-  template <typename T, typename U>
-    constexpr bool Common() { return Subst_succeeded<Common_type<T, U>>(); }
+  //////////////////////////////////////////////////////////////////////////////
+  // Commmon
+  //
+  // The Common type predicate returns true when there exists a type C that
+  // is common to all types T in Args. We refer to this as the "common type
+  // relation" when used with only two types.
+  //
+  // Template Parameters:
+  //    Args -- A list of types
+  //
+  // Returns:
+  //    True if and only there is a type C common to each type T in Args.
+  template <typename... Args>
+    constexpr bool Common() 
+    { 
+      return Subst_succeeded<Common_type<Args...>>(); 
+    }
 
     
 
@@ -429,35 +628,6 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Functions                                                       traits.func
-  //
-  // The following traits apply to functions.
-  //////////////////////////////////////////////////////////////////////////////
-    
-
-  // Returns true if T is a function type.
-  template <typename T>
-    constexpr bool Function_type()
-    {
-      return std::is_function<T>();
-    }
-    
-  // An alias for the result type of the function type. The function type F
-  // is comprised of the types G(Args...) where G is the type of a callable
-  // object (e.g., function pointer, reference or functor), and Args are the
-  // types of the function arguments.
-  template <typename F>
-    using Result_of = typename type_impl::result_of<F>::type;
-
-  // Yields a tuple containing Args, the sequence of argument types for a
-  // function type F with the form R(Args...) where R is the result type and
-  // Args are its argument types.
-  template <typename F>
-    using Argument_types = typename type_impl::get_argument_types<F>::type;
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
   // Pointer types
   //
   // The following traits apply to pointer types.
@@ -528,7 +698,7 @@ namespace origin
 
     
   //////////////////////////////////////////////////////////////////////////////
-  // User-defined types
+  // User-defined Types
   //
   // These traits describe properties of user-defined types: class types, union
   // types, and enumerated types.
@@ -563,6 +733,230 @@ namespace origin
   // An alias to the integer type that stores the values of the enum T.
   template <typename T>
     using Underlying_type = typename std::underlying_type<T>::type;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Functions                                                       traits.func
+  //
+  // There are number of different ways that a function can be represented in
+  // C++. The most obvious is the definition of a function or member function.
+  // We can also make objects of class type act like functions by overloading
+  // their function call operator. Lambda expressions are examples of this
+  // representation.
+  //
+  // The number of ways in which functions are represented can lead to some
+  // confusing terminology. Here, we use the following definitions:
+  //
+  //    function type -- The type of a declared function. A function type has
+  //    the form R(Args...) where R is the result type and Args... is a list
+  //    of function argument types.
+  //
+  //    callable type -- The type of an object, f, that can be called with the
+  //    syntax f(args...). Here, f can be a function pointer, a member function
+  //    pointer, a functor, or a lambda.
+  //
+  //    call expression type -- A function type of the form F(Args...) where
+  //    F is a callable type and Args is a list of arguments over which F
+  //    is being invoked. The distinction between call expression types and
+  //    function types is purely nominal; the C++ language does not actually
+  //    differentiate. We characterize these separately because some typing
+  //    facilities make use of types of this form, but will not work for
+  //    function types.
+  //
+  // It is important to note that the set of callable types is disjoint from
+  // the set of function types. 
+  //
+  // It is also important to note that we cannot generally determine if a type
+  // T is a callable type (without extended compiler support). We cannot
+  // effectively determine the presence of operator() in functors if there are
+  // overloads or if the operator is a member function template. As such, there
+  // is no concept for the notion of Callable types.
+  //
+  // Finally, note that some properties in this component cannot be deduced for
+  // polymorphic functors. If the function call operator is overloaded on
+  // different arguments, or if it is a member function template, then we cannot
+  // deduce its arity or set of arguments. That impacts several useful type
+  // functions.
+  //
+  // TODO: Should the Parameters_of, Function_arity, Domain, and Codomain 
+  // traits accept function types? I think it might be more uniform to restrict
+  // their operation to only callable types.
+  //////////////////////////////////////////////////////////////////////////////
+    
+#include "impl/function.hpp"
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Function Type
+  //
+  // A type T is a function type when it has the form R(Args...) where R is
+  // a result type and Args is a list of types representing the argument types
+  // of the function.
+  //
+  // Template Parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //    True if and only if T is a function type.
+  template <typename T>
+    constexpr bool Function_type()
+    {
+      return std::is_function<T>();
+    }
+    
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Result Of
+  //
+  // The Result_of alias denotes the result type of a call expression type, C,
+  // having the form F(Args...) where F is a callable type and Args is a list of
+  // types representing the arguments with which F is called.
+  //
+  // If T is given as a function type, the referred to type will indicate
+  // substitution failure.
+  //
+  // Template Parameters:
+  //    T -- A call expression type
+  //
+  // Refers To:
+  //    The result of the call expression type T.
+  //
+  // WARNING: Result_of does not fail gracefully on substitution failures 
+  // involving member function pointers. In p
+  template <typename C>
+    using Result_of = typename type_impl::result_of<C>::type;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Parameters Of
+  //
+  // The Parameters_of alias denotes the list of types that are the function
+  // parameters of the function type or callable type F.
+  //
+  // Template parameters:
+  //    F -- A function type or callable type
+  //
+  // Refers To:
+  //    A type list containing the function argument types of F.
+  //
+  // WARNING: This property cannot be deduced for polymorphic functors.
+  //
+  // FIXME: The definition of this function may need to be reconsidered for
+  // member function pointers. When used as an expression, the class object
+  // must be explicitly given as an argument. The total argument list should
+  // be that object and the parameters of the pointed-at function.
+  template <typename F>
+    using Parameters_of = typename type_impl::get_parameter_types<F>::type;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Function Arity
+  //
+  // The arity of a function, F, is the size of its Parameter list. Note that
+  // this is not the same as the number of arguments over which the function
+  // may be called. Parameters with default arguments are included in the arity
+  // of the function.
+  //
+  // Template parameters:
+  //    F -- A function type or callable type
+  //
+  // Returns: 
+  //    The arity of the given callable type or function type. 
+  //
+  // WARNING: This property cannot be deduced for polymorphic functors.
+  //
+  // FIXME: The definition of this function may need to be reconsidered for
+  // member function pointers. When used as an expression, the number of
+  // arguments required to invoke the expression is 1 more than the number of
+  // parameters of the pointed-at function.
+  template <typename F>
+    constexpr std::size_t Function_arity()
+    {
+      return type_impl::function_arity<F>::value;
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Homogeneous function
+  //
+  // A homogeneous function, F, is one whose argument types are all the same.
+  // Here, F can be either a function type or callable type.
+  //
+  // Template Parameters:
+  //    F -- A function or callable type
+  //
+  // Returns:
+  //    True if and only if the arguments of F are all the same.
+  //
+  // WARNING: This property cannot be deduced for polymorphic functors.
+  template <typename F>
+    constexpr bool Homogeneous_function()
+    {
+      return Same<Expand<Parameters_of<F>>>();
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Domain
+  //
+  // The domain of a (homogeneous) function or callable type, F, is the type
+  // shared by its arguments. The domain type of a function is a structural
+  // type; it is neither a reference nor cv-qualified. If F is non-homogeneous,
+  // then this alias refers to a type indicating substitution failure.
+  //
+  // Note that requesting the domain of a nullary function results in an
+  // ill-formed program.
+  //
+  // Template Parameters:
+  //    F -- A function or callable type
+  //
+  // Refers To:
+  //    The domain type of the function or callable type F.
+  //
+  // WARNING: This property cannot be deduced for polymorphic functors.
+  template <typename F>
+    using Domain = 
+      If<Homogeneous_function<F>(), 
+         Structural_type<Front_type<Expand<Parameters_of<F>>>>, 
+         subst_failure>;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Codomain
+  //
+  // The Codomain of a function or callable type, F, is the structural type
+  // of its result. The codomain type is neither a reference nor cv-qualified
+  // type.
+  //
+  // The Codomain alias differs from Result_of in that the argument type F is a
+  // function type or callable type. In contrast, Result_of requires its
+  // argument type to be a call expression type. Moreover, Result_of refers to
+  // the exact result type of an operation. The Codomain alias refers to the
+  // structural type returned by F. In that sense, the following would be
+  // equivalent programs:
+  //
+  //    auto x = f(args...);
+  //    Codomain<decltype(f)> x = f(args...);
+  //
+  // Assuming of course, that decltype(f) can be computed (i.e., f must not
+  // name an overload set).
+  //
+  // Template Parameters:
+  //    F -- A function or callable type
+  //
+  // Refers To:
+  //    The domain type of the function or callable type F.
+  //
+  // WARNING: This property cannot be deduced for polymorphic functors.
+  template <typename F>
+    using Codomain = 
+      Structural_type<typename type_impl::get_result_type<F>::type>;
 
 
 
@@ -709,14 +1103,6 @@ namespace origin
   // Decay an array into a pointer or a function into a function pointer.
   template <typename T>
     using Decay = typename std::decay<T>::type;
-
-  // Return an unqualified a type name by removing any references and  CV-
-  // qualifiers. This is helpful when concept checking template arguments  of
-  // types that are known to be non-value (i.e., qualified) types,  especially
-  // overloads that rely on rvalue references for forwarding.
-  template <typename T>
-    using Make_unqualified = Remove_cv<Remove_reference<T>>;
-
 
 
   //////////////////////////////////////////////////////////////////////////////

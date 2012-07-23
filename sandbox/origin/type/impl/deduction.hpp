@@ -42,7 +42,7 @@ namespace type_impl
   // operation minus reference and const-qualifiers.
   template <typename T>
     auto deduce_value_type(default_t, const T&) 
-      -> Requires<Has_dereference<T>(), Make_unqualified<Dereference_result<T>>>;
+      -> Requires<Has_dereference<T>(), Structural_type<Dereference_result<T>>>;
 
 
   // Deduce the value type associated with T. We first look for an  associated
