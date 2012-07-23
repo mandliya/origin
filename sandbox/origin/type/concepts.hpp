@@ -686,7 +686,7 @@ namespace origin
 
 
 // Include afore-mentioned implementations.
-#include "impl/concepts.hpp"
+#include "concepts.impl/traits.hpp"
 
 
 
@@ -698,7 +698,7 @@ namespace origin
 
 
 // Include deduction support.
-#include "impl/deduction.hpp"
+#include "concepts.impl/deduction.hpp"
 
 
   //////////////////////////////////////////////////////////////////////////////

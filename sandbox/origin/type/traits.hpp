@@ -12,8 +12,6 @@
 #include <utility>
 
 #include "default.hpp"
-#include "unspecified.hpp"
-
 
 namespace origin
 {
@@ -98,10 +96,8 @@ namespace origin
     struct Expand { };
 
 
-
 // Include metaprogramming support.
-#include "impl/meta.hpp"
-
+#include "traits.impl/meta.hpp"
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -251,7 +247,7 @@ namespace origin
 
 
 // Include operator support.
-#include "impl/operators.hpp"
+#include "traits.impl/operators.hpp"
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -544,7 +540,7 @@ namespace origin
 
 
 // Include alternative implementations for make_unsigned, make_signed.
-#include "impl/integer.hpp"
+#include "traits.impl/integer.hpp"
 
 
   // An alias for the unsigned integral type with the same width as T.
@@ -654,7 +650,7 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
 
 // Additional traits needed for forming references.
-#include "impl/reference.hpp"
+#include "traits.impl/reference.hpp"
 
   // Returns true if T is an lvalue reference to some type U.
   template <typename T>
@@ -784,7 +780,7 @@ namespace origin
   // their operation to only callable types.
   //////////////////////////////////////////////////////////////////////////////
     
-#include "impl/function.hpp"
+#include "traits.impl/function.hpp"
 
   //////////////////////////////////////////////////////////////////////////////
   // Function Type
@@ -967,7 +963,7 @@ namespace origin
   // and member functions.
   //////////////////////////////////////////////////////////////////////////////
 
-#include "impl/memptr.hpp"
+#include "traits.impl/memptr.hpp"
 
   // A type T is a member-obect-pointer if it is of the form R C::* where R is
   // the type of the pointed-at object and C is the class containing the member.
@@ -2596,7 +2592,7 @@ namespace origin
 
 
 // Implementation supprot for member traits.
-#include "impl/member.hpp"
+#include "traits.impl/member.hpp"
 
 
   // An alias for T::value_type.
