@@ -73,7 +73,7 @@ namespace origin
     }
 
 
-#include "impl/typestr.hpp"
+#include "typestr.impl/typestr.hpp"
 
 } // namespace origin
 

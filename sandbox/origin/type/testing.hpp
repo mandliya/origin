@@ -34,14 +34,14 @@ namespace origin
 
 
 // Support for randomized tessting.
-#include "impl/testing/random.hpp"
+#include "testing.impl/random.hpp"
 
 // The basic testing context and support functions.
-#include "impl/testing/context.hpp"
+#include "testing.impl/context.hpp"
 
 // Include test support for the type library.
-#include "impl/testing/properties.hpp"
-#include "impl/testing/concepts.hpp"
+#include "testing.impl/properties.hpp"
+#include "testing.impl/concepts.hpp"
 
 /*
 // Include archetypes
