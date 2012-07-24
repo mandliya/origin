@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include <origin/iterator/concepts.hpp>
+#include <origin/sequence/concepts.hpp>
 
 using namespace std;
 using namespace origin;

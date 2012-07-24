@@ -15,6 +15,11 @@
 namespace origin
 {
 
+
+  namespace testing
+  {
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Iterator Properties
   //
@@ -37,7 +42,7 @@ namespace origin
   {
     template <typename P>
       bool
-      operator(const P& pair)
+      operator()(const P& p)
       {
         return operator()(p.first, p.second);
       }
@@ -67,12 +72,12 @@ namespace origin
   {
     template <typename P>
       bool
-      operator(const P& pair)
+      operator()(const P& p)
       {
         return operator()(p.first, p.second);
       }
 
-    template <typename I>
+    template <typename I, typename T>
       bool 
       operator()(I first, I last, const T& a, const T& b) const
       {
@@ -84,7 +89,7 @@ namespace origin
           // known to be equal.
           *first = std::move(a);
           if (a == b)
-            return Readable<I>() ? check_equal(*first b) : true;
+            return Readable<I>() ? check_equal(*first, b) : true;
           else
             return true;
         } else {
@@ -102,12 +107,12 @@ namespace origin
   {
     template <typename P>
       bool
-      operator(const P& pair)
+      operator()(const P& p)
       {
         return operator()(p.first, p.second);
       }
 
-    template <typename I>
+    template <typename I, typename T>
       bool operator()(I first, I last, const T& x) const
       {
         if (first != last) {
@@ -122,9 +127,6 @@ namespace origin
       }
   };
 
-
-  namespace testing
-  {
     ////////////////////////////////////////////////////////////////////////////
     // Readable
     //
@@ -160,7 +162,7 @@ namespace origin
           void
           operator()(Iv&& ivar)
           {
-            quick_check(this->cxt, move, pvar);
+            quick_check(this->cxt, move, ivar);
           }
 
         iterator_move_assignment move;
@@ -171,32 +173,34 @@ namespace origin
 
     // Check that I satisfies the requirements of the Input_iterator concept.
     template <typename I>
-      inline void
+      void
       check_input_iterator(context& cxt)
       {
-
       }
 
     template <typename I>
-      inline void
+      void
       check_output_iterator(context& cxt)
       {
 
       }
 
     template <typename I>
-      check_forward_iteratro(context& cxt)
+      void
+      check_forward_iterator(context& cxt)
       {
 
       }
 
     template <typename I>
+      void
       check_bidirectional_iterator(context& cxt)
       {
 
       }
 
     template <typename I>
+      void
       check_random_access_iterator(context& cxt)
       {
 

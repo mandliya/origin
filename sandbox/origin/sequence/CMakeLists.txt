@@ -12,5 +12,6 @@ origin_module(
   IMPORT origin.type
 
   EXPORT concepts
+         testing
 )
 

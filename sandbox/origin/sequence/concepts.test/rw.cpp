@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 
-#include <origin/iterator/concepts.hpp>
+#include <origin/sequence/concepts.hpp>
 
 using namespace std;
 using namespace origin;

@@ -12,5 +12,5 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(Origin)
 
 add_subdirectory(type)
-add_subdirectory(iterator)
+add_subdirectory(sequence)
 add_subdirectory(math)

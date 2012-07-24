@@ -14,7 +14,7 @@
 #include <memory>
 
 #include <origin/type/typestr.hpp>
-#include <origin/iterator/concepts.hpp>
+#include <origin/sequence/concepts.hpp>
 
 using namespace std;
 using namespace origin;
