@@ -13,5 +13,4 @@ include(Origin)
 
 add_subdirectory(type)
 add_subdirectory(iterator)
-add_subdirectory(range)
 add_subdirectory(math)

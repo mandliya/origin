@@ -5,8 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_ITERATOR_CONCEPTS_HPP
-#define ORIGIN_ITERATOR_CONCEPTS_HPP
+#ifndef ORIGIN_SEQUENCE_CONCEPTS_HPP
+#define ORIGIN_SEQUENCE_CONCEPTS_HPP
 
 #include <iterator>
 
@@ -394,7 +394,7 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Output Iterator                                                 iter.output
   //
-  // An output itertor, I, is a kind of iterator that allows writing elements 
+  // An output iterator, I, is a kind of iterator that allows writing elements 
   // of type T to an output sequence or stream in in a single pass, much like 
   // writing data to a tape. The syntax for writing through an iterator is:
   //
@@ -767,6 +767,166 @@ namespace origin
     {
       return first != last ? is_movable_range(first, last, *first) : true;
     }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Ranges                                                            seq.range
+  //
+  // A range is a type that exposes a pair of iterators that are accessible
+  // through begin() and end() operations. For example:
+  //
+  //    R r = ...; // a range
+  //    auto first = begin(r);
+  //    auto last = end(r);
+  //    auto i = find(first, last, value);
+  //
+  // Ranges also enable the use of the range-based for loop:
+  //
+  //    for (auto& x : r)
+  //      cout << x << ' ';
+  //    cout << '\n';
+  //
+  // Note that the iterator associated with r must be Readable. More 
+  // specifically, the requirements of a range-based for loop require the
+  // type of r to be an Input_range.
+  //
+  // The range concepts parallel the iterator concepts. There is a corresponding
+  // range concept for each of the iterator concepts.
+
+#include "concepts.impl/traits.hpp"
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Range Traits                                               seq.range.traits
+  //
+  // The begin and end result aliases deduces the type of the iterators i and j
+  // in the following program:
+  //
+  //    using std::begin;
+  //    using std::end;
+  //    auto i = begin(r);
+  //    auto j = end(r);
+  //
+  // Note that the type referred to by these alias may depends on type of R.
+  // If R is const qualified, then the resulting iterator may be a const
+  // iterator.
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Begin Result
+  //
+  // Refers to the result of the expression std::begin(r) or end(r).
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Aliases:
+  //    The result type of the begin() operation on Range.
+  template <typename R>
+    using Begin_result = typename range_impl::get_begin_result<R>::type;
+
+  // Returns true if either std::begin(r) or begin(r) is a valid expression.
+  template <typename R>
+    constexpr bool Has_begin()
+    {
+      return Subst_succeeded<R>();
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // End Result
+  //
+  // Refers to the result of the expression std::end(r) or end(r).
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Aliases:
+  //
+  //  The result type of the end() operation on a Range.
+  template <typename R>
+    using End_result = typename range_impl::get_end_result<R>::type;
+
+  // Returns true if either std::end(r) or end(r) is a valid expression.
+  template <typename R>
+    constexpr bool Has_end()
+    {
+      return Subst_succeeded<R>();
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Iterator Of
+  //
+  // The iterator type of a range is the type returned by both begin(r) and 
+  // end(r) for some range(r). Note that the type referred to this alias
+  // may be different for R and const R. However, the alias is always defined
+  // for both.
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Aliases:
+  //    The type returned by both begin and end operations of a range.
+  template <typename R>
+    using Iterator_of = Begin_result<R>;
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Range                                                
+  //
+  // A range is type that exposes an underlying iterator that is accessible
+  // through the begin and end operations. Note that the Range concept only
+  // describes the most basic traversal category of iterators (weakly
+  // incrementable), and requires neither reading nor writing.
+  template <typename R>
+    constexpr bool Range()
+    {
+      return Has_begin<R>()
+          && Has_end<R>()
+          && Same<Begin_result<R>, End_result<R>>()
+          && Iterator<Iterator_of<R>>();
+    }
+
+
+  template <typename R>
+    constexpr bool Input_range()
+    {
+      return Range<R>() && Input_iterator<Iterator_of<R>>();
+    }
+
+  template <typename R>
+    constexpr bool Output_range()
+    {
+      return Range<R>() && Output_iterator<Iterator_of<R>>();
+    }
+
+  template <typename R>
+    constexpr bool Strong_output_range()
+    {
+      return Range<R>() && Strong_output_iterator<Iterator_of<R>>();
+    }
+
+  template <typename R>
+    constexpr bool Forward_range()
+    {
+      return Range<R>() && Forward_iterator<Iterator_of<R>>();
+    }
+
+  template <typename R>
+    constexpr bool Bidirectional_range()
+    {
+      return Range<R>() && Bidirectional_iterator<Iterator_of<R>>();
+    }
+
+  template <typename R>
+    constexpr bool Random_access_range()
+    {
+      return Range<R>() && Random_access_iterator<Iterator_of<R>>();
+    }
+
 
 } // namespace origin
 

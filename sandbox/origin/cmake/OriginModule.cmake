@@ -87,6 +87,9 @@ macro(check_exports)
   # Save the exports!
   set(ORIGIN_CURRENT_EXPORTS ${ARGV})
 
+  # Do a number of things with the list of exports. For example, generate the
+  # list of source files.
+  
   foreach(i ${ARGV})
     # FIXME: Actually verify these things. Issue build warnings if the required
     # components do not exist. We could even refuse to build if we're creating

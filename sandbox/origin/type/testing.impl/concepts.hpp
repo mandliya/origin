@@ -245,7 +245,9 @@ namespace testing
       bool
       operator()(T a, const T& b, const T& c) const
       {
-        return b == c ? check_equal(a = std::move(b), c) : true;
+        // Sequence the assignment and comparison so that we don't induce
+        // requirements on the result of assignment.
+        return b == c ? (a = std::move(b), check_equal(a, c)) : true;
       }
   };
 
@@ -270,7 +272,9 @@ namespace testing
       bool
       operator()(T a, const T& b) const
       {
-        return check_equal(a = b, b);
+        // Sequence the assignment and comparison so that we don't induce
+        // requirements on the result of assignment.
+        return (a = b, check_equal(a, b));
       }
   };
 

@@ -124,6 +124,7 @@ namespace origin
 
 
       // Default construction
+      // Allocates a 
       explicit matrix(const allocator_type& a = {})
         : dims(), elems()
       { }

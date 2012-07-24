@@ -5,7 +5,7 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_RANGE_CONCEPTS_HPP
+#ifndef ORIGIN_SEQUENCE_CONCEPTS_HPP
 #  error Do not include this file directly. Include range/concepts.hpp.
 #endif
 
