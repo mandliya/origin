@@ -33,15 +33,20 @@ int main()
   static_assert(Same<Difference_type<int[3]>, ptrdiff_t>(), "");
 
   
-  // Containers...
-  using Vec = vector<int>;
-  static_assert(Has_difference_type<Vec>(), "");
-  static_assert(Same<Difference_type<Vec>, ptrdiff_t>(), "");
+  // Containers.
+  using V = vector<int>;
+  static_assert(Has_difference_type<V>(), "");
+  static_assert(Same<Difference_type<V>, ptrdiff_t>(), "");
+
+  // These traits must see through reference types.
+  static_assert(Same<Difference_type<V&>, ptrdiff_t>(), "");
+  static_assert(Same<Difference_type<V&&>, ptrdiff_t>(), "");
+  static_assert(Same<Difference_type<const V&>, ptrdiff_t>(), "");
 
   // ... and their iterators
-  using Iter = Vec::iterator;
-  static_assert(Has_difference_type<Iter>(), "");
-  static_assert(Same<Difference_type<Iter>, ptrdiff_t>(), "");
+  using I = V::iterator;
+  static_assert(Has_difference_type<I>(), "");
+  static_assert(Same<Difference_type<I>, ptrdiff_t>(), "");
 
   static_assert(!Has_difference_type<failure>(), "");
 }

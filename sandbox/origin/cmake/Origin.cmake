@@ -25,6 +25,8 @@ if(NOT ORIGIN_INCLUDED)
   # ORIGIN_CMAKE_DIR -- Directory containing Origin's CMake modules
   get_filename_component(ORIGIN_CMAKE_DIR ${CMAKE_CURRENT_LIST_FILE} PATH)
 
+  include(CMakeDependentOption)
+
   # There are some useful CMake utilities in Boost.
   include(BoostUtils)
 

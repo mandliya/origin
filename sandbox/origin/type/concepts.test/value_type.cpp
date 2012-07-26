@@ -20,7 +20,13 @@ int main()
   using V = vector<int>;
   static_assert(Has_value_type<V>(), "");
   static_assert(Same<Value_type<V>, int>(), "");
-  
+
+  // Value type must see through references.
+  static_assert(Same<Value_type<V&>, int>(), "");
+  static_assert(Same<Value_type<V&&>, int>(), "");
+  static_assert(Same<Value_type<const V&>, int>(), "");
+
+
   // Some types don't have value types.
   static_assert(!Has_value_type<fail>(), "");
 

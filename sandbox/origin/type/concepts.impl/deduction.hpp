@@ -53,7 +53,7 @@ namespace type_impl
   template <typename T>
     struct get_deduced_value_type<T, true>
     {
-      using type = typename T::value_type;
+      using type = typename get_associated_value_type<T>::type;
     };
 
   template <typename T>
@@ -81,7 +81,7 @@ namespace type_impl
   template <typename T>
     struct get_deduced_size_type<T, true>
     {
-      using type = typename T::size_type;
+      using type = typename get_associated_value_type<T>::type;
     };
 
   template <typename T>
@@ -133,8 +133,10 @@ namespace type_impl
   template <typename T>
     struct get_deduced_difference_type<T, true>
     {
-      using type = typename T::difference_type;
+      using type = typename get_associated_difference_type<T>::type;
     };
+
+  
 
   // Intercept array types so they don't decay when we try to deduce them.
   // It probably isn't entirely wrong to let the array decay to a pointer, but

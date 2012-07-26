@@ -13,6 +13,7 @@ origin_module(
 
   EXPORT concepts
          range
+         algorithm
          testing
 )
 

@@ -11,10 +11,16 @@
 ##    origin_module(
 ##      VERSION version 
 ##      AUTHORS authors
-##      EXPORTS files
-##      IMPORTS modules
+##      IMPORT libs
+##      EXPORT comps
+##
+##      TEST comp)
 ##
 ## A module is...
+##
+## The list of IMPORTS gives the set of Origin modules which this module 
+## depends. Each imported module results in a physical dependency for the 
+## constructed binary.
 ##
 ## The list of EXPORTS is a list of files in the module directory without
 ## their corresponding extensions (e.g. foo bar baz). Each export defines
@@ -22,9 +28,11 @@
 ## implementation), and foo.test.cpp (a unit test). These files are required
 ## for every export.
 ##
-## The list of IMPORTS gives the set of targets on which the module depends.
-## Each imported module results in a physical dependency for the constructed
-## binary.
+## The TEST command builds a target specifically for testing. An associated
+## testing target is produced separately from the main library. The component
+## name following the TEST label is the name of the component that implements
+## the testing library. Note that not all libraries need to define a TEST
+## library. These are typically associated with libraries that define concepts.
 ##
 ## This defines a number of macros that are used to configure the build of
 ## the module, its test suite, and its documentation.
@@ -51,45 +59,53 @@ macro(origin_module)
   set(ORIGIN_CURRENT_MODULE ${module})
 
   # Parse out the version string from the component.
-  parse_version(${parsed_VERSION})
-
+  #
   # FIXME: There's probably some other stuff I could do here. For example,
   # I might generate version.hpp/version.cpp for the component that includes
   # the version numbers and the author/maintainer data.
+  parse_version(${parsed_VERSION})
+
 
   # Set the current library target. This is the binary component that
   # corresponds to this module.
   set(ORIGIN_CURRENT_LIBRARY_TARGET ${module})
 
 
-  # Make sure that each export has its required components.
+  # Check the arguments and do some other processing on these lists. Namely,
+  # create the variables ORIGIN_CURRENT_IMPORTS and ORIGIN_CURRENT_EXPORTS
+  # for future processong.
+  check_imports(${parsed_IMPORT})
   check_exports(${parsed_EXPORT})
 
-  # Generate a target for the for the module.
-  #
-  # FIXME: For nested modules, the name can't simply be origin_xxx it has
-  # to be fully scoped to the origin root (e.g., origin_math_matrix).
-  add_library(${ORIGIN_CURRENT_LIBRARY_TARGET} STATIC ${parsed_EXPORT})
 
-  # Build dependencies for the imported modules.
-  import_modules(${parsed_IMPORT})
+  # Build the main library
+  build_library()
 
-
-  # Build unit tests for each of the exports.
-  test_exports(${parsed_EXPORT})
-
+  # Build the test suite targets
+  if(${ORIGIN_BUILD_TESTS})
+    build_test_suite(${parsed_EXPORT})
+  endif()
 endmacro()
 
 
 
 # Verify that each export has the required components!
 macro(check_exports)
-  # Save the exports!
-  set(ORIGIN_CURRENT_EXPORTS ${ARGV})
+  # Compute the list of exported properties. We may filter some components
+  # based on the configuration (e.g., testing).
+  set(ORIGIN_CURRENT_EXPORTS)
+  foreach(i ${ARGV})
+    if(${i} STREQUAL "testing")
+      if(${ORIGIN_EXPORT_TESTING})
+        list(APPEND ORIGIN_CURRENT_EXPORTS ${i})
+      endif()
+    else()
+      list(APPEND ORIGIN_CURRENT_EXPORTS ${i})
+    endif()
+  endforeach()
 
   # Do a number of things with the list of exports. For example, generate the
   # list of source files.
-  
   foreach(i ${ARGV})
     # FIXME: Actually verify these things. Issue build warnings if the required
     # components do not exist. We could even refuse to build if we're creating
@@ -98,50 +114,66 @@ macro(check_exports)
 endmacro()
 
 
-# Save the list of imports and create a dependency of the current library
-# to the dependent target.
-macro(import_modules)
-  # Save the imports!
+# Verify that the imports are valid and create a variable that stores
+# the list.
+#
+# FIXME: Can we accept imports like gmp, mpfr, 
+macro(check_imports)
+  # FIXME: Is there nothing we can do here?
   set(ORIGIN_CURRENT_IMPORTS ${ARGV})
-
-  # And link them to the current library
-  link_imports(${ORIGIN_CURRENT_LIBRARY_TARGET})
 endmacro()
 
-# Link the imported modules to the specied target. Additional dependencies
-# may be specified after the target.
-macro(link_imports target)
-  # Link the current library against each imported requirement.
-  foreach (i ${ORIGIN_CURRENT_IMPORTS} ${ARGN})
+
+
+# Save the list of imports and create a dependency of the current library
+# to the dependent target.
+macro(build_library)
+  # Generate a target for the for the module.
+  #
+  # FIXME: For nested modules, the name can't simply be origin_xxx it has
+  # to be fully scoped to the origin root (e.g., origin_math_matrix).
+  #
+
+  # Translate the exports into the source files that will be incorporated
+  # into the build.
+  set(src)
+  foreach(i ${ORIGIN_CURRENT_EXPORTS})
+    list(APPEND src ${i}.cpp)
+  endforeach()
+
+  # Build the library...
+  add_library(${ORIGIN_CURRENT_LIBRARY_TARGET} STATIC ${src})
+  
+  # And link our dependencies.
+  foreach(i ${ORIGIN_CURRENT_IMPORTS})
     target_link_libraries(${target} ${i})
   endforeach()
 endmacro()
 
 
+
+
 # Generate a unit test for each file in ${export}.test
-macro(test_exports)
+macro(build_test_suite)
   foreach(i ${ARGV})
-    test_export(${i})
+    build_component_test(${i})
   endforeach()
 endmacro()
-
 
 # For each exported test, generate a unit test for each file in the
 # corresponding test directory. Note that the corresponding test directory
 # must exist!
-macro(test_export exp)
+macro(build_component_test exp)
   # Find the set of test files
   file(GLOB files ${exp}.test/*.cpp)
   foreach(i ${files})
-    test_file(${exp} ${i})
+    build_unit_test(${exp} ${i})
   endforeach()
-
 endmacro()
 
 
 # Build a test for the file
-macro(test_file exp file)
-  
+macro(build_unit_test exp file)
   # Get the name of the test and generate target names for the exe and te
   # test
   get_filename_component(name ${file} NAME_WE)
@@ -160,5 +192,16 @@ macro(test_file exp file)
   
   # Generate the test. Be sure to point to the correct executable!
   add_test(${test} ${out}/${exe})
-
 endmacro()
+
+
+
+# Link the imported modules to the specied target. Additional dependencies
+# may be specified after the target.
+macro(link_imports target)
+  # Link the current library against each imported requirement.
+  foreach (i ${ORIGIN_CURRENT_IMPORTS} ${ARGN})
+    target_link_libraries(${target} ${i})
+  endforeach()
+endmacro()
+
