@@ -1293,7 +1293,35 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Assignment
 
-  // Returns true if T has an assignment operator for values of type U.
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Assignable
+  //
+  // The Assignable trait determines if a type T supports assignment to a
+  // value of type U. U is generally expected to be a compound type. This trait
+  // can be used to check for copy and move assignment by using reference
+  // types. For example:
+  //
+  //    Assignable<T, const T&>() // Check for copy assignment
+  //    Assignable<T, T&&>()      // Check for move assignment
+  //
+  // A positive response when U is an rvalue reference does not mean that T
+  // defines an assignment operator that specifically takes an rvalue reference
+  // to U (i.e., U&&). A copying assignment operator (taking const U&) will
+  // also satisfy the requirments of rvalue assignment.
+  //
+  // Note that the the first argument can also be given as an lvalue reference
+  // with the same meaning. That is:
+  //
+  //    Assignable<T&, U>() <=> Assignable<T, U>()
+  //
+  // Template Parameters:
+  //    T -- The type of object being assigned to
+  //    U -- The type of value being assigned
+  //
+  // Returns:
+  //    True if and only if an object of type T can be assigned a value of type
+  //    U.
   template <typename T, typename U>
     constexpr bool Assignable()
     {

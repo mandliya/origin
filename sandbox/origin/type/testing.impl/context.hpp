@@ -19,7 +19,10 @@ namespace testing
   {
   public:
     context();
+    ~context();
 
+    // Singleton access
+    static context& instance();
 
     // Properties
 
@@ -54,6 +57,9 @@ namespace testing
       void error(Prop prop, Args&&... args);
 
   private:
+    // Singleton
+    static context* inst;
+
     // Resources
     std::minstd_rand prng;    // The pseudo-random number generator
     std::ostream* os;         // A logging output stream
@@ -87,18 +93,18 @@ namespace testing
     // can be instantiated incorrectly, resulting in a copiler error when
     // the expression args()... is used. It may be better to check that
     // all Args... are generating sets.
-    template <typename Cxt, typename Prop, typename... Args>
+    template <typename Prop, typename... Args>
       inline Requires<Predicate<Prop, Result_of<Args()>...>(), void>
-      check_prop(Cxt& cxt, Prop& prop, Args&&... args)
+      check_prop(context& cxt, Prop& prop, Args&&... args)
       {
         for (std::size_t i = 0; i < cxt.repetitions(); ++i)
           cxt.check(prop, args()...);
       }
 
     // When Prop is not a predicate, we call it as a function.
-    template <typename Cxt, typename Prop, typename... Args>
+    template <typename Prop, typename... Args>
       inline Requires<!Predicate<Prop, Result_of<Args()>...>(), void>
-      check_prop(Cxt& cxt, Prop& prop, Args&&... args)
+      check_prop(context& cxt, Prop& prop, Args&&... args)
       {
         prop(std::forward<Args>(args)...);
       }
@@ -178,8 +184,8 @@ namespace testing
   // The quantify_over returns a random value generator (a quantifier) over a
   // set of values. there are two overloads of this function:
   //
-  //    quantify_over(dist, cxt)
-  //    quantifiy_over<T>(cxt)
+  //    quantify_over(dist)
+  //    quantifiy_over<T>()
   //
   // These functions are used to generate quantified variables for use with the
   // quick-check function. Note that the objects returned by this function are
@@ -195,7 +201,6 @@ namespace testing
   //
   // Parameters:
   //    dist -- A random input description.
-  //    cxt -- The testing context.
   //
   // Returns:
   //    A random value generator.
@@ -205,13 +210,14 @@ namespace testing
   // construct a distribution and then build a quantifier over it.
   //
   //    binomial_distribution dist {5, 0.5};
-  //    auto n = quantify_over(dist, cxt);
-  //    quick_check(cxt, equvalence_relation {}, equal_to<int> {}, n);
+  //    auto n = quantify_over(dist);
+  //    quick_check(equvalence_relation {}, equal_to<int> {}, n);
+  //
   template <typename Dist>
-    auto quantify_over(const Dist& dist, context& cxt)
-      -> decltype(std::bind(dist, cxt.random_engine()))
+    auto quantify_over(const Dist& dist)
+      -> decltype(std::bind(dist, context::instance().random_engine()))
     {
-      return std::bind(dist, cxt.random_engine());
+      return std::bind(dist, context::instance().random_engine());
     }
 
 
@@ -222,9 +228,6 @@ namespace testing
   // Template Parameters:
   //    T -- The type of values to quantify over.
   //
-  // Parameters:
-  //    cxt -- The testing context.
-  //
   // Returns:
   //    A random value generator.
   //
@@ -232,12 +235,13 @@ namespace testing
   // default quantifier selects all possible values with equal probability.
   //
   //    auto n = quantify_over<int>(cxt);
-  //    quick_check(cxt, equvalence_relation {}, equal_to<int> {}, n);
+  //    quick_check(equvalence_relation {}, equal_to<int> {}, n);
+  //
   template <typename T>
-    auto quantify_over(context& cxt) 
-      -> decltype(std::bind(default_pattern<T>(), cxt.random_engine()))
+    auto quantify_over()
+      -> decltype(quantify_over(default_pattern<T>()))
     {
-      return std::bind(default_pattern<T>(), cxt.random_engine());
+      return quantify_over(default_pattern<T>());
     }
 
 
@@ -271,9 +275,9 @@ namespace testing
   // should prefer to use quick_check.
   template <typename Prop, typename... Args>
     inline void
-    check(context& cxt, Prop prop, Args&&... args)
+    check(Prop prop, Args&&... args)
     {
-      cxt.check(prop, std::forward<Args>(args)...);
+      context::instance().check(prop, std::forward<Args>(args)...);
     }
 
 
@@ -292,24 +296,9 @@ namespace testing
   //    args -- A sequence of inputs to the property
   template <typename Prop, typename... Args>
     inline void
-    quick_check(context& cxt, Prop prop, Args&&... args)
+    quick_check(Prop prop, Args&&... args)
     {
-       cxt.quick_check(prop, std::forward<Args>(args)...);
+       context::instance().quick_check(prop, std::forward<Args>(args)...);
     }
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Testable
-  //
-  // The testable class provides features common to all testable properties. In
-  // particular, this class contains a reference to the context under which the
-  // property will be tested.
-  struct testable
-  {
-    explicit testable(context& cxt);
-
-    context& cxt; // The testing context
-  };
 
 } // namespace testing

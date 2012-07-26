@@ -21,6 +21,9 @@ using namespace origin;
 
 int main()
 {
+  // FIXME: All of the iterator tests should be in iterator.test, not
+  // testing.test. This directory is for testing actual test components.
+
   // An input iterator is input, but not output and not forward.
   using In = istream_iterator<int>;
   static_assert(Input_iterator<In>(), "");
@@ -51,4 +54,5 @@ int main()
   static_assert(Forward_iterator<V>(), "");
   static_assert(Bidirectional_iterator<V>(), "");
   static_assert(Random_access_iterator<V>(), "");
+
 }

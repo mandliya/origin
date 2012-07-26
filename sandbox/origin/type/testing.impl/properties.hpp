@@ -78,107 +78,16 @@ namespace testing
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Logical Equivalence
-  //
-  // Two logical expressions e1 and e2 are logically equivalent if, for all
-  // args, e1(args...) == e2(args...). By "logical" expressions, we mean
-  // two expressions returning bool.
-  //
-  // Template Parameters:
-  //    Args -- A list of arguments for the expressions e1 and e2.
-  template <typename... Args>
-    struct logical_equivalence
-    {
-      template <typename E1, typename E2>
-        bool 
-        operator()(E1 e1, E2 e2, Args&&... args) const
-        {
-          return 
-            e1(std::forward<Args>(args)...) == e2(std::forward<Args>(args)...);
-        }
-    };
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Common Type Equivalence
-  //
-  // The common type equivalence property states that any expression involving
-  // arguments of different types, but sharing a common type, must be equivalent
-  // to (have the same observable effects as) the same expression with all
-  // arguments converted to the formal type. Formally stated any binary
-  // expression e the common type equivalence property is, for all values a of
-  // type T and all values b of type U where T and U share a common type C,
-  // the following holds:
-  //
-  //    e(a, b) <=> e(C(a), C(b))
-  //
-  // The more general property holds for expressions of any arity.
-  //
-  // Template Parameters:
-  //    T -- A type
-  //    U -- A type
-  //
-  // TODO: Generalize the property for exprssions of arbitrary arity.
-  template <typename T, typename U>
-  struct common_type_equivalence : testable
-    {
-      using C = Common_type<T, U>;
-
-      common_type_equivalence(context& cxt)
-        : testable(cxt)
-      { }
-
-      template <typename E>
-        bool
-        operator()(E e, const T& a, const U& b) const
-        {
-          return check_equal(e(a, b), e(C(a), C(b)));
-        }
-    };
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Common Type Symmetry
-  //
-  // Common type symmetry (or more precisely symmetric common type equivalence)
-  // extends common type equivalence such that if e(a, b) is equivalent to
-  // it's common form, then so is e(b, a).
-  //
-  // Template Parameters:
-  //    T -- A type
-  //    U -- A type
-  template <typename T, typename U>
-    struct common_type_symmetry : testable
-    {
-      using C = Common_type<T, U>;
-
-      common_type_symmetry(context& cxt)
-        : testable(cxt)
-      { }
-
-      template <typename E>
-        bool
-        operator()(E e, const T& a, const U& b) const
-        {
-          return check_equal(e(a, b), e(C(a), C(b)))
-              && check_equal(e(b, a), e(C(b), C(a)));
-        }
-    };
-
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
   // Reflexive Property
   //
   // A relation is reflexive if r(a, a) is true for all a of the domain of r.
-  struct reflexive : testable
+  struct reflexive
   {
-    reflexive(context& cxt);
-
     template <typename R, typename T>
-      bool operator()(R r, const T& a) const {return r(a, a); }
+      bool operator()(R r, const T& a) const 
+      {
+        return r(a, a); 
+      }
   };
 
 
@@ -188,12 +97,13 @@ namespace testing
   //
   // A relation is irreflexive if r(a, a) is false for all a of the domain of r. 
   // Equivalently, !r(a, a) is true for all a in the domain of r.
-  struct irreflexive : testable
+  struct irreflexive
   {
-    irreflexive(context& cxt);
-
     template <typename R, typename T>
-      bool operator()(R r, const T& a) const { return !r(a, a); }
+      bool operator()(R r, const T& a) const 
+      { 
+        return !r(a, a); 
+      }
   };
  
 
@@ -203,13 +113,10 @@ namespace testing
   //
   // A relation is symmetric if r(a, b) => r(b, a) for all a and b in the
   // domain of r.
-  struct symmetric : testable
+  struct symmetric
   {
-    symmetric(context& cxt);
-
     template <typename R, typename T>
-      bool 
-      operator()(R r, const T& a, const T& b) const 
+      bool operator()(R r, const T& a, const T& b) const
       { 
         return r(a, b) ? r(b, a) : true; 
       }
@@ -221,13 +128,10 @@ namespace testing
   //
   // A relation is asymmetric if r(a, b) => !r(b, a) for all a and b in the
   // domain of r.
-  struct asymmetric : testable
+  struct asymmetric
   {
-    asymmetric(context& cxt);
-
     template <typename R, typename T>
-      bool
-      operator()(R r, const T& a, const T& b) const
+      bool operator()(R r, const T& a, const T& b) const
       {
         return r(a, b) ? !r(b, a) : true;
       }
@@ -240,13 +144,10 @@ namespace testing
   //
   // A relation is antisymmetric if r(a, b) && r(b, a) => a == b for all a and b
   // in the domain of r.
-  struct antisymmetric : testable
+  struct antisymmetric
   {
-    antisymmetric(context& cxt);
-
     template <typename R, typename T>
-      bool
-      operator()(R r, const T& a, const T& b) const
+      bool operator()(R r, const T& a, const T& b) const
       {
         return r(a, b) && r(b, a) ? a == b : true;
       }
@@ -259,13 +160,10 @@ namespace testing
   //
   // A relation is transitive if r(a, b) && r(b, c) => r(a, c) for all a, b,
   // and c in the domain of r.
-  struct transitive : testable
+  struct transitive
   {
-    transitive(context& cxt);
-
     template <typename R, typename T>
-      bool
-      operator()(R r, const T& a, const T& b, const T& c) const
+      bool operator()(R r, const T& a, const T& b, const T& c) const
       {
         return r(a, b) && r(b, c) ? r(a, c) : true;
       }
@@ -284,13 +182,10 @@ namespace testing
   //    a == b
   //
   // for all a and b in the domain of r.
-  struct trichotomous : testable
+  struct trichotomous
   {
-    trichotomous(context& cxt);
-
     template <typename R, typename T>
-      bool 
-      operator()(R r, const T& a, const T& b) const
+      bool operator()(R r, const T& a, const T& b) const
       {
         if (a == b)         // Equality is the same as equivalence
           return !r(a, b) && !r(b, a);
@@ -308,17 +203,14 @@ namespace testing
   //
   // An equivalence relation is a relation that is reflexive, symmetric, and 
   // transitive.
-  struct equivalence : testable
+  struct equivalence
   {
-    equivalence(context& cxt);
-
     template <typename R, typename T>
-      void
-      operator()(R&& rvar, T&& tvar) const
+      void operator()(R&& rvar, T&& tvar) const
       {
-        quick_check(cxt, refl, rvar, tvar);
-        quick_check(cxt, sym, rvar, tvar, tvar);
-        quick_check(cxt, trans, rvar, tvar, tvar, tvar);
+        quick_check(refl, rvar, tvar);
+        quick_check(sym, rvar, tvar, tvar);
+        quick_check(trans, rvar, tvar, tvar, tvar);
       }
 
     reflexive refl;
@@ -333,17 +225,14 @@ namespace testing
   // An ordering relation is irreflexive, asymmetric, and transitive. Without
   // further qualification a strict ordering is assumed to be a partial
   // ordering.
-  struct strict_ordering : testable
+  struct strict_ordering
   {
-    strict_ordering(context& cxt);
-
     template <typename R, typename T>
-      void
-      operator()(R&& rvar, T&& tvar) const
+      void operator()(R&& rvar, T&& tvar) const
       {
-        quick_check(cxt, irrefl, rvar, tvar);
-        quick_check(cxt, asym, rvar, tvar, tvar);
-        quick_check(cxt, trans, rvar, tvar, tvar, tvar);
+        quick_check(irrefl, rvar, tvar);
+        quick_check(asym, rvar, tvar, tvar);
+        quick_check(trans, rvar, tvar, tvar, tvar);
       }
 
     irreflexive irrefl;
@@ -357,13 +246,10 @@ namespace testing
   //
   // A strict weak ordering is a strict ordering relation, r, where the
   // symmetric complement, !r(a, b) && !r(b, a), is an equivalence.
-  struct strict_weak_ordering : testable
+  struct strict_weak_ordering
   {
-    strict_weak_ordering(context& cxt);
-
     template <typename R, typename T>
-      void
-      operator()(R&& rvar, T&& tvar) const
+      void operator()(R&& rvar, T&& tvar) const
       {
         // Derive the symmetric complement of r and quantify over it. I
         // wouldn't need to do this if I had a symmetric_complement function.
@@ -372,8 +258,8 @@ namespace testing
         auto sc = [r](const U& a, const U& b) { return !r(a, b) && !r(b, a); }; 
         auto svar = single(sc);
         
-        quick_check(cxt, ord, rvar, tvar);
-        quick_check(cxt, eq, svar, tvar);
+        quick_check(ord, rvar, tvar);
+        quick_check(eq, svar, tvar);
       }
 
     strict_ordering ord;
@@ -387,16 +273,13 @@ namespace testing
   // A strict total ordering is a special case of a strict weak ordering where
   // the symmetric complement is the same as equality. Another way of saying
   // this is that the relation is transitive and trichotomous.
-  struct strict_total_ordering : testable
+  struct strict_total_ordering
   {
-    strict_total_ordering(context& cxt);
-
     template <typename R, typename T>
-      void
-      operator()(R&& rvar, T&& tvar) const
+      void operator()(R&& rvar, T&& tvar) const
       {
-        quick_check(cxt, trans, rvar, tvar, tvar, tvar);
-        quick_check(cxt, tri, rvar, tvar, tvar);
+        quick_check(trans, rvar, tvar, tvar, tvar);
+        quick_check(tri, rvar, tvar, tvar);
       }
 
     transitive trans;
@@ -409,139 +292,115 @@ namespace testing
   // Testing functions
 
 
-  // Check that T and U satisfy the common type equivalence property for the
-  // expression e.
-  template <typename T, typename U, typename E>
-    void 
-    check_common_type_equivalence(context& cxt, E e)
-    {
-      auto evar = single(e);
-      auto tvar = quantify_over<T>(cxt);
-      auto uvar = quantify_over<U>(cxt);
-      quick_check(cxt, common_type_equivalence<T, U> {cxt}, evar, tvar, uvar);
-    }
-
-  // Check that T and U satisfy the common type symmetry property for the
-  // exopression e.
-  template <typename T, typename U, typename E>
-    void 
-    check_common_type_symmetry(context& cxt, E e)
-    {
-      auto evar = single(e);
-      auto tvar = quantify_over<T>(cxt);
-      auto uvar = quantify_over<U>(cxt);
-      quick_check(cxt, common_type_symmetry<T, U> {cxt}, evar, tvar, uvar);
-    }
-
   // Check that r, having domain T, is reflexive.
   template <typename R>
     void 
-    check_reflexive(context& cxt, R r)
+    check_reflexive(R r)
     {
       using D = Domain<R>;
       auto rvar = single(r);
-      auto tvar = quantify_over<D>(cxt);
-      quick_check(cxt, reflexive {cxt}, rvar, tvar);
+      auto tvar = quantify_over<D>();
+      quick_check(reflexive {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is irreflexive.
   template <typename R>
     void 
-    check_irreflexive(context& cxt, R r)
+    check_irreflexive(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, irreflexive {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(irreflexive {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is symmetric.
   template <typename R>
     void 
-    check_symmetric(context& cxt, R r)
+    check_symmetric(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, symmetric {cxt}, rvar, tvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(symmetric {}, rvar, tvar, tvar);
     }
 
   // Check that r, having domain T, is asymmetric.
   template <typename R>
     void 
-    check_asymmetric(context& cxt, R r)
+    check_asymmetric(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, asymmetric {cxt}, rvar, tvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(asymmetric {}, rvar, tvar, tvar);
     }
 
   // Check that r, having domain T, is antisymmetric.
   template <typename R>
     void 
-    check_antisymmetric(context& cxt, R r)
+    check_antisymmetric(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, antisymmetric {cxt}, rvar, tvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(antisymmetric {}, rvar, tvar, tvar);
     }
 
   // Check that r, having domain T, is transitive.
   template <typename R>
     void 
-    check_transitive(context& cxt, R r)
+    check_transitive(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, transitive {cxt}, rvar, tvar, tvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(transitive {}, rvar, tvar, tvar, tvar);
     }
 
   // Check that r, having domain T, is trichotomous.
   template <typename R>
     void 
-    check_trichotomous(context& cxt, R r)
+    check_trichotomous(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, trichotomous {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(trichotomous {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is an equivalence relation.
   template <typename R>
     void 
-    check_equivalence(context& cxt, R r)
+    check_equivalence(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, equivalence {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(equivalence {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is a strict ordering relation.
   template <typename R>
     void 
-    check_strict_ordering(context& cxt, R r)
+    check_strict_ordering(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, strict_ordering {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(strict_ordering {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is a strict weak ordering relation.
   template <typename R>
     void 
-    check_strict_weak_ordering(context& cxt, R r)
+    check_strict_weak_ordering(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, strict_weak_ordering {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(strict_weak_ordering {}, rvar, tvar);
     }
 
   // Check that r, having domain T, is a strict total ordering relation.
   template <typename R>
     void 
-    check_strict_total_ordering(context& cxt, R r)
+    check_strict_total_ordering(R r)
     {
       auto rvar = single(r);
-      auto tvar = quantify_over<Domain<R>>(cxt);
-      quick_check(cxt, strict_total_ordering {cxt}, rvar, tvar);
+      auto tvar = quantify_over<Domain<R>>();
+      quick_check(strict_total_ordering {}, rvar, tvar);
     }
 
 

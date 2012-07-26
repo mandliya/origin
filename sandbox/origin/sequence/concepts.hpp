@@ -25,7 +25,7 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Readable                                                          iter.read
+  // Readable
   //
   // A type I is readable if it defines an associated value type and can be
   // dereferenced. The associated value type (accessed through Value_type<I>)
@@ -63,65 +63,41 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Move Writable                                                     iter.move
+  // Writable
   //
-  // A type I is copy writable to a value of type T, if values of T can be
-  // copy assigned through a dereferenced value of type I. That is, the 
-  // following expression must be valid:
-  //
-  //    *i = move(t);
-  // 
-  // where i has type I and t has type T. The operation has the result of
-  // moving the representation of t into the object referenced by *i.
-  //
-  // Template Parameters:
-  //    I -- The type being tested
-  //    T -- A type being move assigned through an iterator of type I
-  //
-  // Returns:
-  //    True if and only if I satisfies the syntactic requirements of the 
-  //    Move_writable concept.
-  template <typename I, typename T>
-    constexpr bool Move_writable()
-    {
-      return Assignable<Dereference_result<I>, T&&>();
-    }
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Copy Writable                                                     iter.copy
-  //
-  // A type I is copy writable to a value of type T, if values of T can be
-  // copy assigned through a dereferenced value of type I. That is, the 
-  // following expression must be valid:
+  // An iterator type, I, is Writable if it permits the assignment of values of
+  // type T to its referenced objects. That is, the following expression must be
+  // valid:
   //
   //    *i = t;
   // 
-  // where i has type I and t has type T. If I is also Readable and the 
-  // assigned value type is Equality comparable, then *i == t after the
-  // assignment.
+  // where i has type I and t is an expression having  type T. If I is also
+  // Readable and the assigned value type is Equality comparable, then *i == t
+  // after the assignment.
+  //
+  // Note that the type T can be a reference type (e.g., const T& or T&&). This
+  // is useful for writing test for copy and move assignment through the
+  // iterator.
   //
   // Template Parameters:
-  //    I -- The type being tested
-  //    T -- A type being copy assigned through an iterator of type I
+  //    I -- An iterator type
+  //    T -- The type of values being written through iterators of type I
   //
   // Returns:
   //    True if and only if I satisfies the syntactic requirements of the 
-  //    Copy_writable concept.
+  //    Writable concept with respect to the value type T.
   template <typename I, typename T>
-    constexpr bool Copy_writable()
+    constexpr bool Writable()
     {
-      return Move_writable<I, T>() 
-          && Assignable<Dereference_result<I>, const T&>();
+      return Assignable<Dereference_result<I>, T>();
     };
 
 
     
   //////////////////////////////////////////////////////////////////////////////
-  // Permutable                                                  iter.permutable
+  // Permutable
   //
-  // An iterator type is permutable if its referenced values can be moved
+  // An iterator type, I, is Permutable if its referenced values can be moved
   // between iterators (of the same type). For example.
   //
   //    *i = move(*j);
@@ -139,14 +115,14 @@ namespace origin
     constexpr bool Permutable()
     {
       return Readable<I>() 
-          && Movable<Value_type<I>>() 
-          && Move_writable<I, Value_type<I>&&>();
+          && Movable<Value_type<I>>()
+          && Assignable<Dereference_result<I>, Value_type<I>&&>();
     }
 
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Mutable                                                        iter.mutable
+  // Mutable
   //
   // An iterator type is mutable if its referenced values can be copied between
   // iterators (of the same type). For example:
@@ -167,7 +143,7 @@ namespace origin
     {
       return Permutable<I>() 
           && Copyable<Value_type<I>>() 
-          && Copy_writable<I, Value_type<I>>();
+          && Writable<I, const Value_type<I>&>();
     }
     
     
@@ -309,6 +285,9 @@ namespace origin
 
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Iterator Category
+  //
   // An iterator, I, has an associated tag class called its "category". This
   // describes the concept modeled by the type I.
   //
@@ -334,9 +313,9 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Iterator Types                                                iter.iterator
+  // Iterator
   //
-  // An iterator, in the most general sense is a type that can be incremented
+  // An Iterator, in the most general sense is a type that can be incremented
   // and decremented, although no claims are made on the behavior or result of
   // dereferencing. In that sense, the concept is incomplete but nonetheless
   // useful to describe very general requirements on iterator types.
@@ -362,7 +341,7 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Input Iterator                                                   iter.input
+  // Input Iterator
   //
   // An input iterator is a kind of iterator, I, that allows reading elements of
   // type T from an input sequence or stream in a single pass, much reading data
@@ -392,10 +371,10 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Output Iterator                                                 iter.output
+  // Output Iterator
   //
-  // An output iterator, I, is a kind of iterator that allows writing elements 
-  // of type T to an output sequence or stream in in a single pass, much like 
+  // An Output_iterator, I, is a kind of iterator that allows writing elements
+  // of type T to an output sequence or stream in in a single pass, much like
   // writing data to a tape. The syntax for writing through an iterator is:
   //
   //    *i = t;
@@ -408,6 +387,10 @@ namespace origin
   // strong output iterators. Both are required to be weakly incrementable
   // and copy writable, but a regular output iterator is also required to be
   // equality comparable.
+  //
+  // Note that there is no corresponding output iterator for that requires or
+  // permits move assignment. Moving an objects state into an object of a 
+  // different type is not a sound operation.
   //
   // NOTE: Ideally, all iterators should be equality comparable. However, the
   // C++ standard has an established convention of not requiring equality for
@@ -432,14 +415,14 @@ namespace origin
   // that is also an output iterator does not derive from the output iterator
   // tag class.
   //
-  // NOTE: This concept is degenrate. Basically, it has to match the 
+  // NOTE: This concept is degenrate. Basically, it has to match the
   // expectations of output iterators in the C++ standard, which require that
   // the value, reference, and pointer types are void. At least the difference
   // type of output iterators should be defined.
   template <typename I, typename T>
     constexpr bool Output_iterator()
     {
-      return Copy_writable<I, T>() 
+      return Writable<I, T>() 
           && Has_difference_type<I>() // Actual type is unspecified!
           
           // ++i returns I&
@@ -462,6 +445,8 @@ namespace origin
   // Returns:
   //    True if and only if I satisfies the syntactic requirements of the 
   //    Strong_output_iterator concepts with respect to a written type T.
+  //
+  // FIXME: Rename to Regular_output_iterator?
   template <typename I, typename T>
     constexpr bool Strong_output_iterator()
     {
@@ -470,7 +455,7 @@ namespace origin
  
  
   //////////////////////////////////////////////////////////////////////////////
-  // Forward Iterator                                                   iter.fwd
+  // Forward Iterator
   //
   // A forward iterator, I, is an iterator over a sequence of objects, allowing
   // both reading and possibly writing (if allowed by the underlying object
@@ -505,7 +490,7 @@ namespace origin
     
 
   //////////////////////////////////////////////////////////////////////////////
-  // Bidirectional Iterator                                            iter.bidi
+  // Bidirectional Iterator
   //
   // A bidirectional iterator, I, is an iterator over a sequence of objects,
   // allowing both reading and possibly writing (if allowed by the underlying
@@ -539,7 +524,7 @@ namespace origin
 
     
   //////////////////////////////////////////////////////////////////////////////
-  // Random Access Iterator                                            iter.rand
+  // Random Access Iterator
   //
   // A random access iterator is a bidirectional iterator that can advance 
   // any number of steps in constant time.
@@ -698,7 +683,7 @@ namespace origin
     inline bool 
     is_writable_range(I first, Difference_type<I> n, T const& value)
     {
-      static_assert(Copy_writable<I, T>(), "");
+      static_assert(Writable<I, T>(), "");
       return is_weak_range(first, n);
     }
    
@@ -708,28 +693,8 @@ namespace origin
     inline bool 
     is_writable_range(I first, I last, T const& value) 
     { 
-      static_assert(Copy_writable<I, T>(), "");
+      static_assert(Writable<I, T>(), "");
       return is_bounded_range(first, last);
-    }
-    
-  // Returns true if the weak range [first, n) is movable everywhere except its
-  // limit.
-  template <typename I, typename T>
-    inline bool 
-    is_movable_range(I first, Difference_type<I> n, T const& value)
-    {
-      static_assert(Move_writable<I, T&&>(), "");
-      return is_weak_range(first, n);
-    }
-  
-  // Returns true if the bounded range [first, last) is movable everywhere except
-  // its limit.
-  template <typename I, typename T>
-    inline bool 
-    is_movable_range(I first, I last, T const& value) 
-    {
-      static_assert(Move_writable<I, T&&>(), "");
-      return is_bounded_range(first, last); 
     }
     
   // Returns true if the weak range [first, n) is mutable everywhere except its
@@ -875,7 +840,7 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
-  // Range                                                
+  // Range
   //
   // A range is type that exposes an underlying iterator that is accessible
   // through the begin and end operations. Note that the Range concept only
@@ -891,42 +856,80 @@ namespace origin
     }
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Input Range
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Returns:
+  //    True if and only if R satisfies the syntactic requirements of a Range
+  // whose associated iterator type is an Input_iterator.
   template <typename R>
     constexpr bool Input_range()
     {
       return Range<R>() && Input_iterator<Iterator_of<R>>();
     }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Output Range
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Returns:
+  //    True if and only if R satisfies the syntactic requirements of a Range
+  // whose associated iterator type is an Output_iterator.
   template <typename R>
     constexpr bool Output_range()
     {
       return Range<R>() && Output_iterator<Iterator_of<R>>();
     }
 
-  template <typename R>
-    constexpr bool Strong_output_range()
-    {
-      return Range<R>() && Strong_output_iterator<Iterator_of<R>>();
-    }
-
+  //////////////////////////////////////////////////////////////////////////////
+  // Forward Range
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Returns:
+  //    True if and only if R satisfies the syntactic requirements of a Range
+  // whose associated iterator type is an Forward_iterator.
   template <typename R>
     constexpr bool Forward_range()
     {
       return Range<R>() && Forward_iterator<Iterator_of<R>>();
     }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Bidirectional Range
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Returns:
+  //    True if and only if R satisfies the syntactic requirements of a Range
+  // whose associated iterator type is an Bidirectional_iterator.
   template <typename R>
     constexpr bool Bidirectional_range()
     {
       return Range<R>() && Bidirectional_iterator<Iterator_of<R>>();
     }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Random Access Range
+  //
+  // Template Parameters:
+  //    R -- A range type
+  //
+  // Returns:
+  //    True if and only if R satisfies the syntactic requirements of a Range
+  // whose associated iterator type is an Random_access_iterator.
   template <typename R>
     constexpr bool Random_access_range()
     {
       return Range<R>() && Random_access_iterator<Iterator_of<R>>();
     }
-
 
 } // namespace origin
 

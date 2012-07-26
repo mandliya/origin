@@ -20,13 +20,10 @@ namespace testing
   //
   //    t == u <=> C(t) == C(u)
   //    u == t <=> C(u) == C(t)
-  struct crosstype_equality : testable
+  struct crosstype_equality
   {
-    crosstype_equality(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
-      bool 
-      operator()(const T& t, const U& u) const
+      bool operator()(const T& t, const U& u) const
       {
         using C = Common_type<T, U>;
         return (t == u) == (C(t) == C(u))
@@ -44,13 +41,10 @@ namespace testing
   //    t != u <=> C(t) != C(u)
   //    u != t <=> C(u) != C(t)
   //
-  struct crosstype_distinction : testable
+  struct crosstype_distinction
   {
-    crosstype_distinction(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
-      bool 
-      operator()(const T& t, const U& u) const
+      bool operator()(const T& t, const U& u) const
       {
         using C = Common_type<T, U>;
         return (t != u) == (C(t) != C(u))
@@ -67,10 +61,8 @@ namespace testing
   //
   //    t < u <=> C(t) < C(u)
   //    u < t <=> C(u) < C(t)
-  struct crosstype_less : testable
+  struct crosstype_less
   {
-    crosstype_less(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
       bool operator()(const T& t, const U& u) const
       {
@@ -89,10 +81,8 @@ namespace testing
   //
   //    t > u <=> C(t) > C(u)
   //    u > t <=> C(u) > C(t)
-  struct crosstype_greater : testable
+  struct crosstype_greater
   {
-    crosstype_greater(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
       bool operator()(const T& t, const U& u) const
       {
@@ -111,10 +101,8 @@ namespace testing
   //
   //    t <= u <=> C(t) <= C(u)
   //    u <= t <=> C(u) <= C(t)
-  struct crosstype_less_equal : testable
+  struct crosstype_less_equal
   {
-    crosstype_less_equal(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
       bool operator()(const T& t, const U& u) const
       {
@@ -133,10 +121,8 @@ namespace testing
   //
   //    t >= u <=> C(t) >= C(u)
   //    u >= t <=> C(u) >= C(t)
-  struct crosstype_greater_equal : testable
+  struct crosstype_greater_equal
   {
-    crosstype_greater_equal(context& cxt) : testable(cxt) { }
-
     template <typename T, typename U>
       bool operator()(const T& t, const U& u) const
       {
@@ -153,13 +139,10 @@ namespace testing
   //
   //    a != b <=> !(a == b).
   //
-  struct complement_of_equality : testable
+  struct complement_of_equality
   {
-    complement_of_equality(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& a, const T& b) const
+      bool operator()(const T& a, const T& b) const
       {
         return (a != b) == !(a == b);
       }
@@ -172,13 +155,10 @@ namespace testing
   //
   //    a > b <=> !(a < b).
   //
-  struct complement_of_less : testable
+  struct complement_of_less
   {
-    complement_of_less(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& a, const T& b) const
+      bool operator()(const T& a, const T& b) const
       {
         return (a >= b) == !(a < b);
       }
@@ -192,13 +172,10 @@ namespace testing
   //
   //    a > b <=> b < a
   //
-  struct converse_of_less : testable
+  struct converse_of_less
   {
-    converse_of_less(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& a, const T& b) const
+      bool operator()(const T& a, const T& b) const
       {
         return (a > b) == (b < a);
       }
@@ -211,13 +188,10 @@ namespace testing
   //
   //    a <= b <=> !(b < a)
   //
-  struct complement_of_converse_of_less : testable
+  struct complement_of_converse_of_less
   {
-    complement_of_converse_of_less(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& a, const T& b) const
+      bool operator()(const T& a, const T& b) const
       {
         return (a <= b) == !(b < a);
       }
@@ -225,25 +199,19 @@ namespace testing
 
 
 
-  struct move_construction : testable
+  struct move_construction
   {
-    move_construction(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& a, const T& b) const
+      bool operator()(const T& a, const T& b) const
       {
         return a == b ? check_equal(T {std::move(a)}, b) : true;
       }
   };
 
-  struct move_assignment : testable
+  struct move_assignment
   {
-    move_assignment(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(T a, const T& b, const T& c) const
+      bool operator()(T a, const T& b, const T& c) const
       {
         // Sequence the assignment and comparison so that we don't induce
         // requirements on the result of assignment.
@@ -251,26 +219,20 @@ namespace testing
       }
   };
 
-  struct copy_construction : testable
+  struct copy_construction
   {
-    copy_construction(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(const T& x) const
+      bool operator()(const T& x) const
       {
         return check_equal(T {x}, x);
       }
   };
 
 
-  struct copy_assignment : testable
+  struct copy_assignment
   {
-    copy_assignment(context& cxt) : testable(cxt) { }
-
     template <typename T>
-      bool
-      operator()(T a, const T& b) const
+      bool operator()(T a, const T& b) const
       {
         // Sequence the assignment and comparison so that we don't induce
         // requirements on the result of assignment.
@@ -291,36 +253,29 @@ namespace testing
   // In actuality, the == operator must compare for value equality, but we have
   // no way to actually test that.
   template <typename T, typename U = T>
-    struct equality_comparable : testable
+    struct equality_comparable
     {
       static_assert(Equality_comparable<T, U>(), "");
 
       using C = Common_type<T, U>;
 
-      equality_comparable(context& cxt)
-        : testable(cxt)
-        , eq_t(cxt), eq_u(cxt), eq_c(cxt), cross_eq(cxt), cross_df(cxt)
-      { }
-
       template <typename Tv, typename Uv>
-        void 
-        operator()(Tv&& tvar, Uv&& uvar)
+        void operator()(Tv&& tvar, Uv&& uvar)
         {
-          auto cvar = quantify_over<C>(this->cxt);
+          auto cvar = quantify_over<C>();
           operator()(tvar, uvar, cvar);
         }
 
       template <typename Tv, typename Uv, typename Cv>
-        void 
-        operator()(Tv&& tvar, Uv&& uvar, Cv&& cvar) const
+        void operator()(Tv&& tvar, Uv&& uvar, Cv&& cvar) const
         {
-          quick_check(this->cxt, eq_t, tvar);
-          quick_check(this->cxt, eq_u, uvar);
-          quick_check(this->cxt, eq_c, cvar);
+          quick_check(eq_t, tvar);
+          quick_check(eq_u, uvar);
+          quick_check(eq_c, cvar);
 
           // Create "quantified" variables for the given expressions.
-          quick_check(this->cxt, cross_eq, tvar, uvar);
-          quick_check(this->cxt, cross_df, tvar, uvar);
+          quick_check(cross_eq, tvar, uvar);
+          quick_check(cross_df, tvar, uvar);
         }
 
       equality_comparable<T> eq_t;
@@ -334,21 +289,16 @@ namespace testing
 
   // Specialization when testing for a single type.
   template <typename T>
-    struct equality_comparable<T, T> : testable
+    struct equality_comparable<T, T>
     {
       static_assert(Equality_comparable<T>(), "");
-      
-      equality_comparable(context& cxt)
-        : testable(cxt), eq(cxt), df(cxt)
-      { }
 
       template <typename Tv>
-        void 
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
           auto eqvar = single(std::equal_to<T> {});
-          quick_check(this->cxt, eq, eqvar, tvar);
-          quick_check(this->cxt, df, tvar, tvar);
+          quick_check(eq, eqvar, tvar);
+          quick_check(df, tvar, tvar);
         }
 
       equivalence            eq;
@@ -365,38 +315,30 @@ namespace testing
   //
   //
   template <typename T, typename U = T>
-    struct weakly_ordered : testable
+    struct weakly_ordered
     {
       static_assert(Weakly_ordered<T, U>(), "");
       
       using C = Common_type<T, U>;
 
-      weakly_ordered(context& cxt)
-        : testable(cxt)
-        , ord_t(cxt), ord_u(cxt), ord_c(cxt)
-        , cross_lt(cxt), cross_gt(cxt), cross_le(cxt), cross_ge(cxt)
-      { }
-
       template <typename Tv, typename Uv>
-        void 
-        operator()(Tv&& tvar, Uv&& uvar) const
+        void operator()(Tv&& tvar, Uv&& uvar) const
         {
-          auto cvar = quantify_over<C>(this->cxt);
+          auto cvar = quantify_over<C>();
           operator()(tvar, uvar, cvar);
         }
       
       template <typename Tv, typename Uv, typename Cv>
-        void 
-        operator()(Tv&& tvar, Uv&& uvar, Cv&& cvar) const
+        void operator()(Tv&& tvar, Uv&& uvar, Cv&& cvar) const
         {
-          quick_check(this->cxt, ord_t, tvar);
-          quick_check(this->cxt, ord_u, uvar);
-          quick_check(this->cxt, ord_c, cvar);
+          quick_check(ord_t, tvar);
+          quick_check(ord_u, uvar);
+          quick_check(ord_c, cvar);
 
-          quick_check(this->cxt, cross_lt, tvar, uvar);
-          quick_check(this->cxt, cross_gt, tvar, uvar);
-          quick_check(this->cxt, cross_le, tvar, uvar);
-          quick_check(this->cxt, cross_ge, tvar, uvar);
+          quick_check(cross_lt, tvar, uvar);
+          quick_check(cross_gt, tvar, uvar);
+          quick_check(cross_le, tvar, uvar);
+          quick_check(cross_ge, tvar, uvar);
         }
 
       weakly_ordered<T> ord_t;
@@ -412,22 +354,18 @@ namespace testing
 
   // Specialization for the unary type.
   template <typename T>
-    struct weakly_ordered<T, T> : testable
+    struct weakly_ordered<T, T>
     {
       static_assert(Weakly_ordered<T>(), "");
-
-      weakly_ordered(context& cxt)
-        : testable(cxt), lt(cxt), gt(cxt), le(cxt), ge(cxt)
-      { }
 
       template <typename Tv>
         void operator()(Tv&& tvar) const
         {
           auto ltvar = single(std::less<T> {});
-          quick_check(this->cxt, lt, ltvar, tvar);
-          quick_check(this->cxt, gt, tvar, tvar);
-          quick_check(this->cxt, le, tvar, tvar);
-          quick_check(this->cxt, ge, tvar, tvar);
+          quick_check(lt, ltvar, tvar);
+          quick_check(gt, tvar, tvar);
+          quick_check(le, tvar, tvar);
+          quick_check(ge, tvar, tvar);
         }
 
       strict_weak_ordering           lt;
@@ -446,23 +384,17 @@ namespace testing
   // to ==.
   //
   template <typename T, typename U = T>
-    struct totally_ordered : testable
+    struct totally_ordered
     {
       static_assert(Totally_ordered<T, U>(), "");
 
       using C = Common_type<T, U>;
 
-      totally_ordered(context& cxt)
-        : testable(cxt)
-        , ord_t(cxt), ord_u(cxt), ord_c(cxt)
-        , cross_lt(cxt), cross_gt(cxt), cross_le(cxt), cross_ge(cxt)
-      { };
-
       template <typename Tv, typename Uv>
         void
-        operator()(Tv&& tvar, Uv&& uvar) const
+        operator()(Tv&& tvar, Uv&& uvar) const 
         {
-          auto cvar = quantify_over<C>(cxt);
+          auto cvar = quantify_over<C>();
           operator()(tvar, uvar, cvar);
         }
 
@@ -470,14 +402,14 @@ namespace testing
         void
         operator()(Tv&& tvar, Uv&& uvar, Cv&& cvar) const
         {
-          quick_check(this->cxt, ord_t, tvar);
-          quick_check(this->cxt, ord_u, uvar);
-          quick_check(this->cxt, ord_c, cvar);
+          quick_check(ord_t, tvar);
+          quick_check(ord_u, uvar);
+          quick_check(ord_c, cvar);
 
-          quick_check(this->cxt, cross_lt, tvar, uvar);
-          quick_check(this->cxt, cross_gt, tvar, uvar);
-          quick_check(this->cxt, cross_le, tvar, uvar);
-          quick_check(this->cxt, cross_ge, tvar, uvar);
+          quick_check(cross_lt, tvar, uvar);
+          quick_check(cross_gt, tvar, uvar);
+          quick_check(cross_le, tvar, uvar);
+          quick_check(cross_ge, tvar, uvar);
         }
 
       totally_ordered<T> ord_t;
@@ -491,23 +423,18 @@ namespace testing
     };
     
   template <typename T>
-    struct totally_ordered<T, T> : testable
+    struct totally_ordered<T, T>
     {
       static_assert(Totally_ordered<T>(), "");
 
-      totally_ordered(context)
-        : testable(cxt), lt(cxt), gt(cxt), le(cxt), ge(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
           auto ltvar = single(std::less<T> {});
-          quick_check(this->cxt, lt, ltvar, tvar);
-          quick_check(this->cxt, gt, tvar, tvar);
-          quick_check(this->cxt, le, tvar, tvar);
-          quick_check(this->cxt, ge, tvar, tvar);
+          quick_check(lt, ltvar, tvar);
+          quick_check(gt, tvar, tvar);
+          quick_check(le, tvar, tvar);
+          quick_check(ge, tvar, tvar);
         }
 
       strict_total_ordering          lt;
@@ -522,17 +449,12 @@ namespace testing
   // Move Constructuble
   //
   template <typename T>
-    struct move_constructible : testable
+    struct move_constructible
     {
-      move_constructible(context& cxt) 
-        : testable(cxt), ctor(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, ctor, tvar, tvar);
+          quick_check(ctor, tvar, tvar);
         }
 
       move_construction ctor;
@@ -543,18 +465,13 @@ namespace testing
   // Movable
   //
   template <typename T>
-    struct movable : testable
+    struct movable
     {
-      movable(context& cxt) 
-        : testable(cxt), ctor(cxt), assign(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, ctor, tvar, tvar);
-          quick_check(this->cxt, assign, tvar, tvar, tvar);
+          quick_check(ctor, tvar, tvar);
+          quick_check(assign, tvar, tvar, tvar);
         }
 
       move_construction ctor;
@@ -566,18 +483,13 @@ namespace testing
   // Copy Constructuble
   //
   template <typename T>
-    struct copy_constructible : testable
+    struct copy_constructible
     {
-      copy_constructible(context& cxt) 
-        : testable(cxt), move(cxt), ctor(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, move, tvar);
-          quick_check(this->cxt, ctor, tvar);
+          quick_check(move, tvar);
+          quick_check(ctor, tvar);
         }
 
       move_constructible<T> move;
@@ -589,19 +501,14 @@ namespace testing
   // Copyable
   //
   template <typename T>
-    struct copyable : testable
+    struct copyable
     {
-      copyable(context& cxt) 
-        : testable(cxt), move(cxt), ctor(cxt), assign(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, move, tvar);
-          quick_check(this->cxt, ctor, tvar);
-          quick_check(this->cxt, assign, tvar, tvar);
+          quick_check(move, tvar);
+          quick_check(ctor, tvar);
+          quick_check(assign, tvar, tvar);
         }
 
       movable<T>        move;
@@ -622,16 +529,11 @@ namespace testing
   //    int x {}; // x is default-initialized to 0.
   //
   template <typename T>
-    struct default_constructible : testable
+    struct default_constructible
     {
       static_assert(Default_constructible<T>(), "");
 
-      default_constructible(context& cxt) 
-        : testable(cxt)
-      { }
-
-      bool
-      operator()() const
+      bool operator()() const
       {
         return check_equal(T{}, T{});
       }
@@ -642,20 +544,15 @@ namespace testing
   // Semiregular
   //
   template <typename T>
-    struct semiregular : testable
+    struct semiregular
     {
       static_assert(Semiregular<T>(), "");
 
-      semiregular(context& cxt)
-        : testable(cxt), def(cxt), copy(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, def);
-          quick_check(this->cxt, copy, tvar);
+          quick_check(def);
+          quick_check(copy, tvar);
         }
 
       default_constructible<T> def;
@@ -667,20 +564,15 @@ namespace testing
   // Regular
   //
   template <typename T>
-    struct regular : testable
+    struct regular
     {
       static_assert(Regular<T>(), "");
 
-      regular(context& cxt)
-        : testable(cxt), semi(cxt), eq(cxt)
-      { }
-
       template <typename Tv>
-        void
-        operator()(Tv&& tvar) const
+        void operator()(Tv&& tvar) const
         {
-          quick_check(this->cxt, semi, tvar);
-          quick_check(this->cxt, eq, tvar);
+          quick_check(semi, tvar);
+          quick_check(eq, tvar);
         }
 
       semiregular<T>         semi;
@@ -693,122 +585,122 @@ namespace testing
 
   // Check that T is equality comparable.
   template <typename T>
-    inline void 
-    check_equality_comparable(context& cxt)
+    void 
+    check_equality_comparable()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, equality_comparable<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(equality_comparable<T> {}, tvar);
     }
 
   // Check that T and U satisfy the requirements of cross-type equality
   // comparison.
   template <typename T, typename U>
-    inline void 
-    check_equality_comparable(context& cxt)
+    void 
+    check_equality_comparable()
     {
-      auto tvar = quantify_over<T>(cxt);
-      auto uvar = quantify_over<U>(cxt);
-      quick_check(cxt, equality_comparable<T, U> {cxt}, tvar, uvar);
+      auto tvar = quantify_over<T>();
+      auto uvar = quantify_over<U>();
+      quick_check(equality_comparable<T, U> {}, tvar, uvar);
     }
 
   // Check that T is weakly ordered.
   template <typename T>
-    inline void 
-    check_weakly_ordered(context& cxt)
+    void 
+    check_weakly_ordered()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, weakly_ordered<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(weakly_ordered<T> {}, tvar);
     }
 
   // Check that T and U satisfy the requirements of cross-type weak ordering.
   template <typename T, typename U>
-    inline void 
-    check_weakly_ordered(context& cxt)
+    void 
+    check_weakly_ordered()
     {
-      auto tvar = quantify_over<T>(cxt);
-      auto uvar = quantify_over<U>(cxt);
-      quick_check(cxt, weakly_ordered<T, U> {cxt}, tvar, uvar);
+      auto tvar = quantify_over<T>();
+      auto uvar = quantify_over<U>();
+      quick_check(weakly_ordered<T, U> {}, tvar, uvar);
     }
 
   // Check that T is totally ordered.
   template <typename T>
-    inline void 
-    check_totally_ordered(context& cxt)
+    void 
+    check_totally_ordered()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, weakly_ordered<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(weakly_ordered<T> {}, tvar);
     }
 
   // Check that T and U satisfy the requirements of cross-type total ordering.
   template <typename T, typename U>
-    inline void 
-    check_totally_ordered(context& cxt)
+    void 
+    check_totally_ordered()
     {
-      auto tvar = quantify_over<T>(cxt);
-      auto uvar = quantify_over<U>(cxt);
-      quick_check(cxt, weakly_ordered<T, U> {cxt}, tvar, uvar);
+      auto tvar = quantify_over<T>();
+      auto uvar = quantify_over<U>();
+      quick_check(weakly_ordered<T, U> {}, tvar, uvar);
     }
 
   // Check that T is move constructible.
   template <typename T>
-    inline void
-    check_move_constructible(context& cxt)
+    void
+    check_move_constructible()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, move_constructible<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(move_constructible<T> {}, tvar);
     }
 
   // Check that T is movable.
   template <typename T>
-    inline void
-    check_movable(context& cxt)
+    void
+    check_movable()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, movable<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(movable<T> {}, tvar);
     }
 
   // Check that T is copy constructible.
   template <typename T>
-    inline void
-    check_copy_constructible(context& cxt)
+    void
+    check_copy_constructible()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, copy_constructible<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(copy_constructible<T> {}, tvar);
     }
 
   // Check that T is copyable.
   template <typename T>
-    inline void
-    check_copyable(context& cxt)
+    void
+    check_copyable()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, copyable<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(copyable<T> {}, tvar);
     }
 
   // Check that T is default constructible.
   template <typename T>
-    inline void
-    check_default_constructible(context& cxt)
+    void
+    check_default_constructible()
     {
-      quick_check(cxt, default_constructible<T> {cxt});
+      quick_check(default_constructible<T> {});
     }
 
   // Check that T is semiregular.
   template <typename T>
-    inline void 
-    check_semiregular(context& cxt)
+    void 
+    check_semiregular()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, semiregular<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(semiregular<T> {}, tvar);
     }
 
   // Check that T is regular.
   template <typename T>
-    inline void 
-    check_regular(context& cxt)
+    void 
+    check_regular()
     {
-      auto tvar = quantify_over<T>(cxt);
-      quick_check(cxt, regular<T> {cxt}, tvar);
+      auto tvar = quantify_over<T>();
+      quick_check(regular<T> {}, tvar);
     }
 
 } // namespace origin
