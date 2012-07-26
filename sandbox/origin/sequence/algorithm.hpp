@@ -25,7 +25,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::all_of(begin(range), end(range), pred);
+      using std::all_of;
+      return all_of(begin(range), end(range), pred);
     }
 
   template <typename R, typename P>
@@ -34,7 +35,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::any_of(begin(range), end(range), pred);
+      using std::any_of;
+      return any_of(begin(range), end(range), pred);
     }
 
   template <typename R, typename P>
@@ -43,7 +45,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::none_of(begin(range), end(range), pred);
+      using std::none_of;
+      return none_of(begin(range), end(range), pred);
     }
 
 
@@ -56,6 +59,7 @@ namespace origin
     {
       using std::begin;
       using std::end;
+      using std::for_each;
       for_each(begin(range), end(range), f);
     }
 
@@ -72,7 +76,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::find(begin(range), end(range), value);
+      using std::find;
+      return find(begin(range), end(range), value);
     }
 
 
@@ -82,7 +87,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::find_if(begin(range), end(range), pred);
+      using std::find_if;
+      return find_if(begin(range), end(range), pred);
     }
 
   template <typename R, typename P>
@@ -91,7 +97,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::find_if_not(begin(range), end(range), pred);
+      using std::find_if_not;
+      return find_if_not(begin(range), end(range), pred);
     }
 
 
@@ -106,8 +113,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::find_end(begin(range1), end(range1),
-                           begin(range2), end(range2));
+      using std::find_end;
+      return find_end(begin(range1), end(range1), begin(range2), end(range2));
     }
 
   template <typename R1, typename R2, typename C>
@@ -116,8 +123,10 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::find_end(begin(range1), end(range1),
-                           begin(range2), end(range2), comp);
+      using std::find_end;
+      return find_end(begin(range1), end(range1),
+                      begin(range2), end(range2), 
+                      comp);
     }
 
 
@@ -131,7 +140,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::adjacent_find(begin(range), end(range));
+      using std::adjacent_find;
+      return adjacent_find(begin(range), end(range));
     }
 
   template <typename R, typename C>
@@ -140,7 +150,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::adjacent_find(begin(range), end(range), comp);
+      using std::adjacent_find;
+      return adjacent_find(begin(range), end(range), comp);
     }
 
 
@@ -155,7 +166,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::count(begin(range), end(range), value);
+      using std::count;
+      return count(begin(range), end(range), value);
     }
 
   template <typename R, typename P>
@@ -164,7 +176,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::count_if(begin(range), end(range), pred);
+      using std::count_if;
+      return count_if(begin(range), end(range), pred);
     }
 
 
@@ -179,7 +192,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::mismatch(begin(range1), end(range1), begin(range2));
+      using std::mismatch;
+      return mismatch(begin(range1), end(range1), begin(range2));
     }
 
   template <typename R1, typename R2, typename C>
@@ -188,7 +202,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::mismatch(begin(range1), end(range1), begin(range2), comp);
+      using std::mismatch;
+      return mismatch(begin(range1), end(range1), begin(range2), comp);
     }
 
 
@@ -202,7 +217,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::equal(begin(range1), end(range1), begin(range2));
+      using std::equal;
+      return equal(begin(range1), end(range1), begin(range2));
     }
 
   template <typename R1, typename R2, typename C>
@@ -211,7 +227,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::equal(begin(range1), end(range1), begin(range2), comp);
+      using std::equal;
+      return equal(begin(range1), end(range1), begin(range2), comp);
     }
 
 
@@ -225,7 +242,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::is_permutation(begin(range1), end(range1), begin(range2));
+      using std::is_permutation;
+      return is_permutation(begin(range1), end(range1), begin(range2));
     }
 
   template <typename R1, typename R2, typename C>
@@ -234,9 +252,8 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::is_permutation(begin(range1), end(range1), 
-                                 begin(range2), 
-                                 comp);
+      using std::is_permutation;
+      return is_permutation(begin(range1), end(range1), begin(range2), comp);
     }
 
 
@@ -244,23 +261,23 @@ namespace origin
   // Search
   //
   template <typename R1, typename R2>
-    Iterator_of<R1>
+    inline Iterator_of<R1>
     search(R1&& range1, const R2& range2)
     {
       using std::begin;
       using std::end;
-      return std::search(begin(range1), end(range1), 
-                         begin(range2), end(range2));
+      using std::search;
+      return search(begin(range1), end(range1), begin(range2), end(range2)); 
     }
 
   template <typename R1, typename R2, typename C>
-    Iterator_of<R1>
+    inline Iterator_of<R1>
     search(R1&& range1, const R2& range2, C comp)
     {
       using std::begin;
       using std::end;
-      return std::search(begin(range1), end(range1), 
-                         begin(range2), end(range2));
+      using std::search;
+      return search(begin(range1), end(range1), begin(range2), end(range2));
     }
 
 
@@ -268,23 +285,124 @@ namespace origin
   // Search N
   //
   template <typename R, typename T>
-    Iterator_of<R>
+    inline Iterator_of<R>
     search_n(R&& range, Difference_type<R> n, const T& value)
     {
       using std::begin;
       using std::end;
-      return std::search_n(begin(range), end(range), n, value);
+      using std::search_n;
+      return search_n(begin(range), end(range), n, value);
     }
 
   template <typename R, typename T, typename C>
-    Iterator_of<R>
+    inline Iterator_of<R>
     search_n(R&& range, Difference_type<R> n, const T& value, C comp)
     {
       using std::begin;
       using std::end;
-      return std::search_n(begin(range), end(range), n, value, comp);
+      using std::search_n;
+      return search_n(begin(range), end(range), n, value, comp);
     }
 
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Copy
+  //
+
+  template <typename R1, typename R2>
+    inline Iterator_of<R2>
+    copy(const R1& range1, R2&& range2)
+    {
+      using std::begin;
+      using std::end;
+      using std::copy;
+      return copy(begin(range1), end(range1), begin(range2));
+    }
+
+  template <typename R1, typename R2, typename P>
+    inline Iterator_of<R2>
+    copy_if(const R1& range1, R2&& range2, P pred)
+    {
+      using std::begin;
+      using std::end;
+      using std::copy;
+      return copy_if(begin(range1), end(range1), begin(range2), pred);
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Move
+  //
+
+  template <typename R1, typename R2>
+    inline Iterator_of<R2>
+    move(const R1& range1, R2&& range2)
+    {
+      using std::begin;
+      using std::end;
+      using std::move;
+      return move(begin(range1), end(range1), begin(range2));
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Fill
+  //
+
+  template <typename R, typename T>
+    inline void
+    fill(R&& range, const T& value)
+    {
+      using std::begin;
+      using std::end;
+      using std::fill;
+      fill(begin(range), end(range), value);
+    }
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Generate
+  //
+
+  template <typename R, typename Gen>
+    inline Gen
+    generate(R&& range, Gen gen)
+    {
+      using std::begin;
+      using std::end;
+      using std::generate;
+      generate(begin(range), end(range), gen);
+      return gen;
+    }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Transform
+  //
+
+  template <typename R1, typename R2, typename Op>
+    inline Iterator_of<R2>
+    range_transform(const R1& range1, R2&& range2, Op op)
+    {
+      using std::begin;
+      using std::end;
+      using std::transform;
+      return transform(begin(range1), end(range1), begin(range2), op);
+    }
+
+  template <typename R1, typename R2, typename R3, typename Op>
+    inline Iterator_of<R3>
+    range_transform(const R1& range1, const R2& range2, R3&& range3, Op op)
+    {
+      using std::begin;
+      using std::end;
+      using std::transform;
+      return transform(begin(range1), end(range1), 
+                       begin(range2), 
+                       begin(range3), 
+                       op);
+    }
 
 } // namespace origin
 
