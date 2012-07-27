@@ -14,6 +14,8 @@
 using namespace std;
 using namespace origin;
 
+bool odd(int n) { return n & 1; }
+bool neg(int n) { return n < 0; }
 
 int main()
 {
@@ -21,10 +23,23 @@ int main()
   
   V v1 {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   V v2 = v1;
+
+  replace(v1, 0, 1);
+  replace(v2.begin(), v2.end(), 0, 1);
+  assert(v1 == v2);
+
+  replace_if(v1, odd, 0);
+  replace_if(v2.begin(), v2.end(), odd, 0);
+  assert(v1 == v2);
+
   V v3(v1.size());
   V v4(v1.size());
+  
+  replace_copy(v1, v3, 0, -1);
+  replace_copy(v1.begin(), v1.end(), v4.begin(), 0, -1);
+  assert(v3 == v4);
 
-  move(v1, v3);
-  move(v2.begin(), v2.end(), v4.begin());
-  assert(v1 == v4);
+  replace_copy_if(v1, v3, neg, 0);
+  replace_copy_if(v1.begin(), v1.end(), v4.begin(), neg, 0);
+  assert(v3 == v4);
 }

@@ -6,7 +6,6 @@
 // and conditions.
 
 #include <cassert>
-#include <iostream>
 #include <vector>
 
 #include <origin/sequence/algorithm.hpp>
@@ -14,17 +13,22 @@
 using namespace std;
 using namespace origin;
 
-
 int main()
 {
   using V = vector<int>;
-  
   V v1 {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   V v2 = v1;
-  V v3(v1.size());
-  V v4(v1.size());
 
-  move(v1, v3);
-  move(v2.begin(), v2.end(), v4.begin());
-  assert(v1 == v4);
+  std::less<int> lt;
+
+  // It doesn't matter if vn is sorted or not. We only care that it compiles
+  // and produces equivalent results.
+  sort(v1);
+  sort(v2.begin(), v2.end());
+  assert(v1 == v2);
+
+  sort(v1, lt);
+  sort(v2.begin(), v2.end(), lt);
+  assert(v1 == v2);
+
 }

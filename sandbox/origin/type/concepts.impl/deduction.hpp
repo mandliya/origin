@@ -81,7 +81,7 @@ namespace type_impl
   template <typename T>
     struct get_deduced_size_type<T, true>
     {
-      using type = typename get_associated_value_type<T>::type;
+      using type = typename get_associated_size_type<T>::type;
     };
 
   template <typename T>

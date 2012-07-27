@@ -22,11 +22,15 @@ int main()
   
   V v1 {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   V v2(v1.size());
+  V v3(v1.size());
 
   copy(v1, v2);
-  assert(v1 == v2);
+  copy(v1.begin(), v1.end(), v3.begin());
+  assert(v2 == v3);
 
-  V v3(v1.size() / 2);
-  copy_if(v1, v3, odd);
-  assert(all_of(v3, odd));
+  V v4(v1.size() / 2);
+  V v5(v1.size() / 2);
+  copy_if(v1, v4, odd);
+  copy_if(v1.begin(), v1.end(), v5.begin(), odd);
+  assert(v4 == v5);
 }
