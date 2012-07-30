@@ -529,7 +529,7 @@ namespace origin
 
   template <typename R>
     inline Iterator_of<R>
-    range_unique(R&& range)
+    unique(R&& range)
     {
       using std::begin;
       using std::end;
@@ -538,12 +538,15 @@ namespace origin
 
   template <typename R, typename C>
     inline Iterator_of<R>
-    range_unique(R&& range, C comp)
+    unique(R&& range, C comp)
     {
       using std::begin;
       using std::end;
       return std::unique(begin(range), end(range), comp);
     }
+
+  // NOTE: The ternary range overload collides with the ternary iterator
+  // opverload, so we differentiate the overloads by name.
 
   template <typename R1, typename R2>
     inline Iterator_of<R2>
@@ -551,7 +554,7 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::unique_copy(beign(range1), end(range1), begin(range2));
+      return std::unique_copy(begin(range1), end(range1), begin(range2));
     }
 
   template <typename R1, typename R2, typename C>
@@ -560,7 +563,7 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      return std::unique_copy(beign(range1), end(range1), begin(range2), comp);
+      return std::unique_copy(begin(range1), end(range1), begin(range2), comp);
     }
 
 
@@ -583,7 +586,7 @@ namespace origin
     {
       using std::begin;
       using std::end;
-      std::reverse_copy(beign(range1), end(range1), begin(range2));
+      std::reverse_copy(begin(range1), end(range1), begin(range2));
     }
 
 
@@ -667,7 +670,7 @@ namespace origin
 
   template <typename R, typename P>
     inline Iterator_of<R>
-    partition_point(const R& range, P pred)
+    partition_point(R&& range, P pred)
     {
       using std::begin;
       using std::end;
@@ -766,8 +769,8 @@ namespace origin
     }
 
   template <typename R>
-    inline bool
-    is_sorted_unitl(const R& range)
+    inline Iterator_of<R>
+    is_sorted_until(R&& range)
     {
       using std::begin;
       using std::end;
@@ -775,8 +778,8 @@ namespace origin
     }
 
   template <typename R, typename C>
-    inline bool 
-    is_sorted_unitl(const R& range, C comp)
+    inline Iterator_of<R>
+    is_sorted_until(R&& range, C comp)
     {
       using std::begin;
       using std::end;
@@ -1102,7 +1105,7 @@ namespace origin
     }
 
   template <typename R>
-    inline bool
+    inline Iterator_of<R>
     is_heap_until(R&& range)
     {
       using std::begin;
@@ -1111,7 +1114,7 @@ namespace origin
     }
 
   template <typename R, typename C>
-    inline bool
+    inline Iterator_of<R>
     is_heap_until(R&& range, C comp)
     {
       using std::begin;
