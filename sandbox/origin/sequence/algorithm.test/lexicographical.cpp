@@ -10,25 +10,25 @@
 #include <vector>
 
 #include <origin/sequence/algorithm.hpp>
+#include <origin/type/typestr.hpp>
 
 using namespace std;
 using namespace origin;
+
+template <typename T>
+  using Pair_of = pair<T, T>;
 
 
 int main()
 {
   using V = vector<int>;
-  
-  V v1 {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto f1 = v1.begin();
-  auto l1 = v1.end();
+  V v1 {0, 1, 2, 3, 4};
+  V v2 {0, 1, 2, 3, 4};
+  std::less<int> lt;
 
-  V v2 {0, 1, 2, 3, 5, 6, 7, 8, 9};
-  auto f2 = v2.begin();
-  // auto l2 = v2.end();
+  assert(lexicographical_compare(v1, v2) == 
+         lexicographical_compare(v1.begin(), v1.end(), v2.begin(), v2.end()));
 
-  std::equal_to<int> eq;
-
-  assert(range_is_permutation(v1, v2) == is_permutation(f1, l1, f2));
-  assert(range_is_permutation(v1, v2, eq) == is_permutation(f1, l1, f2, eq));
+  assert(lexicographical_compare(v1, v2, lt) == 
+         lexicographical_compare(v1.begin(), v1.end(), v2.begin(), v2.end(), lt));
 }

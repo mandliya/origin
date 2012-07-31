@@ -1218,17 +1218,19 @@ namespace origin
     }
 
   template <typename R>
-    inline auto
-    minmax(R&& range) -> decltype(*minmax_element(range))
+    inline std::pair<Reference_of<R>, Reference_of<R>>
+    minmax(R&& range)
     {
-      return *minmax_element(range);
+      auto p = minmax_element(range);
+      return {*p.first, *p.second};
     }
 
   template <typename R, typename C>
-    inline auto
-    minmax(R&& range, C comp) -> decltype(*minmax_element(range, comp))
+    inline std::pair<Reference_of<R>, Reference_of<R>>
+    minmax(R&& range, C comp)
     {
-      return *minmax_element(range);
+      auto p = minmax_element(range);
+      return {*p.first, *p.second};
     }
 
 
@@ -1238,7 +1240,7 @@ namespace origin
 
   template <typename R1, typename R2>
     inline bool
-    lexicographical_ccompare(const R1& range1, const R2& range2)
+    lexicographical_compare(const R1& range1, const R2& range2)
     {
       using std::begin;
       using std::end;
@@ -1248,7 +1250,7 @@ namespace origin
 
   template <typename R1, typename R2, typename C>
     inline bool
-    lexicographical_ccompare(const R1& range1, const R2& range2, C comp)
+    lexicographical_compare(const R1& range1, const R2& range2, C comp)
     {
       using std::begin;
       using std::end;

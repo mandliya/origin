@@ -12,6 +12,7 @@ origin_module(
   IMPORT origin.type
 
   EXPORT concepts
+         iterator
          range
          algorithm
          testing

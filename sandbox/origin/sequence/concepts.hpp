@@ -165,11 +165,37 @@ namespace origin
 
 
   //////////////////////////////////////////////////////////////////////////////
+  // Pseudo Incrementable
+  //
+  // This concept exists solely to describe the synatx and semantics of
+  // incrementing strict output iterators like ostream_iterator and
+  // ostreambuf_iterator. These types can be incremented, but the operation
+  // has virtually no meaning. 
+  //
+  // This is a terrible concept.
+  template <typename I>
+    constexpr bool Pseudo_incrementable()
+    {
+      return Copyable<I>()
+
+          // ++i return I&
+          && Has_pre_increment<I>()
+          && Same<Pre_increment_result<I>, I&>();
+    }
+
+
+  //////////////////////////////////////////////////////////////////////////////
   // Weakly Incrementable
   //
-  // A weakly incrementable type, I, can be pre- and post-incremented. Both
-  // operations advance the value, but neither operation is required to be
-  // equality preserving. The result type of post-incrementing  is unspecified.
+  // A weakly incrementable type, I, can pre-incremented and has an associated
+  // difference type. The difference type encodes the maximum difference between
+  // any two iterators of type I.
+  //
+  // A weakly incrementable iterator is not required to be post-incremented
+  // because we cannot give strong semantics for the operation. This is a
+  // difference from the usual requirements of the C++ standard. Despite the
+  // difference, we fully expect that Origin-conforming weakly-incrementable
+  // iterators will continue to work with standard iterators.
   //
   // Template Parameters:
   //    I -- The type being tested
@@ -192,10 +218,7 @@ namespace origin
           
           // ++i return I&
           && Has_pre_increment<I>()
-          && Same<Pre_increment_result<I>, I&>()
-
-          // i++ is valid
-          && Has_post_increment<I>();
+          && Same<Pre_increment_result<I>, I&>();
     }
     
 
@@ -219,6 +242,7 @@ namespace origin
       return Weakly_incrementable<I>()
 
           // i++ returns I
+          && Has_post_increment<I>()
           && Same<Post_increment_result<I>, I>()
 
           && Equality_comparable<I>();
@@ -422,15 +446,8 @@ namespace origin
   template <typename I, typename T>
     constexpr bool Output_iterator()
     {
-      return Writable<I, T>() 
-          && Has_difference_type<I>() // Actual type is unspecified!
-          
-          // ++i returns I&
-          && Has_pre_increment<I>()
-          && Same<Pre_increment_result<I>, I&>()
-
-          // i++ is valid
-          && Has_post_increment<I>();
+      return Pseudo_incrementable<I>()
+          && Writable<I, T>();
     }
 
 

@@ -77,6 +77,7 @@ namespace testing
     void context::check(Prop prop, Args&&... args)
     {
       if (!prop(std::forward<Args>(args)...)) {
+        ++fail;
         error(prop, std::forward<Args>(args)...);
       }
     }

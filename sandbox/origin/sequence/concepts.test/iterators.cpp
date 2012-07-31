@@ -1,10 +1,9 @@
 // Copyright (c) 2008-2010 Kent State University
-// Copyright (c) 2011 Texas A&M University
+// Copyright (c) 2011-2012 Texas A&M University
 //
 // This file is distributed under the MIT License. See the accompanying file
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
-
 
 #include <forward_list>
 #include <iterator>
@@ -20,7 +19,6 @@
 using namespace std;
 using namespace origin;
 using namespace origin::testing;
-
 
 int main()
 {
@@ -79,4 +77,6 @@ int main()
 
   V v {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   check_readable_range(v);
+
+  return cxt.failures();
 }

@@ -195,7 +195,8 @@ namespace origin
         bool operator()(I first, I last) const
         {
           if (first != last) {
-            return first++ == first;
+            auto orig = first;
+            return first++ == orig;
           } else {
             return true;
           }
@@ -220,11 +221,8 @@ namespace origin
         bool operator()(I first, I last) const
         {
           if (first != last) {
-            if (first == last) {
-              auto i = ++first;
-              auto j = first++;
-              return i == j;
-            }
+            auto copy = first;
+            return (++first, first) == ++copy;
           } else {
             return true;
           }

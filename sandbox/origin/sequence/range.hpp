@@ -1,5 +1,5 @@
 // Copyright (c) 2008-2010 Kent State University
-// Copyright (c) 2011 Texas A&M University
+// Copyright (c) 2011-2012 Texas A&M University
 //
 // This file is distributed under the MIT License. See the accompanying file
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
@@ -11,9 +11,18 @@
 #include <origin/type/concepts.hpp>
 
 #include "concepts.hpp"
+#include "iterator.hpp"
 
 namespace origin
 {
+  // Reference deduction for ranges. Note that the reference type for standard
+  // Containers will not be deduced using this mechanism. They define nested
+  // types.
+  template <typename R>
+    auto deduce_reference(default_t, R&& range)
+      -> Requires<Range<R>(), Reference_of<Iterator_of<R>>>;
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Bounded range
   //

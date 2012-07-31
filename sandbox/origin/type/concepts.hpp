@@ -760,6 +760,16 @@ namespace origin
 
 
 
+  // This difference traits can be specialized to override the default
+  // deduction and lookup mechanisms. This should only be used when a type
+  // describes itself incorrectly (e.g., std::ostream_iterator).
+  template <typename T>
+    struct difference_type_traits
+    {
+      using type = typename type_impl::get_deduced_difference_type<T>::type;
+    };
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Difference Type                                   concepts.types.difference
   //
@@ -784,7 +794,7 @@ namespace origin
   // type function will indicate substitution failure.
   template <typename T>
     using Difference_type = 
-      typename type_impl::get_deduced_difference_type<T>::type;
+      typename difference_type_traits<T>::type;
     
 
   // Returns true if a difference type is associated with T.
