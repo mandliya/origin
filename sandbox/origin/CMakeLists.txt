@@ -13,4 +13,6 @@ include(Origin)
 
 add_subdirectory(type)
 add_subdirectory(sequence)
+add_subdirectory(memory)
+add_subdirectory(data)
 add_subdirectory(math)

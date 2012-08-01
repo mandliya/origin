@@ -580,6 +580,26 @@ namespace testing
     };
 
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Ordered
+  //
+  template <typename T>
+    struct ordered
+    {
+      static_assert(Ordered<T>(), "");
+
+      template <typename Tv>
+        void operator()(Tv&& tvar) const
+        {
+          quick_check(reg, tvar);
+          quick_check(ord, tvar);
+        }
+
+      regular<T>         reg;
+      totally_ordered<T> ord;
+    };
+
+
 
   // TODO: Implement testing for function objects. 
 
@@ -701,6 +721,15 @@ namespace testing
     {
       auto tvar = quantify_over<T>();
       quick_check(regular<T> {}, tvar);
+    }
+
+  // Check that T is ordered
+  template <typename T>
+    void
+    check_ordered()
+    {
+      auto tvar = quantify_over<T>();
+      quick_check(ordered<T> {}, tvar);
     }
 
 } // namespace origin

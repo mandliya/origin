@@ -167,13 +167,13 @@ namespace testing
       using type = typename default_pattern_traits<T>::type;
     };
 
-  // Specialization for bool.
+  // Specialization for bool. This prevents the default bool distribution
+  // from being confused with the default integer distributions.
   template <>
     struct default_pattern_traits<bool>
     {
       using type = default_bool_distribution;
     };
-
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -188,7 +188,7 @@ namespace testing
     default_pattern()
       -> decltype(typename default_pattern_traits<T>::type {}())
     {
-      typename default_pattern_traits<T>::type {}();
+      return typename default_pattern_traits<T>::type {}();
     }
 
 
