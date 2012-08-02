@@ -127,7 +127,7 @@ namespace testing
     // Write the specified argument to os along with its type. The output 
     // format is, "v:T" where v is the value and T is its type.
     template <typename Stream, typename T>
-      Requires<Streamable<T>(), void>
+      Requires<Output_streamable<T>(), void>
       log_arg(Stream& os, T&& value)
       {
         os << value << ':' << typestr(std::forward<T>(value));
@@ -136,7 +136,7 @@ namespace testing
     // If T is not streamable, indicate that in the output sequence. A 
     // non-streamable value is represented by an underscore: "_:T".
     template <typename Stream, typename T>
-      Requires<!Streamable<T>(), void>
+      Requires<!Output_streamable<T>(), void>
       log_arg(Stream& os, T&& value)
       {
         os << '_' << ':' << typestr(std::forward<T>(value));

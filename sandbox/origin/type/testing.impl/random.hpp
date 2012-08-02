@@ -79,6 +79,31 @@ namespace testing
     singleton_generator<T> single(const T& value) { return {value}; }
 
 
+  template <typename T>
+    struct single_value_distribution
+    {
+      single_value_distribution(const T& x) 
+        : value(x) 
+      { }
+
+      template <typename Eng>
+        const T& operator()(Eng&& eng)
+        {
+          return value;
+        }
+
+      T value;
+    };
+
+
+  // The default nullptr distribution returns null pointers.
+  struct default_nullptr_distribution
+  {
+    single_value_distribution<std::nullptr_t> operator()() const 
+    {
+      return single_value_distribution<std::nullptr_t>(nullptr);
+    }
+  };
 
   // The default distribution for Boolean values is a fair Bernoulli trial.
   struct default_bool_distribution
@@ -173,6 +198,14 @@ namespace testing
     struct default_pattern_traits<bool>
     {
       using type = default_bool_distribution;
+    };
+
+  // Yes... this sometimes happens. The defualt nullptr distribution always
+  // returns nulltprs.
+  template <>
+    struct default_pattern_traits<std::nullptr_t>
+    {
+      using type = default_nullptr_distribution;
     };
 
 
