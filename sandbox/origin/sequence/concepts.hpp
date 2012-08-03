@@ -14,6 +14,7 @@
 
 namespace origin
 {
+#include "concepts.impl/traits.hpp"
 
   //////////////////////////////////////////////////////////////////////////////
   // Reading and Writing                                                 iter.rw
@@ -325,7 +326,7 @@ namespace origin
   // unindented substitution or compilation failures.
   template <typename I>
     using Iterator_category = 
-      typename std::iterator_traits<I>::iterator_category;
+      typename sequence_impl::iterator_category_traits<I>::type;
 
 
   // Returns true if and only if Iterator_category<I> is a valid type name.
@@ -775,8 +776,6 @@ namespace origin
   // The range concepts parallel the iterator concepts. There is a corresponding
   // range concept for each of the iterator concepts.
 
-#include "concepts.impl/traits.hpp"
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Range Traits                                               seq.range.traits
@@ -805,7 +804,7 @@ namespace origin
   // Aliases:
   //    The result type of the begin() operation on Range.
   template <typename R>
-    using Begin_result = typename range_impl::get_begin_result<R>::type;
+    using Begin_result = typename sequence_impl::get_begin_result<R>::type;
 
   // Returns true if either std::begin(r) or begin(r) is a valid expression.
   template <typename R>
@@ -827,7 +826,7 @@ namespace origin
   //
   //  The result type of the end() operation on a Range.
   template <typename R>
-    using End_result = typename range_impl::get_end_result<R>::type;
+    using End_result = typename sequence_impl::get_end_result<R>::type;
 
   // Returns true if either std::end(r) or end(r) is a valid expression.
   template <typename R>

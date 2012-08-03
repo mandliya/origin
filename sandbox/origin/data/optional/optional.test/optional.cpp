@@ -18,10 +18,26 @@ int main()
 {
   context cxt;
 
-  typedef optional<int> T;
+  using T = optional<int>;
 
+
+  // A default initialized optional is not initialized.
+  T x;
+  assert(!x);
+
+  // An initialized optional is.
+  T y = 1;
+  assert(y);
+
+  // Properties
   static_assert(Same<Common_type<T, int>, T>(), "");
   static_assert(Output_streamable<T>(), "");
+
+  static_assert(Same<Value_type<T>, int>(), "");
+  static_assert(Same<Reference_of<T>, int&>(), "");
+  static_assert(Same<Reference_of<const T>, const int&>(), "");
+  static_assert(Same<Pointer_of<T>, int*>(), "");
+  static_assert(Same<Pointer_of<const T>, const int*>(), "");
 
   check_ordered<T>();
   check_equality_comparable<T, int>();
