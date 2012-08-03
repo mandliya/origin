@@ -16,7 +16,4 @@ origin_module(
   IMPORT origin.type
 
   EXPORT matrix
-         matrix_ref
-         matrix_shape
-         matrix_ops
 )
