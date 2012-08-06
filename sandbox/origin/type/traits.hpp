@@ -150,6 +150,48 @@ namespace origin
   
 
 
+  // FIXME: Move into impl.
+  template <std::size_t N, typename... Args>
+    struct selection;
+
+  template <std::size_t N, typename T, typename... Args>
+    struct selection<N, T, Args...>
+      : selection<N - 1, Args...>
+    { };
+  
+  template <typename T, typename... Args>
+    struct selection<0, T, Args...>
+    {
+      using type = T;
+    };
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Select                                                          meta.select
+  //
+  // The Select alias refers to the Nth type is a sequence of Args. It is a
+  // generalization of if If, to N values. For example:
+  //
+  //    Select<0, char, short, int, long> // is char
+  //    Select<1, char, short, int, long> // is short
+  //
+  // Note that the value of N must be less than the number of types in Args.
+  // If not, the program is ill-formed.
+  //
+  // Template Parameters:
+  //    N -- The nth type
+  //    Args -- A list of types
+  //
+  // Refers To:
+  //    The Nth type in Args
+  //
+  // Requires:
+  //    N < sizeof...(Args)
+  template <std::size_t N, typename... Args>
+    using Select = typename selection<N, Args...>::type;
+
+
+
+
   //////////////////////////////////////////////////////////////////////////////
   // Structural Type
   //
