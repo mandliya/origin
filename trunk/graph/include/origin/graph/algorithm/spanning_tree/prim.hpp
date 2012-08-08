@@ -5,8 +5,8 @@
 // LICENSE.txt or http://www.opensource.org/licenses/mit-license.php for terms
 // and conditions.
 
-#ifndef ORIGIN_GRAPH_SPANNING_TREE_PRIM_HPP
-#define ORIGIN_GRAPH_SPANNING_TREE_PRIM_HPP
+#ifndef ORIGIN_GRAPH_ALGORITHM_SPANNING_TREE_PRIM_HPP
+#define ORIGIN_GRAPH_ALGORITHM_SPANNING_TREE_PRIM_HPP
 
 // FIXMEs
 //  - need to fix vertex.hpp, or just make own iterator
@@ -39,7 +39,7 @@ namespace origin
 /*============================================================================*/
 
   template <typename G, typename Edge_weight>
-    labeling <Vertex<G>,Vertex<G>>
+    labeling <Vertex<G>, Vertex<G>>
     prim(const G& g, Vertex<G> s, Edge_weight & w)
     {
       auto pred = label_vertices (g, nil_vertex<Vertex<G>>());
@@ -123,4 +123,4 @@ namespace origin
 
 } // namespace origin
 
-#endif //ORIGIN_GRAPH_SPANNING_TREE_PRIM_HPP
+#endif //ORIGIN_GRAPH_ALGORITHM_SPANNING_TREE_PRIM_HPP

@@ -26,8 +26,7 @@ namespace origin {
   // The Nil Vertex
     // FIXME move this into vertex.hpp
   template <typename V>
-    V nil_vertex()
-    { return V(max_val<V>()); }
+    V nil_vertex() { return V(max_val<V>()); }
   }
 
   // Note that this version queues all vertices right away.
@@ -44,22 +43,24 @@ namespace origin {
       auto q = make_weight_queue(w_v);
       for (Vertex<G> v : vertices(g))
         q.push(v);
-      w_v(ord(s)) = 0;;
+      w_v(ord(s)) = 0;
 
       // Main algorithm
-      while (!q.empty()) {  // There is a bug here. See top
+      while (!q.empty()) {
         // get new vertex
         Vertex<G> u = q.top();
 
         // If this elements weight is max or more, exit. We're done.
-        if (w_v(u) == max)
+        // There was the notion of clamping, but this relieves that
+        // Overflow is a USER problem. 
+        if (!(w_v(u) < max))
           return pred;
 
         // relax all neighbors
         for (Edge<G> e : out_edges(g,u)) {
 
           // weight must increase
-          assert (( w_v(u) <= w_v(u) + w(e) ));
+          assert (( !(w_v(u) > w_v(u) + w(e)) ));
 
           // relax the edge
           Vertex<G> v = opposite(e,u);
@@ -74,6 +75,13 @@ namespace origin {
 
       return pred;
     }
+
+  // The case where the graph edge values are the edge weights
+  template <typename G, typename Edge_weight>
+    inline
+    labeling<Vertex<G>, Vertex<G>>
+    dijkstra(const G& g, Vertex<G> s)
+    { return dijkstra (g,s,edge_weight_graph_wrapper (g)); }
 
 } // namespace origin
 

@@ -27,16 +27,17 @@ namespace origin
    * attribution.
    */
   template<typename Graph>
-  Graph reflexive_closure(Graph g)
+  Graph symmetric_closure(Graph g)
   {
+    Graph h(g); // Should just copy edges? Copy to edge list?
     for(auto e : g.edges()) {
       auto u = g.source(e);
       auto v = g.target(e);
       if(!g.edge(v, u)) {
-        g.add_edge(v, u);
+        h.add_edge(v, u);
       }
     }
-    return g;
+    return h;
   }
 
 } // namesapce origin

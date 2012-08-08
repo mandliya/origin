@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include <origin/graph/algorithm/spanning_tree/prim.hpp>
+#include <origin/graph/algorithm/spanning_tree/prim.hpp>
 #include <origin/graph/adjacency_vector/undirected.hpp>
 
 #include <origin/heap/binary_heap.hpp>
@@ -97,13 +98,18 @@ int main()
   edge_weight(e34) = 9;
   edge_weight(e45) = 10;
 
-  labeling<V,V> pred = prim(g, V(0), edge_weight);
+  labeling<V,V> pred_prim = prim(g, V(0), edge_weight);
+  labeling<V,V> pred_kruskal = prim(g, V(0), edge_weight);
 
   print_graph(g);
 
-  for (auto v : g.vertices()) {
-    cout << v.value() << " - " << pred(v).value() << '\n';
-  }
+  cout << "Prim's results:\n";
+  for (auto v : g.vertices())
+    cout << v.value() << " - " << pred_prim(v).value() << '\n';
+
+  cout << "\nKruskal's results:\n";
+  for (auto v : g.vertices())
+    cout << v.value() << " - " << pred_kruskal(v).value() << '\n';
 
   return 0;
 }
