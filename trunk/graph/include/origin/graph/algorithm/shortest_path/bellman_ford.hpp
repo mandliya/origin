@@ -38,7 +38,7 @@ namespace origin {
    *
    * TODO Implement path recovery.
    */
-  template<typename Graph,
+  /*template<typename Graph,
            typename Vertex_Label,
            typename Edge_Label,
            typename Accumulate_Op,
@@ -129,12 +129,12 @@ namespace origin {
       distance_type init_;
       distance_type max_;
       Visitor v_;
-    };
+    };*/
 
   /**
    * Bellman_ford Algorithm
    */
-  template<typename Graph,
+  /*template<typename Graph,
            typename Vertex_Label,
            typename Visitor = default_bellman_ford_visitor>
     void bellman_ford(Graph const& g,
@@ -161,6 +161,50 @@ namespace origin {
       Algorithm algo(g, d, w, accum, cmp, init, max, visitor);
 
       algo(start);
+    }*/
+
+  /*namespace {
+  template <typename T>
+    constexpr T max_val() { return std::numeric_limits<T>::max(); }
+
+  // The Nil Vertex
+    // FIXME move this into vertex.hpp
+  template <typename V>
+    V nil_vertex() { return V(max_val<V>()); }
+  }*/
+
+  template <typename G, typename Edge_weight>
+    labeling <Vertex<G>, Vertex<G>>
+    bellman__ford (const G& g, Vertex<G> s, Edge_weight& w)
+    {
+      // label the graph with vertex weight and predecessors
+      auto w_v = label_vertices (g,max_val<Value_type<Edge_weight>>());
+      auto pred = label_vertices(g,nil_vertex<Vertex<G>>());
+
+      // Initialize the weight of the start vertex
+      w_v(s) = 0;
+
+      // Iterate order(g) - 1 times or until we can no longer relax
+      for (auto i = 1u; i < g.order(); ++i)
+      {
+        // relax all of the vertices
+        for (auto e : edges(g))
+        {
+          // Relax this edge
+          Vertex<G> u = source(e);
+          Vertex<G> v = target(e);
+          if (w_v(u) + w(e) < w_v(v))
+          {
+            w_v(v) = w_v(u) + w(e);
+            pred(v) = u;
+          }
+        }
+      }
+
+      // Check for 'negative' edge weight cycles
+      // Well, this first pass is not a safe one
+
+      return pred;
     }
 
 }

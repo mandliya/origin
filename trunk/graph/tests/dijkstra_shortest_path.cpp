@@ -11,6 +11,7 @@
 #include <tuple>
 
 #include <origin/graph/algorithm/shortest_path/dijkstra.hpp>
+#include <origin/graph/algorithm/shortest_path/bellman_ford.hpp>
 #include <origin/graph/adjacency_vector/directed.hpp>
 #include <origin/graph/traits.hpp>
 
@@ -51,10 +52,16 @@ int main() {
   w(e43) = 6;
 
   // run dijkstra
-  auto pred = dijkstra(g,V(0),w);
+  auto pred_d = dijkstra(g,V(0),w);
+  auto pred_b = bellman__ford(g,V(0),w);
 
+  std::cout << "Dijkstra\n";
   for (auto v : vertices(g))
-    std::cout << ord(pred(v)) << " : " << ord(v) << '\n';
+    std::cout << ord(pred_d(v)) << " : " << ord(v) << '\n';
+
+  std::cout << "\nBellman-ford\n";
+  for (auto v : vertices(g))
+    std::cout << ord(pred_b(v)) << " : " << ord(v) << '\n';
 
   return 0;
 }

@@ -43,7 +43,7 @@ namespace origin {
       auto q = make_weight_queue(w_v);
       for (Vertex<G> v : vertices(g))
         q.push(v);
-      w_v(ord(s)) = 0;
+      w_v(s) = 0;
 
       // Main algorithm
       while (!q.empty()) {
