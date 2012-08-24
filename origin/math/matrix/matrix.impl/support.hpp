@@ -116,11 +116,12 @@ namespace matrix_impl
   //    The function object f.  
   template <typename I1, typename I2, typename F>
     inline F 
-    apply(I1 first1, I1 last1, I2 first2, F f)
+    apply_each(I1 first1, I1 last1, I2 first2, F f)
     {
       while (first1 != last1) {
         f(*first1, *first2);
         ++first1;
+        ++first2;
       }
     }
 

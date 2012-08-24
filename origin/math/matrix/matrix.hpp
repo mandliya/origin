@@ -13,7 +13,7 @@
 #include <cassert>
 
 #include <origin/type/concepts.hpp>
-
+#include <origin/sequence/algorithm.hpp>
 
 namespace origin
 {
@@ -108,8 +108,17 @@ namespace origin
       void count();
 
     private:
-      T exts[N];    // The extents of each dimension
-      T elems[N];   // Number of elements stored in each sub-table.
+    // The extents of each dimension.
+    T exts[N];
+      
+
+    // Number of elements stored in each sub-extent. Without storing
+    // this, we would have to recompute the same products every time
+    // we indexed into the array.
+    //
+    // TODO: We can effectively remove this when the N is small and
+    // recompute anyways. It may be end up being faster.
+    T elems[N];
     };
 
 
@@ -574,8 +583,9 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::apply(
-          begin(), end(), x.begin(), matrix_impl::plus_assign<value_type>{});
+
+        matrix_impl::plus_assign<value_type> plus_eq;
+        matrix_impl::apply_each(begin(), end(), x.begin(), plus_eq);
         return *this;
       }
 
@@ -586,8 +596,9 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::apply(
-          begin(), end(), x.begin(), matrix_impl::minus_assign<value_type>{});
+
+        matrix_impl::minus_assign<value_type> minus_eq;
+        matrix_impl::apply_each(begin(), end(), x.begin(), minus_eq);
         return *this;
       }
 
@@ -599,8 +610,8 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator=(const value_type& value)  
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::assign<value_type>{}); 
+      matrix_impl::assign<value_type> assign;
+      matrix_impl::apply(begin(), end(), value, assign);
       return *this;
     }
       
@@ -608,17 +619,17 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator+=(const value_type& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::plus_assign<value_type>{}); 
+      matrix_impl::plus_assign<value_type> add_eq;
+      matrix_impl::apply(begin(), end(), value, add_eq);
       return *this;
     }
       
   template <typename T, std::size_t N>
     inline matrix<T, N>& 
     matrix<T, N>::operator-=(value_type const& value) 
-    { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::minus_assign<value_type>{}); 
+    {
+      matrix_impl::minus_assign<value_type> sub_eq;
+      matrix_impl::apply(begin(), end(), value, sub_eq); 
       return *this;
     }
   
@@ -630,8 +641,8 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator*=(value_type const& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::multiplies_assign<value_type>{}); 
+      matrix_impl::multiplies_assign<value_type> mul_eq;
+      matrix_impl::apply(begin(), end(), value, mul_eq);
       return *this;
     }
 
@@ -639,8 +650,8 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator/=(value_type const& value) 
     { 
-      matrix_impl::apply(begin(), end(), value, 
-        matrix_impl::divides_assign<value_type>{}); 
+      matrix_impl::divides_assign<value_type> div_eq;
+      matrix_impl::apply(begin(), end(), value, div_eq);
       return *this;
     }
       
@@ -649,8 +660,8 @@ namespace origin
     inline matrix<T, N>& 
     matrix<T, N>::operator%=(value_type const& value) 
     { 
-      matrix_impl::apply(begin(), end(), value, 
-        matrix_impl::modulus_assign<value_type>{}); 
+      matrix_impl::modulus_assign<value_type> mod_eq;
+      matrix_impl::apply(begin(), end(), value, mod_eq);
       return *this;
     }
 
@@ -713,6 +724,7 @@ namespace origin
       // Are implicit. Moves are are the same copies, and copies are shallow.
       // This class does not implemnt value semantics.
 
+
       // A matrix reference cannot be constructed over a matrix rvalue. That
       // would leak memory (at best).
       //
@@ -722,19 +734,13 @@ namespace origin
       matrix_ref& operator=(matrix<Remove_const<T>, N>&&) = delete;
 
 
-      // FIXME: Is this valid?
-      // A matrix can be copy construced or assigned to a matrix lvalue. This
-      // guarantees that matrix is 
-      matrix_ref(const matrix<Remove_const<T>, N>& x) 
-        : dims(x.shape()), ptr(x.data())
-      { }
+      // A matrix can be copy construced or assigned to a matrix lvalue. The
+      // lifetime of the matrix is longer than that of the reference.
+      matrix_ref(matrix<Remove_const<T>, N>& x);
+      matrix_ref& operator=(matrix<Remove_const<T>, N>& x);
 
-      matrix_ref& operator=(const matrix<Remove_const<T>, N>& x)
-      {
-        dims = x.shape();
-        ptr = x.data();
-        return *this;
-      }
+      matrix_ref(const matrix<Remove_const<T>, N>& x);
+      matrix_ref& operator=(const matrix<Remove_const<T>, N>& x);
 
 
       // Properties
@@ -790,15 +796,47 @@ namespace origin
 
       // Iterators
       iterator begin() { return ptr; }
-      iterator end()   { return ptr + dims.elements(); }
+      iterator end()   { return ptr + dims.size(); }
 
       const_iterator begin() const { return ptr; }
-      const_iterator end() const   { return ptr + dims.elements(); }
+      const_iterator end() const   { return ptr + dims.size(); }
 
     private:
       shape_type dims;  // The shape of the matrix
       pointer ptr;      // The 1st element in the matrix
     };
+
+  // Allows binding to non-const references.
+  template <typename T, std::size_t N>
+    matrix_ref<T, N>::matrix_ref(matrix<Remove_const<T>, N>& x) 
+      : dims(x.shape()), ptr(x.data())
+    { }
+
+  template <typename T, std::size_t N>
+    inline auto 
+    matrix_ref<T, N>::operator=(matrix<Remove_const<T>, N>& x) 
+      -> matrix_ref& 
+    {
+      dims = x.shape();
+      ptr = x.data();
+      return *this;
+    }
+
+  // Allows binding to const references.
+  template <typename T, std::size_t N>
+    matrix_ref<T, N>::matrix_ref(const matrix<Remove_const<T>, N>& x) 
+      : dims(x.shape()), ptr(x.data())
+    { }
+
+  template <typename T, std::size_t N>
+    inline auto 
+    matrix_ref<T, N>::operator=(const matrix<Remove_const<T>, N>& x) 
+      -> matrix_ref& 
+    {
+      dims = x.shape();
+      ptr = x.data();
+      return *this;
+    }
 
 
   template <typename T, std::size_t N>
@@ -849,8 +887,9 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::apply(
-          begin(), end(), x.begin(), matrix_impl::plus_assign<value_type>{});
+
+        matrix_impl::plus_assign<value_type> add_eq;
+        matrix_impl::apply_each(begin(), end(), x.begin(), add_eq);
         return *this;
       }
 
@@ -861,8 +900,9 @@ namespace origin
       {
         static_assert(order() == M::order(), "");
         assert(shape() == x.shape());
-        matrix_impl::apply(
-          begin(), end(), x.begin(), matrix_impl::minus_assign<value_type>{});
+
+        matrix_impl::minus_assign<value_type> sub_eq;
+        matrix_impl::apply(begin(), end(), x.begin(), sub_eq);
         return *this;
       }
 
@@ -871,8 +911,8 @@ namespace origin
     inline matrix_ref<T, N>& 
     matrix_ref<T, N>::operator=(const value_type& value)  
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::assign<value_type>{}); 
+      matrix_impl::assign<value_type> assign;
+      matrix_impl::apply(begin(), end(), value, assign);
       return *this;
     }
       
@@ -889,8 +929,8 @@ namespace origin
     inline matrix_ref<T, N>& 
     matrix_ref<T, N>::operator-=(value_type const& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::minus_assign<value_type>{}); 
+      matrix_impl::minus_assign<value_type> sub_eq;
+      matrix_impl::apply(begin(), end(), value, sub_eq); 
       return *this;
     }
 
@@ -900,8 +940,8 @@ namespace origin
     inline matrix_ref<T, N>& 
     matrix_ref<T, N>::operator*=(value_type const& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::multiplies_assign<value_type>{}); 
+      matrix_impl::minus_assign<value_type> mul_eq;
+      matrix_impl::apply(begin(), end(), value, mul_eq); 
       return *this;
     }
 
@@ -909,8 +949,8 @@ namespace origin
     inline matrix_ref<T, N>& 
     matrix_ref<T, N>::operator/=(value_type const& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::divides_assign<value_type>{}); 
+      matrix_impl::minus_assign<value_type> div_eq;
+      matrix_impl::apply(begin(), end(), value, div_eq); 
       return *this;
     }
 
@@ -919,8 +959,8 @@ namespace origin
     inline matrix_ref<T, N>& 
     matrix_ref<T, N>::operator%=(value_type const& value) 
     { 
-      matrix_impl::apply(
-        begin(), end(), value, matrix_impl::modulus_assign<value_type>{}); 
+      matrix_impl::minus_assign<value_type> div_eq;
+      matrix_impl::apply(begin(), end(), value, div_eq); 
       return *this;
     }
 
@@ -930,6 +970,7 @@ namespace origin
   //
   // The following operations are defined for all Matrix types.
   //////////////////////////////////////////////////////////////////////////////
+
 
 
 
@@ -956,19 +997,18 @@ namespace origin
 
   // Equality comparable
   // Two matrices compare equal when they have the same shape and elements.
-  template <typename M>
-    inline auto 
-    operator==(const M& a, const M& b)
-      -> Requires<Matrix<M>(), bool>
+  template <typename M1, typename M2>
+    inline Requires<Matrix<M1>() && Matrix<M2>(), bool> 
+    operator==(const M1& a, const M2& b)
     { 
-      return a.shape() == b.shape() 
-          && std::equal(a.begin(), a.end(), b.begin());
+      assert(a.shape() == b.shape());
+      return range_equal(a, b);
     }
   
-  template <typename M>
-    inline auto 
-    operator!=(const M& a, const M& b) -> Requires<Matrix<M>(), bool>
-    {
+  template <typename M1, typename M2>
+    inline Requires<Matrix<M1>() && Matrix<M2>(), bool> 
+    operator!=(const M1& a, const M2& b)
+    { 
       return !(a == b);
     }
       
@@ -1004,7 +1044,7 @@ namespace origin
     inline matrix<T, N>
     operator+(const matrix<T, N>& a, const matrix<T, N>& b)
     {
-      assert(a.dim() == b.dim());
+      assert(a.shape() == b.shape());
       matrix<T, N> result = a;
       return result += b;
     }
@@ -1013,7 +1053,7 @@ namespace origin
     inline matrix<T, N>
     operator+(const matrix_ref<T, N>& a, const matrix_ref<T, N>& b)
     {
-      assert(a.dim() == b.dim());
+      assert(a.shape() == b.shape());
       matrix<T, N> result = a;
       return result += b;
     }
@@ -1023,7 +1063,7 @@ namespace origin
     inline matrix<T, N>
     operator+(const matrix<T, N>& a, const matrix_ref<T, N>& b)
     {
-      assert(a.dim() == b.dim());
+      assert(a.shape() == b.shape());
       matrix<T, N> result = a;
       return result += b;
     }
@@ -1032,7 +1072,7 @@ namespace origin
     inline matrix<T, N>
     operator+(const matrix_ref<T, N>& a, const matrix<T, N>& b)
     {
-      assert(a.dim() == b.dim());
+      assert(a.shape() == b.shape());
       matrix<T, N> result = a;
       return result += b;
     }

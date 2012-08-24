@@ -246,6 +246,8 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Equal
   //
+  // FIXME: This is a terrible name for equal since std::equal_range does
+  // something decidedly different.
 
   template <typename R1, typename R2>
     inline bool
