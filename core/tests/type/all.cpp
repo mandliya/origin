@@ -10,13 +10,3 @@
 using namespace std;
 using namespace origin;
 
-
-int main()
-{
-  static_assert(All(), "");
-  static_assert(All(true), "");
-  static_assert(All(true, true, true), "");
-
-  static_assert(!All(false), "");
-  static_assert(!All(true, true, false), "");
-}
