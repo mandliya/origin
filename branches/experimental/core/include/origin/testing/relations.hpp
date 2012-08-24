@@ -20,7 +20,6 @@ namespace origin
       }
   };
 
-    
   
   // Common type equivalence (property)
   // The common type equivalence property says that any expression involving
@@ -87,6 +86,7 @@ namespace origin
         return r(a, b) ? r(b, a) : true; 
       }
   };
+
 
 
   // Asymmetric relation (property)
@@ -156,8 +156,14 @@ namespace origin
   // Equivalence relation (specification)
   // An equivalence relation is a relation that is reflexive, symmetric, and 
   // transitive.
-  struct equivalence_relation_spec
+  struct equivalence_relation_specification
   {
+    template <typename R, typename T>
+      auto operator()(R r, T&& values) const
+        -> Requires<Generator<T>() && 
+        Relation<R, Value
+
+
     template <typename Env, typename R, typename T>
       void operator()(Env& env, R&& r, T&& value) const
       {
@@ -167,6 +173,7 @@ namespace origin
       }
   };
 
+  /*
   // Check if comp satisfies the semantics of an equivalence relation.
   template <typename T, typename Env, typename R>
     void check_equivalence_relation(Env& env, R comp)
@@ -261,5 +268,6 @@ namespace origin
       auto value = checkable_var<T>(env);
       check(env, strict_total_order_spec {}, rel, value);
     }
+  */
 
 } // namespace origin

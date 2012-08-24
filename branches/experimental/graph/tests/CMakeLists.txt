@@ -6,8 +6,10 @@
 # and conditions.
 
 origin_run_test(graph_handles handles.cpp)
-# origin_run_test(graph_adjacency_list adjacency_list.cpp)
+
+origin_run_test(graph_adjacency_list adjacency_list.cpp)
 origin_run_test(adjacency_vector adjacency_vector.cpp)
+
 origin_run_test(mst mst.cpp)
 
 # origin_run_test(graph_generator generator.cpp)

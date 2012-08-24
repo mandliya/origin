@@ -18,5 +18,5 @@ include(Origin)
 
 add_subdirectory(core)
 add_subdirectory(data)
-add_subdirectory(graph)
+# add_subdirectory(graph)
 subdirs(math)

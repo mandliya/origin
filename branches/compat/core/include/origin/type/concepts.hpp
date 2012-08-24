@@ -15,13 +15,15 @@ namespace origin
   // Implementation
   namespace concepts 
   {
-    template <typename T, typename U> is_equality_comparable;
-    template <typename T, typename U> is_weakly_ordered;
-  
-  } // namsepace concepts
+    template <typename T, typename U> struct is_equality_comparable;
+    template <typename T, typename U> struct is_weakly_ordered;
+    template <typename R, typename T, typename U> struct is_relation;
+    template <typename O, typename T, typename U> struct is_binary_operation;
+  }
 
   // Declarations
   template <typename T> constexpr Boolean();
+
 
 
   //////////////////////////////////////////////////////////////////////////////
@@ -36,6 +38,12 @@ namespace origin
   // 
   // This concept is primarily defined as a more concise way of writing
   // Convertible<T, bool>.
+  //
+  // Template parameters:
+  //    T -- The type being tested
+  //
+  // Returns:
+  //    True if and only if T can be converted to bool.
   template <typename T>
     constexpr bool Boolean() { return Convertible<T, bool>(); }
 
@@ -44,11 +52,12 @@ namespace origin
   //////////////////////////////////////////////////////////////////////////////
   // Equality                                                        concepts.eq
   //
-  // FIXME: Give a semantic description of notions of equality.
+  // TODO: Give a semantic description of notions of equality.
   //
   // Note that it is inusfficient to define == as only an equivalence relation.
   // Two equivalent values may be substituted in programs, yielding different
   // results.
+
 
 
   //////////////////////////////////////////////////////////////////////////////
