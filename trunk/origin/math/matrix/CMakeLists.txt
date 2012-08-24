@@ -14,6 +14,7 @@ origin_module(
     An n-dimensional matrix class and common arithmetic operations.
 
   IMPORT origin.type
+         origin.sequence
 
   EXPORT matrix
 )
