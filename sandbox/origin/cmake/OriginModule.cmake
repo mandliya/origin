@@ -50,10 +50,9 @@ macro(origin_module)
 
   # Compute the module name by finding the relative path to the current
   # module directory and pre-pending "origin". 
-  file(RELATIVE_PATH path ${ORIGIN_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
+  file(RELATIVE_PATH path ${ORIGIN_MODULE_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
   string(REPLACE "/" "." path ${path})
   set(module origin.${path})
-
 
   # Define some variables that are useful locally...
   set(ORIGIN_CURRENT_MODULE ${module})
@@ -79,12 +78,23 @@ macro(origin_module)
 
 
   # Build the main library
-  build_library()
+  build_component()
 
   # Build the test suite targets
   if(${ORIGIN_BUILD_TESTS})
     build_test_suite(${parsed_EXPORT})
   endif()
+endmacro()
+
+
+
+# Verify that the imports are valid and create a variable that stores
+# the list.
+#
+# FIXME: Can we accept imports like gmp, mpfr, 
+macro(check_imports)
+  # FIXME: Is there nothing we can do here?
+  set(ORIGIN_CURRENT_IMPORTS ${ARGV})
 endmacro()
 
 
@@ -114,20 +124,11 @@ macro(check_exports)
 endmacro()
 
 
-# Verify that the imports are valid and create a variable that stores
-# the list.
-#
-# FIXME: Can we accept imports like gmp, mpfr, 
-macro(check_imports)
-  # FIXME: Is there nothing we can do here?
-  set(ORIGIN_CURRENT_IMPORTS ${ARGV})
-endmacro()
-
 
 
 # Save the list of imports and create a dependency of the current library
 # to the dependent target.
-macro(build_library)
+macro(build_component)
   # Generate a target for the for the module.
   #
   # FIXME: For nested modules, the name can't simply be origin_xxx it has

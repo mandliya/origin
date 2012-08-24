@@ -10,24 +10,18 @@
 if(NOT ORIGIN_INCLUDED)
   set(ORIGIN_INCLUDED TRUE)
 
-  # Set the root of the source tree.
-  set(ORIGIN_ROOT ${CMAKE_SOURCE_DIR})
-
-  # Get the parent of the Origin module tree. This will be put on the include
-  # path.
-  #
-  # FIXME: If the module tree becomes a nested directory within a larger
-  # project then the "parent" will be the top-level directory and we'll need
-  # to specify module paths relative to the module root. 
-  get_filename_component(ORIGIN_PARENT_DIR ${CMAKE_SOURCE_DIR} PATH)
+  # Set basic tree information. The project root is the top-level directory
+  # that includes the build system and the module root. The module root
+  # is the top-level of all modules.
+  set(ORIGIN_PROJECT_ROOT ${CMAKE_SOURCE_DIR})
+  set(ORIGIN_MODULE_ROOT ${CMAKE_SOURCE_DIR}/origin)
 
 
-  # ORIGIN_CMAKE_DIR -- Directory containing Origin's CMake modules
+  # Set the directory containing Origin's CMake modules: the build system.
   get_filename_component(ORIGIN_CMAKE_DIR ${CMAKE_CURRENT_LIST_FILE} PATH)
 
+  # Include some useful packages.
   include(CMakeDependentOption)
-
-  # There are some useful CMake utilities in Boost.
   include(BoostUtils)
 
 
@@ -36,7 +30,7 @@ if(NOT ORIGIN_INCLUDED)
   set(CMAKE_CXX_FLAGS "-std=c++11")
 
   # Make sure that we can include files as <origin/xxx>.
-  include_directories(${ORIGIN_PARENT_DIR})  
+  include_directories(${ORIGIN_PROJECT_ROOT})  
 
 
   # Include Origin-specific macros
