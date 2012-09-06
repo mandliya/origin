@@ -10,57 +10,34 @@
 if(NOT ORIGIN_INCLUDED)
   set(ORIGIN_INCLUDED TRUE)
 
-
-  # Did the user set ORIGIN_ROOT in the environment? Don't overwrite a 
-  # previous setting!
-  if (NOT ORIGIN_ROOT)
-    set(ORIGIN_ROOT $ENV{ORIGIN_ROOT})
-  endif()
-  
-  # Find the project root. Either we're building in that directory or we
-  # are not. If not, the variable ORIGIN_ROOT must be defined.
-  if(NOT EXISTS ${CMAKE_SOURCE_DIR}/cmake/Origin.cmake)
-    if(ORIGIN_ROOT)
-      set(ORIGIN_OUT_OF_TRUNK true)
-      set(ORIGIN_PROJECT_ROOT ${ORIGIN_ROOT})
-      set(ORIGIN_FAKE_ROOT ${CMAKE_SOURCE_DIR})
-      message (STATUS "Using Origin root ${ORIGIN_PROJECT_ROOT}")
-  else()
-      message(FATAL_ERROR "ORIGIN_ROOT must be set for out-of-trunk libraries")
-    endif()
-  else()
-    set(ORIGIN_PROJECT_ROOT ${CMAKE_SOURCE_DIR})
-  endif()
-
-  # Set basic tree information. The project root is the top-level directory
-  # that includes the build system and the module root. The module root
-  # is the top-level of all modules.
-  set(ORIGIN_MODULE_ROOT ${ORIGIN_PROJECT_ROOT}/origin)
-
-
-  # Set the directory containing Origin's CMake modules: the build system.
+  # The ORIGIN_CMAKE_DIR is the path to the directory containing the Origin
+  # CMake build extensions.
   get_filename_component(ORIGIN_CMAKE_DIR ${CMAKE_CURRENT_LIST_FILE} PATH)
 
-  # Include some useful packages.
-  include(CMakeDependentOption)
-  include(BoostUtils)
-
-
-  # Be sure to compile in C++11 mode!
-  # FIXME: Move the C++ configuration stuff into a separate config module.
-  set(CMAKE_CXX_FLAGS "-std=c++11")
-
-  # Make sure that we can include files as <origin/xxx>.
-  # FIXME: It would be nice if...
-  include_directories(${ORIGIN_PROJECT_ROOT})
-  if (ORIGIN_OUT_OF_TRUNK)
-    include_directories(${ORIGIN_FAKE_ROOT}/..)
+  # Define ORIGIN_ROOT as either the current build, or the user has specified
+  # an alternative in the environemnt. This variable is used in various
+  # macros to affect the build environment.
+  set(root $ENV{ORIGIN_ROOT})
+  if(root)
+      set(ORIGIN_ROOT ${root})
+  else()
+      set(ORIGIN_ROOT ${CMAKE_SOURCE_DIR})
   endif()
 
-  # Include Origin-specific macros
+  # This file contains all of the build macros necessary to build, test, and
+  # install Origin libraries. Note that much of this is actually based on the
+  # Boost.CMake environment.
+
+  # Include Origin-specific macros.
+  include(BoostUtils)
   include(OriginVersion)
-  include(OriginModule)
+  include(OriginConfig)
+  include(OriginProject)
+  include(OriginDepend)
+  include(OriginExecutable)
   include(OriginTest)
+  include(OriginPerformance)
+  include(OriginInstall)
+  include(OriginPackage)
 
 endif()
-

@@ -7,8 +7,16 @@
 
 cmake_minimum_required(VERSION 2.8)
 
-# Make sure that we can find Origin's CMake macros.
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+if(DEFINED $ENV{ORIGIN_ROOT})
+  set(ORIGIN_ROOT $ENV{ORIGIN_ROOT})
+else()
+  set(ORIGIN_ROOT ${CMAKE_SOURCE_DIR})
+endif(DEFINED $ENV{ORIGIN_ROOT})
+list(APPEND CMAKE_MODULE_PATH ${ORIGIN_ROOT}/cmake)
 include(Origin)
 
-add_subdirectory(origin)
+
+add_subdirectory(core)
+add_subdirectory(data)
+# add_subdirectory(graph)
+subdirs(math)
