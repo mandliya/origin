@@ -23,7 +23,7 @@ namespace type_impl
   // Returns true if T and U are cross-type equality comparable.
   template <typename T, typename U>
     struct is_equality_comparable
-      : boolean_constant<
+      : Meta_boolean<
             Common<T, U>() 
          && Equality_comparable<T>()
          && Equality_comparable<U>()
@@ -38,7 +38,7 @@ namespace type_impl
   // Returns true if T is equality comparable.
   template <typename T>
     struct is_equality_comparable<T, T>
-      : boolean_constant<
+      : Meta_boolean<
             Has_equal<T>()     && Boolean<Equal_result<T>>()
          && Has_not_equal<T>() && Boolean<Not_equal_result<T>>()
         >
@@ -49,7 +49,7 @@ namespace type_impl
   // Returns true if T and U are cross-type weakly ordered.
   template <typename T, typename U>
     struct is_weakly_ordered
-      : boolean_constant<
+      : Meta_boolean<
             Common<T, U>()
          && Totally_ordered<T>()
          && Totally_ordered<T>()
@@ -68,7 +68,7 @@ namespace type_impl
   // Returns true if T is weakly ordered.
   template <typename T>
     struct is_weakly_ordered<T, T>
-      : boolean_constant<
+      : Meta_boolean<
             Has_less<T>()          && Boolean<Less_result<T>>()
          && Has_greater<T>()       && Boolean<Greater_result<T>>()
          && Has_less_equal<T>()    && Boolean<Less_equal_result<T>>()
@@ -80,7 +80,7 @@ namespace type_impl
   // Returns true if R is a cross-type relation over (T, U).
   template <typename R, typename T, typename U>
     struct is_relation
-      : boolean_constant<
+      : Meta_boolean<
             Common<T, U>()
          && Relation<R, T>()
          && Relation<R, U>()
@@ -93,7 +93,7 @@ namespace type_impl
   // Returns true if R is a relation over T.
   template <typename R, typename T>
     struct is_relation<R, T, T>
-      : boolean_constant<Predicate<R, T, T>()>
+      : Meta_boolean<Predicate<R, T, T>()>
     { };
 
 
@@ -101,7 +101,7 @@ namespace type_impl
   // Returns true if Op is a binary operation over T and U.
   template <typename R, typename T, typename U>
     struct is_binary_operation
-      : boolean_constant<
+      : Meta_boolean<
             Common<T, U>()
          && Relation<R, T>()
          && Relation<R, U>()
@@ -139,7 +139,7 @@ namespace type_impl
   // A type trait that determines if s >> t is valid (or cin >> t).
   template <typename S, typename T>
     struct is_input_streamable
-      : boolean_constant<
+      : Meta_boolean<
           Subst_succeeded<typename get_input_stream_result<S, T>::type>()
         >
     { };
@@ -168,7 +168,7 @@ namespace type_impl
   // A type trait that determines if s << t is valid (or cin << t).
   template <typename S, typename T>
     struct is_output_streamable
-      : boolean_constant<
+      : Meta_boolean<
           Subst_succeeded<typename get_output_stream_result<S, T>::type>()
         >
     { };

@@ -8,11 +8,6 @@
 #ifndef ORIGIN_TYPE_HPP
 #define ORIGIN_TYPE_HPP
 
-// Basic types
-#include "default.hpp"
-#include "unspecified.hpp"
-#include "empty.hpp"
-
 // Type functions
 #include "traits.hpp"
 #include "concepts.hpp"

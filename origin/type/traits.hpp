@@ -11,41 +11,140 @@
 #include <type_traits>
 #include <utility>
 
-#include "default.hpp"
-
 namespace origin
 {
-
   //////////////////////////////////////////////////////////////////////////////
-  // Metaprogramming Support                                                meta
+  // Bool                                                              meta.bool
   //
-  // The following construccts extend the std type traits, providing new 
-  // features, aliases, and functiohns.
-  //////////////////////////////////////////////////////////////////////////////
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Boolean Constant                                                  meta.bool
-  //
-  // An alias for the type integral_constant<bool, X>. This type is provided
-  // purely for convenience. This simplifies the writing of some type traits.
-  // For example:
+  // The Bool class template is a type trait that projects a Boolean value into
+  // the type system (i.e., as a type.)
   //
   //    template <std::size_t N>
-  //      struct equal_zero : boolean_constant<N == 0> { };
+  //      struct Equal_zero : Bool<N == 0> { };
   //
-  // Origin also includes the aliases True_type and False_type, which provide
-  // uniform naming for the associated Boolean constants.
+  // Origin also includes the aliases [True] and [False], which provide uniform
+  // naming for the associated Bool constants.
+  //
+  // Do not confuse the Bool trait with the [Boolean] concept.
   template <bool B>
-    using boolean_constant = std::integral_constant<bool, B>;
+    struct Meta_boolean
+    {
+      using type = Meta_boolean<B>;
+      using value_type = bool;
+      
+      static constexpr bool value = B;
+
+      constexpr explicit operator bool() const { return value; }
+    };
 
 
-  // The True_type and False_type aliases provide alternative names for the
-  // true_type and false_type traits in the C++ standard library. These
-  // exist solely for the purose of adapting those names to the Origin style.
-  using True_type = std::true_type;
-  using False_type = std::false_type;
+  // The type aliases True and False the literal values true and false as
+  // types. They are primarily used in the implement 
+  using True = Meta_boolean<true>;
+  using False = Meta_boolean<false>;
+
+#include "traits.impl/meta.hpp"
+
+  // Type relations
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Same
+  //
+  // The Same constraint is true when each T in Ts is the same as every other.
+  // When only two arguments are given, this is called the same-type relation.
+  // It describes type equality.
+  //
+  // Template Parameters:
+  //    Ts -- A list of types
+  //
+  // Returns:
+  //    True if and only there is a type C common to each type T in Ts.
+  template <typename... Ts>
+    using Same = traits_impl::are_same;
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Commmon
+  //
+  // The Common constraint is true when there exists a type C that is common to
+  // all types T in Args. When only two arguments are given, this is called the
+  // common type relation.
+  //
+  // Template Parameters:
+  //    Ts -- A list of types
+  //
+  // Returns:
+  //    True if and only there is a type C common to each type T in Ts.
+  //
+  // See Also:
+  //    Common_type
+  template <typename... Ts>
+    using Common = traits_impl::is_common;
+
+    
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Void
+  //
+  // The Void trait is true only when the type argument T is the same as void.
+  //
+  // Template Parameters:
+  //    T -- A type
+  //
+  // Returns:
+  //    True if and only there is a T is the same as void.
+  template <typename T> struct Void       : False { };
+  template <>           struct Void<void> : True { };
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Integral
+  //
+  // An integral type is one of the C++ integral types: signed or unsigned
+  // char, short, int, long, or long long.
+  //
+  // Note that unlike the C++ standard, Origin does not consider bool to be
+  // an intgral types (what is the meaning of true % 3?).
+  template <typename T> struct Integral                     : False { };
+  template <>           struct Integral<char>               : True { };
+  template <>           struct Integral<char16_t>           : True { };
+  template <>           struct Integral<char32_t>           : True { };
+  template <>           struct Integral<wchar_t>            : True { };
+  template <>           struct Integral<signed char>        : True { };
+  template <>           struct Integral<signed short>       : True { };
+  template <>           struct Integral<signed int>         : True { };
+  template <>           struct Integral<signed long>        : True { };
+  template <>           struct Integral<signed long long>   : True { };
+  template <>           struct Integral<unsigned char>      : True { };
+  template <>           struct Integral<unsigned short>     : True { };
+  template <>           struct Integral<unsigned int>       : True { };
+  template <>           struct Integral<unsigned long>      : True { };
+  template <>           struct Integral<unsigned long long> : True { };
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Floating Point
+  //
+  // A floationg point type is one of: float, double, or long double.
+  template <typename T> struct Floating_point              : False { };
+  template <>           struct Floating_point<float>       : True { };
+  template <>           struct Floating_point<double>      : True { };
+  template <>           struct Floating_point<long double> : True { };
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Array types
+  //
+  // An array type is a type of the form T[N] with N being a size_t value.
+  template <typename T>                struct is_array       : False { };
+  template <typename T, std::size_t N> struct is_array<T[N]> : True { };
+  
+
+
+
+  //////////////////////////////////////////////////////////////////////////////
+  // Default type
+  struct default_t { };
+
 
 
 
@@ -399,62 +498,6 @@ namespace origin
   //
   // FIXME: This needs to be explicitly specialized for std::duration.
 
-  template <typename... Args>
-    struct common_type;
-
-  // The common type of a single type is obviously that type.
-  template <typename T>
-    struct common_type<T>
-    {
-      using type = T;
-    };
-
-  // The common type relation. This specialization is the primary mechanism
-  // by which common type is defined, and by which it is extended. The default
-  // definition of common type is based on the result type of the ?: operator.
-  template <typename T, typename U>
-    struct common_type<T, U>
-    {
-    private:
-      template <typename X, typename Y>
-        static auto check(X&& a, Y&& b) -> decltype(true ? a : b);
-
-      static subst_failure check(...);
-
-      using C = decltype(check(std::declval<T>(), std::declval<U>()));
-    public:
-      using type = typename std::remove_const<
-        typename std::remove_reference<C>::type
-      >::type;
-    };
-
-  // When the type arguments are the same, we can bypass the deduction on
-  // the conditional operator. This should make compilation slightly faster
-  // in those cases.
-  template <typename T>
-    struct common_type<T, T>
-    {
-      using type = typename std::remove_const<
-        typename std::remove_reference<T>::type
-      >::type;
-    };
-
-  // The recursive definition of common type simply applies the common type
-  // to each pair of types in turn. The computation is similar to that of
-  // max_elements where the "max" type is the common type of each consecutive
-  // pair of elements.
-  template <typename T, typename U, typename... Args>
-    struct common_type<T, U, Args...>
-      : common_type<typename common_type<T, U>::type, Args...>
-    { };
-
-  // Adaptation for expandable types
-  template <template <typename...> class Template, typename... Args>
-    struct common_type<Expand<Template<Args...>>>
-      : origin::common_type<Args...>
-    { };
-
-
 
   //////////////////////////////////////////////////////////////////////////////
   // Commmon Type
@@ -484,25 +527,6 @@ namespace origin
     using Common_type = typename common_type<Args...>::type;
 
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Commmon
-  //
-  // The Common type predicate returns true when there exists a type C that
-  // is common to all types T in Args. We refer to this as the "common type
-  // relation" when used with only two types.
-  //
-  // Template Parameters:
-  //    Args -- A list of types
-  //
-  // Returns:
-  //    True if and only there is a type C common to each type T in Args.
-  template <typename... Args>
-    constexpr bool Common() 
-    { 
-      return Subst_succeeded<Common_type<Args...>>(); 
-    }
-
-    
 
   // Returns true if T is convertible to U.
   //
@@ -546,31 +570,6 @@ namespace origin
     using Identity = typename type_impl::identity<T>::type;
 
 
-    
-  // Returns true if T is void, and false otherwise.
-  template <typename T>
-    constexpr bool Void() { return std::is_void<T>::value; }
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Integer types
-  //
-  // The following traits apply to integer types.
-  //  
-  //
-  // FIXME: There is an issue with the classification of bool as an integer type
-  // in that it is neither signed nor unsigned. This can lead to compilation
-  // failures when using the Make_unsigned or Make_signed type traits when bool
-  // is accepted as an argument. A reasonable solution would be to abstract the
-  // language's characterization of Integer types and exclude bool.
-  //////////////////////////////////////////////////////////////////////////////
-
-  // Returns true if T is a signed or unsigned, possibly cv-qualified, bool,
-  // char, short, int, long or long long.
-  template <typename T>
-    constexpr bool Integer() { return std::is_integral<T>::value; }
-  
   // Returns true if T is a signed type. Note that floating point values
   // are signed.
   template <typename T>
@@ -594,27 +593,6 @@ namespace origin
     using Make_signed = typename type_impl::make_signed<T>::type;
     
   
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Integer types
-  //
-  // The following traits apply to floating types.
-  //////////////////////////////////////////////////////////////////////////////
-    
-  
-  // Returns true if T is a float, double, or long double.
-  template <typename T>
-    constexpr bool Floating_point() { return std::is_floating_point<T>::value; }
-
-
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Array types
-  //
-  // The following traits apply to array types.
-  //////////////////////////////////////////////////////////////////////////////
-  
-
   // Return true if T is an array type of type U[N].
   template <typename T>
     constexpr bool Array() { return std::is_array<T>::value; }

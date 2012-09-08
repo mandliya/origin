@@ -108,22 +108,20 @@ namespace type_impl
   // FIXME: I think that this should be the signed version of the next larger
   // integer type (up to long long). However, since size_t and ptrdiff_t are
   // related in this same way, I'm not terribly concerned right now.
-  template <typename T>
-    auto deduce_difference_type(default_t, T) 
-      -> Requires<Integer<T>(), Make_signed<T>>;
+  template <Integral T>
+    Make_signed<T> deduce_difference_type(default_t, T);
 
   // The difference type for floating point types is that type. This is an
   // identity function for floating point types.
-  template <typename T>
-    auto deduce_difference_type(default_t, T)
-      -> Requires<Floating_point<T>(), T>;
+  template <Floating_point T>
+    T deduce_difference_type(default_t, T);
 
   // We can provide a reasonable guess for all other incrementable 
   // user-defined types as ptrdiff_t. This is basically a default guess for
   // all iterator-like types.
   template <typename T>
-    auto deduce_difference_type(default_t, T) 
-      -> Requires<Class<T>() && Has_pre_increment<T>(), std::ptrdiff_t>;
+    requires Class<T>() && Has_pre_increment<T>()
+      std::ptrdiff_t deduce_difference_type(default_t, T);
 
 
   // Get the distance type associated with T.
