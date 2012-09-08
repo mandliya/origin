@@ -21,7 +21,7 @@ namespace type_impl
 
   // Returns the signed version of T if T is an Integer type. Otherwise, return
   // subst_failure.
-  template <typename T, bool = Integer<T>()>
+  template <typename T, bool = Integral<T>()>
     struct make_signed;
 
   template <typename T>
@@ -33,7 +33,7 @@ namespace type_impl
 
   // Return the unsgiend version of T if T is an Integer type. Otherwise returns
   // sbust_failure.
-  template <typename T, bool = Integer<T>()>
+  template <typename T, bool = Integral<T>()>
     struct make_unsigned;
 
   template <typename T>

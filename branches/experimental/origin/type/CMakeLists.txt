@@ -9,10 +9,7 @@ origin_module(
   VERSION 0.1.0
   AUTHORS Andrew Sutton <andrew.n.sutton -at- gmail.com>
 
-  EXPORT default
-         unspecified
-         empty
-         traits 
+  EXPORT traits 
          concepts 
          typestr
          type
