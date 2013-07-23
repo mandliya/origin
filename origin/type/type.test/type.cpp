@@ -14,7 +14,13 @@ using namespace std;
 using namespace origin;
 using namespace origin::testing;
 
+template <typename T>
+  struct foo 
+  {
+    static_assert(Integer<T>(), "");
+  };
+
 int main()
 {
-
+  foo<float>* p = nullptr;
 }

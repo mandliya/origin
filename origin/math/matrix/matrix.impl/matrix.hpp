@@ -267,6 +267,7 @@ template <typename T, std::size_t N>
   matrix<T, N>::matrix(matrix_initializer<T, N> init)
     : desc(0, matrix_impl::derive_extents<N>(init))
   {
+    // matrix_impl::derive_extents(desc.extents, init);
     elems.reserve(desc.size);
     matrix_impl::insert_flattened(init, elems);
     assert(elems.size() == desc.size);
