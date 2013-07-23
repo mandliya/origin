@@ -47,6 +47,12 @@ void test_init()
   // You cannot value initialize from a flat list. There is no way to deduce
   // the intended extents.
   // matrix<int, 2> m5 {1, 2, 3, 4, 5, 6};
+
+  // Must be non-jagged.
+  // matrix<int, 2> m6 { // This must fail at runtime. 
+  //   {1, 2, 3},
+  //   {1, 2}
+  // };
 }
 
 void test_access()

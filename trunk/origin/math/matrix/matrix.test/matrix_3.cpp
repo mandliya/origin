@@ -59,4 +59,12 @@ int main()
   // Cannot value-initialize a matrix from a flat list. We can't deduce the
   // extents of the matrix.
   // matrix<int, 3> m3{1, 2, 3};
+
+  // Must be non-jagged.
+  // matrix<int, 3> m3 { // This must fail.
+  //   {
+  //     {{1, 2}, {1, 2}},
+  //     {{1},    {1}}
+  //   }
+  // };
 }

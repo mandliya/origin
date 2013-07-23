@@ -100,15 +100,18 @@ namespace matrix_impl
   //                          Derive Extents
 
 
-  // Used in derive_extents, returns true if the array is not jagged. That is,
-  // all sub-initializers of list must have the same size.
-  template <typename List>
+  template <std::size_t N, typename List>
+    inline std::array<std::size_t, N> derive_extents(const List& list);
+
+
+  // An matrix is non-jagged if the extents of each submatrix compare equal.
+  template <std::size_t N, typename List>
     inline bool
     check_non_jagged(const List& list)
     {
       auto i = list.begin();
       for (auto j = i + 1; j != list.end(); ++j) {
-        if (i->size() != j->size())
+        if (derive_extents<N - 1>(*i) != derive_extents<N - 1>(*j))
           return false;
       }
       return true;
@@ -129,7 +132,7 @@ namespace matrix_impl
     inline Requires<(N > 1), void>
     derive_extents(I& first, I last, const List& list)
     {
-      assert(check_non_jagged(list));
+      assert(check_non_jagged<N>(list));
       assert(first != last);
       *first++ = list.size();
       derive_extents<N - 1>(first, last, *list.begin());
@@ -159,7 +162,6 @@ namespace matrix_impl
       std::size_t indexes[N] {std::size_t(dims)...};
       std::less<std::size_t> lt;
       return std::equal(indexes, indexes + N, slice.extents, lt);
-      return check_bounds(slice, indexes);
     }
 
 

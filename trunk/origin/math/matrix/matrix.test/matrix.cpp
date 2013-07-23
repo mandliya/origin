@@ -13,7 +13,6 @@
 using namespace std;
 using namespace origin;
 
-
 int main()
 {
   // TODO: Check common type traits and concepts.
