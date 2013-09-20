@@ -200,8 +200,9 @@ template<std::size_t N>
     matrix_slice<N>::matrix_slice(const matrix_slice<M>& s, const Args&... args)
     {
       static_assert(matrix_impl::Slice_sequence<Args...>(), "");
+      std::multiplies<std::size_t> mul;
       start = s.start + do_slice(s, args...);
-      size = extents[0] * strides[0];
+      size = std::accumulate(extents, extents + N, 1, mul);
     }
 
 template<std::size_t N>
